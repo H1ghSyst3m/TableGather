@@ -637,6 +637,27 @@ describe("room manager", () => {
     expect(manager.getRoom(room.code)?.lastActivityAt).toBe(lastActivityAt);
   });
 
+  it("persists passive disconnect state without refreshing activity", () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 500 });
+    const { room } = manager.createRoom("host-1", "werewolf");
+
+    now = 1_010;
+    const joined = manager.joinRoom(room.code, "Alex", "player-1");
+    const lastActivityAt = manager.getRoom(room.code)?.lastActivityAt;
+
+    now = 1_020;
+    const touched = manager.disconnectClient("player-1");
+    const updated = manager.getRoom(room.code);
+
+    expect(touched).toHaveLength(1);
+    expect(updated?.players.find((player) => player.id === joined.player.id)).toMatchObject({
+      clientId: null,
+      connected: false,
+    });
+    expect(updated?.lastActivityAt).toBe(lastActivityAt);
+  });
+
   it("refreshes room activity on successful room actions", () => {
     let now = 1_000;
     const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 500 });

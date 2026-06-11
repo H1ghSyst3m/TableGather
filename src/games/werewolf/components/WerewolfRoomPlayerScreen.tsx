@@ -35,6 +35,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
   const [pendingCode, setPendingCode] = useState<string | null>(initialRoomCode || null);
   const [roomStatus, setRoomStatus] = useState<JoinRoomStatus>(initialRoomCode ? "checking" : "idle");
   const [roomPlayerCount, setRoomPlayerCount] = useState<number | null>(null);
+  const [staleInspectKey, setStaleInspectKey] = useState(0);
   const [roleCardOpen, setRoleCardOpen] = useState(false);
   const roomCode = normalizeRoomCode(roomCodeInput);
 
@@ -79,10 +80,21 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
         if (roomCode) removePlayerRoomSession(roomCode);
         setToken(null);
         setSnapshot(null);
-        if (message.message !== "Room not found.") setRoomStatus("joinable");
+        if (message.message !== "Room not found." && roomCode) {
+          setPendingCode(roomCode);
+          setRoomStatus("checking");
+          setRoomPlayerCount(null);
+          setStaleInspectKey((current) => current + 1);
+        }
       }
     }
   });
+
+  useEffect(() => {
+    if (staleInspectKey === 0) return;
+    if (roomCode.length !== 4) return;
+    send({ type: "inspectRoom", roomCode });
+  }, [roomCode, send, staleInspectKey]);
 
   useEffect(() => {
     if (roomCode.length !== 4) return;

@@ -48,8 +48,9 @@ Main routes:
 
 - Werewolf is fully playable in local and room mode.
 - Werewolf room mode supports host, player, and read-only stage clients.
-- Room state is in-memory on the server. Rooms expire after 48 hours of inactivity; rooms, reconnect tokens, and stage tokens still do not survive a server restart.
-- The Hub Session tab shows active host/player rooms known to the current browser by validating stored local tokens with the room server.
+- Room state is in-memory on the server. Rooms expire after 48 hours of inactivity, and a server restart clears active server-side room state.
+- Browser-stored reconnect tokens, stage tokens, and local session tokens remain on the client until explicitly invalidated by the server or user, but may no longer map to an active room after expiry or restart.
+- The Hub Session tab shows active host/player rooms known to the current browser by validating stored local tokens with the room server; locally stored tokens can outlive the server-side room they belonged to.
 - Local pass-and-play Werewolf persists its current game in `localStorage`.
 - Privacy is enforced by snapshots: host snapshots can contain full game state, player snapshots only expose the requesting player's private role data and public table status, and stage snapshots expose only public room/game information.
 - No placeholder role art is bundled for Werewolf. Icon fallbacks remain until real assets are added.

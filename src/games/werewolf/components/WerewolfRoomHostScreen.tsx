@@ -17,6 +17,7 @@ import { useRoomSocket } from "../../../online/useRoomSocket";
 import type { HostCommand } from "../../../online/messages";
 import {
   getStoredHostRoomToken,
+  removeHostRoomSession,
   removeRoomSessions,
   saveHostRoomSession,
 } from "../../../online/roomSessionStorage";
@@ -66,7 +67,7 @@ export function WerewolfRoomHostScreen({
       setSnapshot(message.snapshot as WerewolfHostRoomSnapshot);
     }
     if (message.type === "hostTransferred") {
-      removeRoomSessions(message.roomCode);
+      removeHostRoomSession(message.roomCode);
       setSnapshot(null);
       setToken(null);
       setServerError(null);
@@ -74,8 +75,9 @@ export function WerewolfRoomHostScreen({
       navigate(`/room/${message.roomCode}`);
     }
     if (message.type === "roomClosed") {
-      if (snapshot?.code) {
-        removeRoomSessions(snapshot.code);
+      const closedRoomCode = snapshot?.code ?? code;
+      if (closedRoomCode) {
+        removeRoomSessions(closedRoomCode);
       }
       navigate("/");
     }

@@ -189,7 +189,6 @@ export class RoomManager {
       }
 
       if (changed) {
-        this.touchRoom(room);
         this.store.save(room);
         touched.push(room);
       }
