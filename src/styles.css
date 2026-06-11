@@ -173,6 +173,20 @@ svg {
   gap: 1rem;
 }
 
+.app-brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+.app-brand-mark {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 auto;
+  border-radius: 0.7rem;
+}
+
 .brand-row h1 {
   margin: 0;
   font-size: 1.8rem;

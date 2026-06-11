@@ -52,7 +52,10 @@ export function HeaderBar({
             {t("common.back")}
           </button>
         ) : (
-          <h1>{t("common.appName")}</h1>
+          <div className="app-brand">
+            <img className="app-brand-mark" src="/icon.svg" alt="" aria-hidden="true" />
+            <h1>{t("common.appName")}</h1>
+          </div>
         )}
         <div className="header-actions">
           {actions}
