@@ -10,11 +10,13 @@ import { HeaderBar } from "./HeaderBar";
 import type { TranslationKey } from "../i18n/translations";
 import type { ServerMessage } from "../online/messages";
 import {
-  listStoredRoomSessions,
+  listStoredRoomSessionCandidates,
   removeStoredRoomSession,
   type StoredRoomSession,
 } from "../online/roomSessionStorage";
 import { useRoomSocket } from "../online/useRoomSocket";
+
+const SESSION_INSPECT_TIMEOUT_MS = 5_000;
 
 interface HubScreenProps {
   navigate: (path: string) => void;
@@ -45,6 +47,7 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
   const [sessionServerError, setSessionServerError] = useState<string | null>(null);
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const pendingSessionsRef = useRef<Map<string, StoredRoomSession>>(new Map());
+  const pendingSessionTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const currentGame = games.find((game) => game.id === selectedGameId) ?? games[0];
   const otherGames = games.filter((game) => game.id !== currentGame.id);
   const canStart = currentGame.status === "playable";
@@ -53,9 +56,10 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
       const session = pendingSessionsRef.current.get(message.requestId);
       if (!session) return;
 
+      clearPendingSessionTimer(pendingSessionTimersRef.current, message.requestId);
       pendingSessionsRef.current.delete(message.requestId);
       if (message.valid) {
-        setSessionCards((current) => sortSessionCards([...current.filter((card) => card.roomCode !== message.roomCode), roomSessionCard(message)]));
+        setSessionCards((current) => mergeSessionCard(current, roomSessionCard(message)));
       } else {
         removeStoredRoomSession(session);
       }
@@ -67,6 +71,7 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
       const session = pendingSessionsRef.current.get(message.requestId);
       if (!session) return;
 
+      clearPendingSessionTimer(pendingSessionTimersRef.current, message.requestId);
       pendingSessionsRef.current.delete(message.requestId);
       setSessionServerError(message.message);
       if (pendingSessionsRef.current.size === 0) setSessionLoading(false);
@@ -76,9 +81,11 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
   useEffect(() => {
     if (activeTab !== "session") return;
 
-    const sessions = listStoredRoomSessions();
+    const sessions = listStoredRoomSessionCandidates();
     const pendingSessions = pendingSessionsRef.current;
+    const pendingSessionTimers = pendingSessionTimersRef.current;
     let cancelled = false;
+    clearPendingSessionTimers(pendingSessionTimers);
     pendingSessions.clear();
     queueMicrotask(() => {
       if (cancelled) return;
@@ -92,6 +99,7 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
       });
       return () => {
         cancelled = true;
+        clearPendingSessionTimers(pendingSessionTimers);
         pendingSessions.clear();
       };
     }
@@ -105,7 +113,23 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
       for (const session of sessions) {
         const requestId = `hub-session-${session.role}-${session.roomCode}-${sessionRefreshKey}-${requestBatch}`;
         pendingSessions.set(requestId, session);
-        send({ type: "inspectRoomSession", requestId, roomCode: session.roomCode, clientToken: session.token });
+        pendingSessionTimers.set(
+          requestId,
+          setTimeout(() => {
+            if (!pendingSessions.has(requestId)) return;
+            pendingSessions.delete(requestId);
+            pendingSessionTimers.delete(requestId);
+            setSessionServerError(t("errors.roomConnection"));
+            if (pendingSessions.size === 0) setSessionLoading(false);
+          }, SESSION_INSPECT_TIMEOUT_MS),
+        );
+
+        const sent = send({ type: "inspectRoomSession", requestId, roomCode: session.roomCode, clientToken: session.token });
+        if (!sent) {
+          clearPendingSessionTimer(pendingSessionTimers, requestId);
+          pendingSessions.delete(requestId);
+          setSessionServerError(t("errors.roomConnection"));
+        }
       }
 
       if (pendingSessions.size === 0) setSessionLoading(false);
@@ -120,9 +144,10 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
     return () => {
       cancelled = true;
       socket.removeEventListener("open", inspectSessions);
+      clearPendingSessionTimers(pendingSessionTimers);
       pendingSessions.clear();
     };
-  }, [activeTab, connect, send, sessionRefreshKey]);
+  }, [activeTab, connect, send, sessionRefreshKey, t]);
 
   const start = () => {
     if (!canStart) return;
@@ -368,8 +393,27 @@ function roomSessionCard(message: Extract<ServerMessage, { type: "roomSessionSta
   };
 }
 
+function mergeSessionCard(cards: HubSessionCard[], nextCard: HubSessionCard) {
+  const existingCard = cards.find((card) => card.roomCode === nextCard.roomCode);
+  if (existingCard?.role === "host" && nextCard.role === "player") return cards;
+
+  return sortSessionCards([...cards.filter((card) => card.roomCode !== nextCard.roomCode), nextCard]);
+}
+
 function sortSessionCards(cards: HubSessionCard[]) {
   return [...cards].sort((first, second) => second.lastActivityAt - first.lastActivityAt);
+}
+
+function clearPendingSessionTimer(timers: Map<string, ReturnType<typeof setTimeout>>, requestId: string) {
+  const timer = timers.get(requestId);
+  if (!timer) return;
+  clearTimeout(timer);
+  timers.delete(requestId);
+}
+
+function clearPendingSessionTimers(timers: Map<string, ReturnType<typeof setTimeout>>) {
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
 }
 
 function formatRemainingTime(expiresAt: number, t: ReturnType<typeof useI18n>["t"]) {
