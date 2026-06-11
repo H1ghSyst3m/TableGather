@@ -2,6 +2,8 @@ import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createRoomServer } from "../server/index";
+import { RoomManager } from "../server/roomManager";
+import { InMemoryRoomStore } from "../server/roomStore";
 import { ROOM_PROTOCOL_FEATURES, ROOM_PROTOCOL_VERSION } from "../src/online/protocol";
 import type { ServerMessage } from "../src/online/messages";
 import type { RoleCounts, WerewolfState } from "../src/games/werewolf/domain/types";
@@ -10,6 +12,7 @@ import type { WerewolfHostRoomSnapshot, WerewolfPlayerRoomSnapshot, WerewolfStag
 type ConnectedMessage = Extract<ServerMessage, { type: "connected" }>;
 type SnapshotMessage = Extract<ServerMessage, { type: "snapshot" }>;
 type RoomStatusMessage = Extract<ServerMessage, { type: "roomStatus" }>;
+type RoomSessionStatusMessage = Extract<ServerMessage, { type: "roomSessionStatus" }>;
 
 const openSockets: TestSocket[] = [];
 let closeServer: (() => Promise<void>) | null = null;
@@ -139,6 +142,90 @@ describe("room websocket server", () => {
       exists: false,
       joinable: false,
     } satisfies Partial<RoomStatusMessage>);
+  });
+
+  it("reports stored room session status without joining the room", async () => {
+    const url = await startServer();
+    const host = await openSocket(url);
+
+    host.send({ type: "createRoom", payload: { gameId: "werewolf" } });
+    const created = (await host.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    const roomCode = created.roomCode;
+    await host.next((message) => message.type === "snapshot");
+
+    const player = await joinPlayer(url, roomCode, "Alex");
+
+    const guest = await openSocket(url);
+    guest.send({ type: "inspectRoomSession", requestId: "host-session", roomCode, clientToken: created.clientToken });
+    await expect(guest.next((message) => message.type === "roomSessionStatus")).resolves.toMatchObject({
+      type: "roomSessionStatus",
+      requestId: "host-session",
+      roomCode,
+      valid: true,
+      role: "host",
+      gameId: "werewolf",
+      phase: "lobby",
+      playerCount: 1,
+      protocolVersion: ROOM_PROTOCOL_VERSION,
+    } satisfies Partial<RoomSessionStatusMessage>);
+
+    guest.send({ type: "inspectRoomSession", requestId: "player-session", roomCode, clientToken: player.clientToken });
+    await expect(guest.next((message) => message.type === "roomSessionStatus")).resolves.toMatchObject({
+      type: "roomSessionStatus",
+      requestId: "player-session",
+      roomCode,
+      valid: true,
+      role: "player",
+      playerName: "Alex",
+      playerCount: 1,
+    } satisfies Partial<RoomSessionStatusMessage>);
+
+    guest.send({ type: "inspectRoomSession", requestId: "bad-session", roomCode, clientToken: "BADTOKEN" });
+    await expect(guest.next((message) => message.type === "roomSessionStatus")).resolves.toMatchObject({
+      type: "roomSessionStatus",
+      requestId: "bad-session",
+      roomCode,
+      valid: false,
+    } satisfies Partial<RoomSessionStatusMessage>);
+  });
+
+  it("closes expired rooms before websocket requests and health responses", async () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 100 });
+    const url = await startServer(manager);
+    const host = await openSocket(url);
+
+    host.send({ type: "createRoom", payload: { gameId: "werewolf" } });
+    const created = (await host.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    const roomCode = created.roomCode;
+    await host.next((message) => message.type === "snapshot");
+
+    now = 1_100;
+    const guest = await openSocket(url);
+    guest.send({ type: "inspectRoom", requestId: "expired-room", roomCode });
+
+    await expect(host.next((message) => message.type === "roomClosed")).resolves.toMatchObject({ type: "roomClosed", roomCode });
+    await expect(guest.next((message) => message.type === "roomStatus")).resolves.toMatchObject({
+      type: "roomStatus",
+      requestId: "expired-room",
+      roomCode,
+      exists: false,
+      joinable: false,
+    } satisfies Partial<RoomStatusMessage>);
+
+    now = 1_200;
+    const secondHost = await openSocket(url);
+    secondHost.send({ type: "createRoom", payload: { gameId: "werewolf" } });
+    const secondCreated = (await secondHost.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    await secondHost.next((message) => message.type === "snapshot");
+
+    now = 1_300;
+    const response = await fetch(toHealthUrl(url));
+    await expect(response.json()).resolves.toMatchObject({ ok: true, rooms: 0 });
+    await expect(secondHost.next((message) => message.type === "roomClosed")).resolves.toMatchObject({
+      type: "roomClosed",
+      roomCode: secondCreated.roomCode,
+    });
   });
 
   it("connects stage clients and closes them when the stage link is disabled", async () => {
@@ -413,8 +500,8 @@ describe("room websocket server", () => {
   });
 });
 
-async function startServer() {
-  const { server, wss } = createRoomServer();
+async function startServer(manager = new RoomManager()) {
+  const { server, wss } = createRoomServer(manager);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as AddressInfo;
   closeServer = async () => {

@@ -2,7 +2,7 @@
 
 ## Supported Scope
 
-TableGather Hub uses an in-memory room server for local table play. Rooms, host tokens, player tokens, and stage tokens are not durable and are lost when the server process restarts.
+TableGather Hub uses an in-memory room server for local table play. Rooms expire after 48 hours of inactivity, and rooms, host tokens, player tokens, and stage tokens are not durable and are lost when the server process restarts.
 
 Security-sensitive areas include:
 
@@ -10,7 +10,8 @@ Security-sensitive areas include:
 - WebSocket room commands and snapshots;
 - player privacy in role-filtered snapshots;
 - public Stage mode data exposure;
-- local browser storage of reconnect tokens.
+- local browser storage of reconnect tokens;
+- Hub Session tab validation and stale-token cleanup.
 
 ## Reporting A Vulnerability
 

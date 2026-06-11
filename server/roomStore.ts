@@ -21,6 +21,7 @@ export interface Room {
   assignment: RoomAssignmentEntry[];
   gameState: unknown | null;
   createdAt: number;
+  lastActivityAt: number;
 }
 
 export interface RoomStore {

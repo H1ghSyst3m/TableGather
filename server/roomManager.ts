@@ -5,12 +5,30 @@ import type { HostCommand, PlayerCommand } from "../src/online/messages";
 import { normalizePlayerName, playerNameKey } from "../src/playerNames";
 import { InMemoryRoomStore, type Room, type RoomPlayer, type RoomStore } from "./roomStore";
 
+export const DEFAULT_ROOM_TTL_MS = 48 * 60 * 60 * 1000;
+
+interface RoomManagerOptions {
+  now?: () => number;
+  roomTtlMs?: number;
+}
+
 export class RoomManager {
-  constructor(private store: RoomStore = new InMemoryRoomStore()) {}
+  private readonly now: () => number;
+  private readonly roomTtlMs: number;
+
+  constructor(
+    private store: RoomStore = new InMemoryRoomStore(),
+    options: RoomManagerOptions = {},
+  ) {
+    this.now = options.now ?? Date.now;
+    this.roomTtlMs = options.roomTtlMs ?? DEFAULT_ROOM_TTL_MS;
+  }
 
   createRoom(clientId: string, gameId: GameId) {
+    this.pruneExpiredRooms();
     const game = requirePlayableGame(gameId);
     if (!game.roomAdapter) throw new Error(`Game ${gameId} is not playable.`);
+    const now = this.now();
 
     const room: Room = {
       code: this.createRoomCode(),
@@ -24,7 +42,8 @@ export class RoomManager {
       setupState: game.roomAdapter.createInitialSetupState(5),
       assignment: [],
       gameState: null,
-      createdAt: Date.now(),
+      createdAt: now,
+      lastActivityAt: now,
     };
 
     this.store.create(room);
@@ -50,13 +69,14 @@ export class RoomManager {
     };
 
     room.players.push(player);
+    this.touchRoom(room);
     this.store.save(room);
     return { room, clientToken: player.token, player };
   }
 
   inspectRoom(code: string) {
     const roomCode = normalizeRoomCode(code);
-    const room = this.store.get(roomCode);
+    const room = this.getActiveRoom(roomCode);
     if (!room) return { roomCode, exists: false, joinable: false };
 
     return {
@@ -73,6 +93,7 @@ export class RoomManager {
     const room = this.requireRoom(code);
     if (room.hostToken === token) {
       room.hostClientId = clientId;
+      this.touchRoom(room);
       this.store.save(room);
       return { room, role: "host" as const };
     }
@@ -82,14 +103,53 @@ export class RoomManager {
 
     player.clientId = clientId;
     player.connected = true;
+    this.touchRoom(room);
     this.store.save(room);
     return { room, role: "player" as const, player };
+  }
+
+  inspectRoomSession(code: string, token: string) {
+    const roomCode = normalizeRoomCode(code);
+    const room = this.getActiveRoom(roomCode);
+    if (!room) return { roomCode, valid: false as const };
+
+    if (room.hostToken === token) {
+      return {
+        roomCode: room.code,
+        valid: true as const,
+        role: "host" as const,
+        gameId: room.gameId,
+        phase: room.phase,
+        playerCount: room.players.length,
+        createdAt: room.createdAt,
+        lastActivityAt: room.lastActivityAt,
+        expiresAt: this.expiresAt(room),
+      };
+    }
+
+    const player = room.players.find((candidate) => candidate.token === token);
+    if (!player) return { roomCode: room.code, valid: false as const };
+
+    return {
+      roomCode: room.code,
+      valid: true as const,
+      role: "player" as const,
+      gameId: room.gameId,
+      phase: room.phase,
+      playerCount: room.players.length,
+      playerName: player.name,
+      createdAt: room.createdAt,
+      lastActivityAt: room.lastActivityAt,
+      expiresAt: this.expiresAt(room),
+    };
   }
 
   joinStage(code: string, token: string) {
     const room = this.requireRoom(code);
     if (!room.stageToken || room.stageToken !== token) throw new Error("Stage link is not valid.");
     this.requireStageAdapter(room);
+    this.touchRoom(room);
+    this.store.save(room);
     return room;
   }
 
@@ -99,6 +159,7 @@ export class RoomManager {
     if (player) {
       player.connected = false;
       player.clientId = null;
+      this.touchRoom(room);
       this.store.save(room);
     }
     return room;
@@ -108,6 +169,11 @@ export class RoomManager {
     const touched: Room[] = [];
 
     for (const room of this.store.list()) {
+      if (this.isExpired(room)) {
+        this.store.delete(room.code);
+        continue;
+      }
+
       let changed = false;
       if (room.hostClientId === clientId) {
         room.hostClientId = null;
@@ -123,6 +189,7 @@ export class RoomManager {
       }
 
       if (changed) {
+        this.touchRoom(room);
         this.store.save(room);
         touched.push(room);
       }
@@ -137,6 +204,7 @@ export class RoomManager {
     switch (command.type) {
       case "transferHost": {
         const target = this.transferHost(room, command.playerId);
+        this.touchRoom(room);
         this.store.save(room);
         return { room, closed: false, transferred: target };
       }
@@ -157,6 +225,7 @@ export class RoomManager {
       case "kickPlayer": {
         const kicked = room.players.find((player) => player.id === command.playerId);
         room.players = room.players.filter((player) => player.id !== command.playerId);
+        this.touchRoom(room);
         this.store.save(room);
         return {
           room,
@@ -175,6 +244,7 @@ export class RoomManager {
         break;
     }
 
+    this.touchRoom(room);
     this.store.save(room);
     return { room, closed: false };
   }
@@ -185,16 +255,30 @@ export class RoomManager {
     if (!player) throw new Error("Player session not found.");
 
     this.adapterForRoom(room).applyPlayerCommand(room, player, command as GameCommand);
+    this.touchRoom(room);
     this.store.save(room);
     return { room, player };
   }
 
   getRoom(code: string) {
-    return this.store.get(normalizeRoomCode(code));
+    return this.getActiveRoom(normalizeRoomCode(code));
   }
 
   listRooms() {
+    this.pruneExpiredRooms();
     return this.store.list();
+  }
+
+  pruneExpiredRooms() {
+    const expired: Room[] = [];
+
+    for (const room of this.store.list()) {
+      if (!this.isExpired(room)) continue;
+      this.store.delete(room.code);
+      expired.push(room);
+    }
+
+    return expired;
   }
 
   hostSnapshot(room: Room): HostRoomSnapshot {
@@ -257,7 +341,7 @@ export class RoomManager {
   }
 
   private requireRoom(code: string) {
-    const room = this.store.get(normalizeRoomCode(code));
+    const room = this.getActiveRoom(normalizeRoomCode(code));
     if (!room) throw new Error("Room not found.");
     return room;
   }
@@ -270,8 +354,28 @@ export class RoomManager {
     let code = "";
     do {
       code = createToken(4).toUpperCase();
-    } while (this.store.get(code));
+    } while (this.getActiveRoom(code));
     return code;
+  }
+
+  private getActiveRoom(roomCode: string) {
+    const room = this.store.get(roomCode);
+    if (!room) return undefined;
+    if (!this.isExpired(room)) return room;
+    this.store.delete(room.code);
+    return undefined;
+  }
+
+  private touchRoom(room: Room) {
+    room.lastActivityAt = this.now();
+  }
+
+  private expiresAt(room: Room) {
+    return room.lastActivityAt + this.roomTtlMs;
+  }
+
+  private isExpired(room: Room) {
+    return this.expiresAt(room) <= this.now();
   }
 }
 

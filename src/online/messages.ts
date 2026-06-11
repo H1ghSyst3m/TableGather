@@ -5,6 +5,7 @@ import type { WerewolfHostCommand, WerewolfPlayerCommand } from "../games/werewo
 export type ClientMessage =
   | { type: "createRoom"; requestId?: string; payload: { gameId: GameId } }
   | { type: "inspectRoom"; requestId?: string; roomCode: string }
+  | { type: "inspectRoomSession"; requestId?: string; roomCode: string; clientToken: string }
   | { type: "joinStage"; requestId?: string; roomCode: string; stageToken: string }
   | { type: "joinRoom"; requestId?: string; roomCode: string; payload: { name: string } }
   | { type: "resumeRoom"; requestId?: string; roomCode: string; clientToken: string }
@@ -37,6 +38,26 @@ export type ServerMessage =
       phase?: RoomPhase;
       playerCount?: number;
     } & RoomServerInfo)
+  | ({
+      type: "roomSessionStatus";
+      requestId?: string;
+      roomCode: string;
+      valid: false;
+    } & RoomServerInfo)
+  | ({
+      type: "roomSessionStatus";
+      requestId?: string;
+      roomCode: string;
+      valid: true;
+      role: "host" | "player";
+      gameId: GameId;
+      phase: RoomPhase;
+      playerCount: number;
+      createdAt: number;
+      lastActivityAt: number;
+      expiresAt: number;
+      playerName?: string;
+    } & RoomServerInfo)
   | { type: "snapshot"; roomCode: string; snapshot: unknown }
   | { type: "roomClosed"; roomCode: string }
   | { type: "hostTransferred"; roomCode: string; toPlayerId?: string }
@@ -67,6 +88,13 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
     case "inspectRoom": {
       const message = raw as { requestId?: unknown; roomCode?: unknown };
       if (typeof message.roomCode !== "string") return null;
+      if (message.requestId !== undefined && typeof message.requestId !== "string") return null;
+      return raw as ClientMessage;
+    }
+    case "inspectRoomSession": {
+      const message = raw as { requestId?: unknown; roomCode?: unknown; clientToken?: unknown };
+      if (typeof message.roomCode !== "string") return null;
+      if (typeof message.clientToken !== "string") return null;
       if (message.requestId !== undefined && typeof message.requestId !== "string") return null;
       return raw as ClientMessage;
     }

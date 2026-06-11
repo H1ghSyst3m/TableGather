@@ -10,12 +10,16 @@ const roomServerInfo = {
   features: ROOM_PROTOCOL_FEATURES,
 } satisfies RoomServerInfo;
 
+const ROOM_EXPIRY_SWEEP_INTERVAL_MS = 60_000;
+
 export function createRoomServer(manager = new RoomManager()) {
   const clients = new Map<string, WebSocket>();
   const clientSessions = new Map<string, { roomCode: string; token: string; role: "host" | "player" | "stage" }>();
+  const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
 
   const server = http.createServer((request, response) => {
     if (request.url === "/health") {
+      closeExpiredRooms();
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({ ok: true, rooms: manager.listRooms().length, ...roomServerInfo }));
       return;
@@ -26,12 +30,15 @@ export function createRoomServer(manager = new RoomManager()) {
   });
 
   const wss = new WebSocketServer({ server, path: "/ws" });
+  server.on("close", () => clearInterval(expirySweep));
+  wss.on("close", () => clearInterval(expirySweep));
 
   wss.on("connection", (socket) => {
     const clientId = createClientId();
     clients.set(clientId, socket);
 
     socket.on("message", (data) => {
+      closeExpiredRooms();
       const parsed = safeJson(data.toString());
       const message = parseClientMessage(parsed);
 
@@ -62,6 +69,16 @@ export function createRoomServer(manager = new RoomManager()) {
             type: "roomStatus",
             requestId: message.requestId,
             ...manager.inspectRoom(message.roomCode),
+            ...roomServerInfo,
+          });
+          return;
+        }
+
+        if (message.type === "inspectRoomSession") {
+          send(socket, {
+            type: "roomSessionStatus",
+            requestId: message.requestId,
+            ...manager.inspectRoomSession(message.roomCode, message.clientToken),
             ...roomServerInfo,
           });
           return;
@@ -180,12 +197,19 @@ export function createRoomServer(manager = new RoomManager()) {
     });
 
     socket.on("close", () => {
+      closeExpiredRooms();
       clients.delete(clientId);
       clientSessions.delete(clientId);
       const touchedRooms = manager.disconnectClient(clientId);
       for (const room of touchedRooms) broadcastRoom(room.code);
     });
   });
+
+  function closeExpiredRooms() {
+    for (const room of manager.pruneExpiredRooms()) {
+      broadcastClosed(room.code);
+    }
+  }
 
   function assertTransferTargetOnline(roomCode: string, hostToken: string, playerId: string) {
     const room = manager.getRoom(roomCode);

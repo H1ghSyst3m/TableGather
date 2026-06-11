@@ -18,10 +18,10 @@ TableGather Hub is a React + TypeScript browser app with a small in-memory WebSo
 
 `src/App.tsx` keeps routing simple. It derives a route from `window.location.pathname`, renders the matching screen, and uses `history.pushState` for navigation.
 
-- `/` renders `HubScreen`.
+- `/` renders `HubScreen` with game/mode selection and a device-local Session tab.
 - `/play/werewolf` renders `LocalWerewolfApp` inside `GameThemeFrame`.
 - `/room/create/werewolf` renders `WerewolfRoomHostScreen` without a room code so it creates a room.
-- `/room/<CODE>` renders host or player room UI depending on whether `localStorage` contains the host token for that code.
+- `/room/<CODE>` renders host or player room UI depending on whether the room session storage helper finds a host token for that code.
 - `/stage/<CODE>/<TOKEN>` renders the Werewolf stage screen as a read-only public display client.
 
 `GameThemeFrame` applies `gameThemeClassName(game)` and `gameThemeStyle(game)` so generic CSS variables and game-specific CSS can style the screen.
@@ -66,14 +66,18 @@ The domain engine owns behavior. UI components should send commands or call engi
 The room server is game-agnostic:
 
 - `RoomManager` creates, joins, resumes, transfers, kicks, closes, resets, and snapshots rooms.
+- `RoomManager` tracks `createdAt` and `lastActivityAt`, expires inactive rooms after the room TTL, and can inspect host/player sessions without resuming them.
 - `RoomStore` abstracts storage. V1 uses `InMemoryRoomStore`.
 - `GameRoomAdapter` handles game-specific setup, commands, public player shape, host snapshots, player snapshots, and optional stage snapshots.
 - `src/online/messages.ts` defines client/server message shapes.
+- `src/online/roomSessionStorage.ts` centralizes browser `localStorage` keys for host/player reconnect tokens and Hub session discovery.
 - `src/online/useRoomSocket.ts` manages the browser WebSocket connection and message dispatch.
 
 The server never knows Werewolf rules directly. It delegates game-specific commands to `werewolfRoomAdapter`.
 
 Room audiences are defined in `src/types.ts` as `host`, `player`, and `stage`. Stage sessions use their own `stageToken`, join through `joinStage`, and are accepted only for adapters that implement `stageSnapshot`.
+
+The Hub Session tab is not a matchmaking or account feature. It scans only host/player tokens stored on the current device, asks the server to validate those tokens through `inspectRoomSession`, and shows active rooms that still exist in memory and have not expired.
 
 ## Styling Architecture
 

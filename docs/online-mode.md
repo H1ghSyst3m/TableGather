@@ -20,10 +20,10 @@ The WebSocket server is generic. Werewolf-specific behavior enters through `were
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /health` | Health check, room count, and room protocol information. |
+| `GET /health` | Health check, expired-room cleanup, room count, and room protocol information. |
 | `WS /ws` | Room creation, joining, reconnecting, host commands, player commands, snapshots, and close/kick/transfer events. |
 
-The room server uses `InMemoryRoomStore`. All rooms and reconnect tokens are lost when the server process restarts.
+The room server uses `InMemoryRoomStore`. Rooms expire after 48 hours of inactivity, and all rooms and reconnect tokens are still lost when the server process restarts.
 
 ## Room Lifecycle
 
@@ -53,7 +53,13 @@ Host runs play
 Game ends or host resets
   -> host can reset to lobby
   -> host can close the room
+
+Room expires
+  -> server removes the room after 48 hours without meaningful activity
+  -> active host/player/stage clients receive roomClosed
 ```
+
+Meaningful activity refreshes `lastActivityAt`: create, join, resume, stage join, leave, disconnect, host commands, and player commands. Passive lookups such as `inspectRoom` and `inspectRoomSession` do not refresh expiry.
 
 ## Stage Lifecycle
 
@@ -104,11 +110,13 @@ Room sessions are token-based:
 - reconnect uses `resumeRoom` with the stored token;
 - disconnecting marks clients as disconnected but keeps the room/player while the server process lives.
 
-Browser storage keys are implementation details in `WerewolfRoomHostScreen` and `WerewolfRoomPlayerScreen`, including:
+Browser storage keys are implementation details centralized in `src/online/roomSessionStorage.ts`, including:
 
 - `tablegather-room-<CODE>-host`
 - `tablegather-room-<CODE>-player`
 - `tablegather-current-host-room`
+
+The Hub Session tab scans those local host/player tokens, validates them through `inspectRoomSession`, and lists only active sessions for the current browser. Invalid validated sessions are removed locally. Offline or unreachable server states do not remove local tokens.
 
 Host transfer promotes a connected lobby player to host by moving that player's token into the host slot and removing them from the player list. Transfer is only available in the lobby.
 
@@ -120,6 +128,7 @@ Stage tokens are not stored as host or player sessions. They are copied from the
 
 - `createRoom`
 - `inspectRoom`
+- `inspectRoomSession`
 - `joinStage`
 - `joinRoom`
 - `resumeRoom`
@@ -137,7 +146,7 @@ Common host commands:
 - `closeRoom`
 - `resetToLobby`
 
-`inspectRoom` returns joinability and public room status before a player submits a name. Werewolf host/player commands are defined in `src/games/werewolf/commands.ts`.
+`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. Werewolf host/player commands are defined in `src/games/werewolf/commands.ts`.
 
 ## Server Messages
 
@@ -145,6 +154,7 @@ The server sends:
 
 - `connected` with role, room code, client token, and server info;
 - `roomStatus` with `exists`, `joinable`, game id, phase, and player count when available;
+- `roomSessionStatus` with validity, role, game id, phase, player count, activity timestamps, expiry, and player name when available;
 - `snapshot` with a host, player, or stage snapshot;
 - `roomClosed`;
 - `hostTransferred`;
@@ -154,20 +164,23 @@ The server sends:
 
 Snapshots are the main data channel. UI components render from snapshots rather than assuming local server state.
 
-The room protocol advertises room lookup and Stage support through feature flags in `src/online/protocol.ts`, including `roomLookup`, `stageMode`, and `stageLocaleControl`.
+The room protocol advertises room lookup, Session tab support, expiry, and Stage support through feature flags in `src/online/protocol.ts`, including `roomLookup`, `roomSessions`, `roomExpiry`, `stageMode`, and `stageLocaleControl`.
 
 ## RoomManager Responsibilities
 
 `server/roomManager.ts` owns generic room lifecycle:
 
 - create room codes and tokens;
+- track room creation, last activity, and expiry timestamps;
 - join/rejoin/leave rooms;
 - mark disconnects;
 - validate host/player tokens;
+- inspect host/player sessions without resuming them;
 - transfer host;
 - create, rotate, validate, localize, and disable stage links;
 - kick players;
 - close rooms;
+- prune expired rooms;
 - reset to lobby through the game adapter;
 - route game-specific commands through the adapter;
 - build host, player, and stage snapshots.
@@ -270,9 +283,10 @@ Players do not submit night actions, day votes, or role choices. The host record
 
 V1 persistence is lightweight:
 
-- server rooms exist only while the Node server process lives;
-- host/player reconnect and stage links work only while the in-memory room store still exists;
+- server rooms exist only while the Node server process lives and for at most 48 hours after their last meaningful activity;
+- host/player reconnect and stage links work only while the in-memory room store still exists and the room has not expired;
 - local pass-and-play game persistence is browser-local only;
+- the Hub Session tab is browser-local and shows only validated host/player tokens stored on the current device;
 - no account, database, or cross-device long-term storage exists.
 
 If persistent rooms are added later, implement a new `RoomStore` and update this document with storage guarantees, token lifecycle, cleanup rules, and migration behavior.

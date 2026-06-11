@@ -6,7 +6,7 @@ export const commonEn = {
     "german": "German",
     "settings": "Settings",
     "interfaceLanguage": "Interface language",
-    "settingsSessionHint": "Room and local game sessions stay on this device. No account or database is used.",
+    "settingsSessionHint": "Room and local game sessions stay on this device. Room sessions expire after inactivity; no account or database is used.",
     "games": "Games",
     "session": "Session",
     "currentGame": "Current Game",

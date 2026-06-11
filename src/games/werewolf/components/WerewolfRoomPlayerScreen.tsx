@@ -5,6 +5,13 @@ import type { RoleId } from "../domain/types";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
 import { useRoomSocket } from "../../../online/useRoomSocket";
+import {
+  getStoredPlayerRoomToken,
+  removePlayerRoomSession,
+  removeRoomSessions,
+  saveHostRoomSession,
+  savePlayerRoomSession,
+} from "../../../online/roomSessionStorage";
 import { normalizePlayerName } from "../../../playerNames";
 import { resolveGameTheme } from "../../theme";
 import type { WerewolfPlayerRoomSnapshot } from "../roomTypes";
@@ -39,15 +46,13 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
     }
     if (message.type === "connected" && message.role === "player") {
       setToken(message.clientToken);
-      localStorage.setItem(playerStorageKey(message.roomCode), message.clientToken);
+      savePlayerRoomSession(message.roomCode, message.clientToken);
       setRoomCodeInput(message.roomCode);
       setServerError(null);
       if (window.location.pathname !== `/room/${message.roomCode}`) navigate(`/room/${message.roomCode}`);
     }
     if (message.type === "connected" && message.role === "host") {
-      localStorage.removeItem(playerStorageKey(message.roomCode));
-      localStorage.setItem(hostStorageKey(message.roomCode), message.clientToken);
-      localStorage.setItem("tablegather-current-host-room", message.roomCode);
+      saveHostRoomSession(message.roomCode, message.clientToken);
       setToken(null);
       setSnapshot(null);
       setServerError(null);
@@ -58,7 +63,10 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
       setSnapshot(message.snapshot as WerewolfPlayerRoomSnapshot);
     }
     if (message.type === "roomClosed" || message.type === "kicked") {
-      if (roomCode) localStorage.removeItem(playerStorageKey(roomCode));
+      if (roomCode) {
+        if (message.type === "roomClosed") removeRoomSessions(roomCode);
+        else removePlayerRoomSession(roomCode);
+      }
       setToken(null);
       setSnapshot(null);
       navigate("/");
@@ -68,7 +76,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
       if (message.message === "Room not found.") setRoomStatus("notFound");
       if (message.message === "The room is already in game.") setRoomStatus("started");
       if (isStalePlayerSessionError(message.message)) {
-        if (roomCode) localStorage.removeItem(playerStorageKey(roomCode));
+        if (roomCode) removePlayerRoomSession(roomCode);
         setToken(null);
         setSnapshot(null);
         if (message.message !== "Room not found.") setRoomStatus("joinable");
@@ -80,7 +88,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
     if (roomCode.length !== 4) return;
 
     const socket = connect();
-    const storedToken = localStorage.getItem(playerStorageKey(roomCode));
+    const storedToken = getStoredPlayerRoomToken(roomCode);
     const inspectOrResume = () => {
       if (storedToken) send({ type: "resumeRoom", roomCode, clientToken: storedToken });
       else send({ type: "inspectRoom", roomCode });
@@ -203,7 +211,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
   const alphaWolfInfected = snapshot.self.alphaWolfInfected === true;
   const role = roleId ? roleDefinitions[roleId] : null;
   const activeRoomCode = snapshot.code;
-  const activeToken = token ?? localStorage.getItem(playerStorageKey(activeRoomCode));
+  const activeToken = token ?? getStoredPlayerRoomToken(activeRoomCode);
 
   if (snapshot.phase === "roleReveal" && role && !snapshot.self.seenRole && activeToken) {
     return (
@@ -306,14 +314,6 @@ function normalizeRoomCode(value: string) {
   const roomMatch = value.toUpperCase().match(/ROOM\/([A-Z0-9]{1,4})/);
   if (roomMatch) return roomMatch[1];
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
-}
-
-function playerStorageKey(code: string) {
-  return `tablegather-room-${code}-player`;
-}
-
-function hostStorageKey(code: string) {
-  return `tablegather-room-${code}-host`;
 }
 
 function roomStatusText(status: JoinRoomStatus, playerCount: number | null, t: ReturnType<typeof useI18n>["t"]) {

@@ -38,7 +38,7 @@ Configuration:
 
 Main routes:
 
-- `/` - hub and game/mode selection.
+- `/` - hub game/mode selection and device-local room sessions.
 - `/play/werewolf` - local pass-and-play Werewolf.
 - `/room/create/werewolf` - create a Werewolf room as host.
 - `/room/<CODE>` - join or resume a room. A stored host token opens the host view; otherwise the player view opens.
@@ -48,7 +48,8 @@ Main routes:
 
 - Werewolf is fully playable in local and room mode.
 - Werewolf room mode supports host, player, and read-only stage clients.
-- Room state is in-memory on the server. Rooms, reconnect tokens, and stage tokens do not survive a server restart.
+- Room state is in-memory on the server. Rooms expire after 48 hours of inactivity; rooms, reconnect tokens, and stage tokens still do not survive a server restart.
+- The Hub Session tab shows active host/player rooms known to the current browser by validating stored local tokens with the room server.
 - Local pass-and-play Werewolf persists its current game in `localStorage`.
 - Privacy is enforced by snapshots: host snapshots can contain full game state, player snapshots only expose the requesting player's private role data and public table status, and stage snapshots expose only public room/game information.
 - No placeholder role art is bundled for Werewolf. Icon fallbacks remain until real assets are added.
@@ -71,7 +72,7 @@ Main routes:
 - `src/games/registry.ts` registers games and exposes playable game adapters.
 - `src/games/types.ts` defines `GameDefinition`, theme tokens, and the room adapter contract, including optional stage snapshots.
 - `src/games/werewolf/` contains the Werewolf definition, domain engine, room adapter, stage snapshot builder, components, i18n, theme, and game-specific CSS.
-- `src/online/` contains client-side WebSocket message types and the room socket hook.
+- `src/online/` contains client-side WebSocket message types, room session storage helpers, and the room socket hook.
 - `server/` contains the in-memory WebSocket room runtime.
 - `test/` contains Vitest coverage for domain behavior, room behavior, i18n, registry, clipboard, and UI rendering.
 

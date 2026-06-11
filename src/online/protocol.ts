@@ -1,4 +1,4 @@
-export const ROOM_PROTOCOL_VERSION = 14;
+export const ROOM_PROTOCOL_VERSION = 15;
 
 export const ROOM_PROTOCOL_FEATURES = [
   "transferHost",
@@ -12,6 +12,8 @@ export const ROOM_PROTOCOL_FEATURES = [
   "roomLookup",
   "stageMode",
   "stageLocaleControl",
+  "roomExpiry",
+  "roomSessions",
 ] as const;
 
 export type RoomProtocolFeature = (typeof ROOM_PROTOCOL_FEATURES)[number];
