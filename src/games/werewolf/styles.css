@@ -1,0 +1,4217 @@
+.werewolf-flow-shell {
+  --werewolf-footer-safe-bottom: min(env(safe-area-inset-bottom, 0px), 1rem);
+  --werewolf-footer-padding-bottom: max(0.75rem, var(--werewolf-footer-safe-bottom));
+  height: 100dvh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: 0;
+}
+
+.werewolf-flow-header {
+  position: relative;
+  z-index: 18;
+  display: grid;
+  grid-template-columns: minmax(4.75rem, 1fr) minmax(0, auto) minmax(4.75rem, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 3.45rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px rgba(10, 28, 35, 0.05);
+  backdrop-filter: blur(16px);
+}
+
+.werewolf-flow-header-side,
+.werewolf-flow-header-actions {
+  min-width: 0;
+}
+
+.werewolf-flow-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.werewolf-flow-title {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.15;
+  font-weight: 780;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.werewolf-flow-back,
+.werewolf-flow-icon-button {
+  min-height: 2.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.78rem;
+  background: var(--card-bg);
+  color: var(--text);
+  box-shadow: 0 4px 14px rgba(10, 28, 35, 0.04);
+}
+
+.werewolf-flow-back {
+  gap: 0.35rem;
+  padding: 0 0.75rem 0 0.55rem;
+  font-weight: 760;
+}
+
+.werewolf-flow-back svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.werewolf-flow-icon-button {
+  position: relative;
+  width: 2.35rem;
+  padding: 0;
+}
+
+.werewolf-flow-icon-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.werewolf-flow-tool-badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.2rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.65rem;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.werewolf-flow-body {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 0.75rem 0.75rem 0.9rem;
+}
+
+.werewolf-flow-footer {
+  position: relative;
+  z-index: 16;
+  border-top: 1px solid rgba(221, 216, 207, 0.78);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -10px 28px rgba(10, 28, 35, 0.07);
+  backdrop-filter: blur(16px);
+  padding: 0.65rem 0.75rem var(--werewolf-footer-padding-bottom);
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .werewolf-flow-shell {
+    --werewolf-footer-padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.werewolf-flow-footer-content,
+.werewolf-flow-action-stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.werewolf-flow-footer-content > .primary-action,
+.werewolf-flow-footer-content > .secondary-button.full,
+.werewolf-flow-action-stack .primary-action,
+.werewolf-flow-action-stack .secondary-button.full,
+.role-reveal-actions .primary-action.compact {
+  min-height: 3.25rem;
+  margin-top: 0;
+}
+
+.day-timer-panel {
+  border: 1px solid rgba(221, 216, 207, 0.9);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.74);
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.8rem;
+}
+
+.day-timer-panel.expired {
+  border-color: rgba(154, 38, 61, 0.38);
+  background: rgba(154, 38, 61, 0.08);
+}
+
+.day-timer-display {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.day-timer-display > svg {
+  background: var(--accent-soft);
+  border-radius: 0.7rem;
+  color: var(--accent-strong);
+  height: 2.7rem;
+  padding: 0.62rem;
+  width: 2.7rem;
+}
+
+.day-timer-panel.expired .day-timer-display > svg {
+  background: rgba(154, 38, 61, 0.12);
+  color: var(--danger);
+}
+
+.day-timer-display strong {
+  color: var(--text);
+  display: block;
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.day-timer-display span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 760;
+  margin-top: 0.18rem;
+}
+
+.day-timer-panel.expired .day-timer-display span {
+  color: var(--danger);
+}
+
+.day-timer-duration-grid {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.day-timer-duration-grid button {
+  border: 1px solid rgba(0, 97, 93, 0.18);
+  border-radius: 0.55rem;
+  background: #fff;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 820;
+  min-height: 2.25rem;
+}
+
+.day-timer-duration-grid button.active {
+  background: var(--accent-soft);
+  border-color: rgba(0, 97, 93, 0.34);
+}
+
+.day-timer-duration-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.day-timer-actions {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.day-timer-actions .secondary-button {
+  justify-content: center;
+  min-width: 0;
+  padding: 0 0.65rem;
+}
+
+.day-timer-actions .secondary-button svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+@media (max-width: 420px) {
+  .day-timer-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.werewolf-flow-footer-content .error-text {
+  margin: 0;
+  text-align: center;
+}
+
+.werewolf-flow-shell .panel,
+.werewolf-flow-shell .role-reveal-card,
+.werewolf-flow-shell .game-surface,
+.werewolf-flow-shell .room-header {
+  margin: 0;
+  border-radius: 0.9rem;
+  box-shadow: none;
+}
+
+.werewolf-flow-shell .game-surface {
+  gap: 0.65rem;
+}
+
+.werewolf-flow-shell .phase-heading {
+  gap: 0.6rem;
+}
+
+.werewolf-flow-shell .phase-heading > svg {
+  width: 2.65rem;
+  height: 2.65rem;
+  padding: 0.62rem;
+}
+
+.werewolf-flow-shell .game-surface h2 {
+  font-size: 1.36rem;
+}
+
+.werewolf-flow-shell .player-grid {
+  gap: 0.5rem;
+}
+
+.werewolf-flow-shell .player-grid button {
+  min-height: 3.3rem;
+}
+
+.night-result-card {
+  margin: 0;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.85rem;
+  font-weight: 820;
+  line-height: 1.3;
+}
+
+.night-result-card.good {
+  border-color: #b9d8c5;
+  background: #e7f4ec;
+  color: #15573a;
+}
+
+.night-result-card.evil {
+  border-color: #e3b7c1;
+  background: #f4dde2;
+  color: #84243a;
+}
+
+.role-editor-heading-actions {
+  max-width: 62%;
+  justify-content: flex-end;
+}
+
+.restore-panel h2 {
+  margin-top: 0;
+}
+
+.role-count-list {
+  display: grid;
+  gap: 0;
+}
+
+.role-count-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem auto;
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 3.2rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.role-count-row:first-child {
+  border-top: 0;
+}
+
+.night-step-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  background: #fbfaf8;
+  border: 1px solid var(--border);
+}
+
+.game-flow-shell .night-step-card {
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.night-step-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.awake-player-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.awake-player-chips span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.awake-player-chips span::after {
+  content: ":";
+}
+
+.awake-player-chips div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.awake-player-chips strong {
+  min-height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.65rem;
+  color: var(--text);
+  background: #fff;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.awake-player-chips strong.muted-text {
+  color: var(--muted);
+  background: var(--surface-tint);
+  opacity: 0.72;
+}
+
+.inline-player-selector {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.player-overview-sheet {
+  width: min(100%, 32rem);
+  overflow-x: hidden;
+}
+
+.gm-player-overview-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.gm-player-overview-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(5.8rem, auto);
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 3.15rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.gm-player-overview-row:first-child {
+  border-top: 0;
+}
+
+.gm-player-overview-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.gm-player-overview-main strong,
+.gm-player-overview-statuses {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gm-player-overview-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+}
+
+.gm-player-status-chip {
+  min-height: 1.22rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.34rem 0 0.24rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.werewolf-status-icon {
+  width: 0.86rem;
+  height: 0.86rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.werewolf-status-icon svg {
+  width: 0.74rem;
+  height: 0.74rem;
+}
+
+.gm-role-button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2rem;
+  height: auto;
+  justify-self: end;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.15;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.witch-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.werewolf-action-icon {
+  width: 2.45rem;
+  height: 2.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.werewolf-action-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.night-action-stack {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.night-action-block,
+.night-action-note,
+.night-report-row {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+  background: #fbfaf8;
+}
+
+.night-action-heading,
+.night-action-note {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.night-action-heading > div,
+.night-action-note > span,
+.night-report-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.night-action-heading span,
+.night-action-note span span,
+.night-report-main span {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.night-action-button {
+  min-height: 2.75rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--text);
+  background: #fff;
+  font-weight: 850;
+}
+
+.night-action-button.selected {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.night-action-choice-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.night-action-choice-grid button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 4.2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  text-align: left;
+  color: var(--text);
+  background: #fff;
+}
+
+.night-action-choice-grid button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.night-action-choice-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.night-action-choice-copy span {
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.night-report-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.night-report-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.night-report-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.night-report-team-badge {
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.65rem 0 0.35rem;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-weight: 850;
+}
+
+.night-report-team-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 0;
+  background: transparent;
+}
+
+.night-report-team-icon svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.night-report-empty {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.game-log-sheet {
+  display: grid;
+  gap: 0.85rem;
+  overflow: hidden;
+}
+
+.game-log-sheet .log-list,
+.game-log-sheet .muted-text {
+  max-height: min(58vh, 28rem);
+  overflow-y: auto;
+}
+
+.game-theme-werewolf .room-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+}
+
+.game-theme-werewolf .room-header.compact {
+  grid-template-columns: 1fr;
+}
+
+.game-theme-werewolf .room-header img,
+.game-theme-werewolf .room-header > svg {
+  width: 8.75rem;
+  height: 8.75rem;
+  min-width: 8.75rem;
+  border-radius: 0.9rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  object-fit: contain;
+}
+
+.game-theme-werewolf .room-header .secondary-button {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.room-link-input {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  color: var(--muted);
+  background: #fff;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copy-feedback {
+  grid-column: 1 / -1;
+  margin: -0.35rem 0 0;
+  color: var(--amber);
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.transfer-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.transfer-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.transfer-list button {
+  min-height: 2.8rem;
+  justify-content: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: #fff;
+  color: var(--text);
+  padding: 0 0.85rem;
+  font-weight: 800;
+}
+
+.setup-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.game-flow-shell .setup-shell,
+.werewolf-flow-shell .setup-shell {
+  gap: 0.75rem;
+}
+
+.setup-shell-content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.setup-shell-progress {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 1.35rem;
+}
+
+.setup-shell-progress span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 820;
+}
+
+.setup-shell-header {
+  position: sticky;
+  top: 4.65rem;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 2.7rem 1fr auto;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 -1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.game-flow-shell .setup-shell-header {
+  top: -0.65rem;
+  margin: -0.65rem -0.75rem 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.setup-shell-header h1 {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.setup-shell-header > span:last-child {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.setup-header-spacer {
+  width: 2.7rem;
+  height: 2.7rem;
+}
+
+.setup-button-row {
+  margin-top: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.setup-button-row .secondary-button,
+.setup-button-row .text-button {
+  flex: 1 1 11rem;
+}
+
+.sticky-action-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.assignment-choice {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+
+.role-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.role-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: #fbfaf8;
+}
+
+.summary-stat {
+  display: grid;
+  place-items: center;
+  min-height: 4.4rem;
+  padding: 0.65rem 0.35rem;
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+
+.summary-stat:first-child {
+  border-left: 0;
+}
+
+.summary-stat strong {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.summary-stat span {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.summary-good strong {
+  color: var(--accent);
+}
+
+.summary-warn strong {
+  color: var(--amber);
+}
+
+.summary-bad strong {
+  color: var(--danger);
+}
+
+.role-balance-card,
+.auto-villager-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: #fbfaf8;
+}
+
+.role-balance-card div,
+.auto-villager-card div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.role-balance-card span,
+.auto-villager-card span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.auto-villager-card {
+  justify-content: flex-start;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-color: rgba(0, 97, 93, 0.18);
+}
+
+.auto-villager-card svg {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0.45rem;
+  border-radius: 0.75rem;
+  color: #fff;
+  background: var(--accent);
+}
+
+.rules-panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  background: #fff;
+}
+
+.rules-toggle {
+  width: 100%;
+  min-height: 3.1rem;
+  padding: 0 0.9rem;
+  border: 0;
+  justify-content: space-between;
+  background: #fbfaf8;
+  color: var(--text);
+  font-weight: 850;
+}
+
+.rules-body {
+  display: grid;
+  gap: 1rem;
+  padding: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.category-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: #fbfaf8;
+}
+
+.category-tabs button {
+  min-height: 2.8rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.category-tabs button.active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.role-group {
+  display: grid;
+  gap: 0;
+}
+
+.role-group h4 {
+  margin: 0.4rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.role-count-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.7rem;
+  flex: 1;
+}
+
+.role-count-main strong {
+  overflow-wrap: anywhere;
+}
+
+.role-count-main > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.role-count-main small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.role-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.7rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.role-icon-chip img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.night-report-role-icon {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 0.55rem;
+}
+
+.night-report-role-icon svg,
+.night-report-role-icon img {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.role-info-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.6rem;
+  color: var(--muted);
+  background: #f3efea;
+}
+
+.role-info-modal,
+.role-rules-modal {
+  width: min(100%, 27rem);
+  max-height: min(84vh, 42rem);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card-bg);
+  box-shadow: 0 24px 70px rgba(10, 28, 35, 0.24);
+  padding: 1rem;
+}
+
+.role-rules-modal {
+  width: min(100%, 34rem);
+  height: min(92vh, 48rem);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 0;
+}
+
+.role-rule-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.role-rule-list > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.role-info-description {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.role-info-modal .result-note {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.role-rule-list article {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: #fbfaf8;
+}
+
+.role-rule-list span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.role-rules-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.role-rules-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.role-rules-header span {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.role-rules-content {
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.role-rules-category {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.2rem;
+}
+
+.role-rules-category h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.role-rules-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  background: #fbfaf8;
+}
+
+.role-rules-card h4 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.role-rules-card span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.role-rule-list.compact {
+  gap: 0.45rem;
+}
+
+.role-rule-list.compact details {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.role-rule-list.compact summary {
+  cursor: pointer;
+  padding: 0.65rem 0.75rem;
+  font-weight: 800;
+}
+
+.role-rule-list.compact p {
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.role-tone-wolf .role-icon-chip {
+  color: #fff;
+  background: #0f2f35;
+}
+
+.role-tone-specialGoal .role-icon-chip {
+  color: #fff;
+  background: var(--amber);
+}
+
+.manual-assignment-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.manual-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 12rem);
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: #fbfaf8;
+}
+
+.manual-assignment-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.manual-assignment-row select {
+  min-width: 0;
+  min-height: 2.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--text);
+  padding: 0 0.65rem;
+}
+
+.quota-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.quota-badges span {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.7rem;
+  color: var(--muted);
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.quota-badges span.complete {
+  color: var(--accent-strong);
+  border-color: rgba(0, 97, 93, 0.25);
+  background: var(--accent-soft);
+}
+
+.role-reveal-screen {
+  min-height: calc(100vh - 5rem);
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  gap: 1rem;
+  padding: 1rem 0 0;
+}
+
+.game-flow-shell .role-reveal-screen,
+.werewolf-flow-shell .role-reveal-screen {
+  min-height: 100%;
+  grid-template-rows: auto auto auto minmax(12rem, 1fr);
+  gap: 0.65rem;
+  padding: 0;
+}
+
+.reveal-header,
+.reveal-player-badge,
+.role-reveal-actions {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.reveal-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.reveal-dots span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #d9d3c9;
+}
+
+.reveal-dots span.current {
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--accent);
+}
+
+.reveal-dots span.done {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.reveal-player-badge {
+  gap: 0.25rem;
+  margin: 0 auto;
+  padding: 0.85rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.game-flow-shell .reveal-player-badge,
+.werewolf-flow-shell .reveal-player-badge {
+  padding: 0.65rem 1rem;
+  border-radius: 0.85rem;
+  box-shadow: none;
+}
+
+.reveal-player-badge span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.reveal-player-badge strong {
+  font-size: 1.55rem;
+  line-height: 1.05;
+}
+
+.game-flow-shell .reveal-player-badge strong,
+.werewolf-flow-shell .reveal-player-badge strong {
+  font-size: 1.28rem;
+}
+
+.reveal-instruction {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.reveal-stack {
+  position: relative;
+  width: clamp(12.5rem, 62vw, 16rem);
+  aspect-ratio: 5 / 7;
+  align-self: center;
+  justify-self: center;
+}
+
+.game-flow-shell .reveal-stack,
+.werewolf-flow-shell .reveal-stack {
+  width: clamp(12.25rem, 56vw, 14.5rem);
+}
+
+.role-layer,
+.cover-card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 1.35rem;
+  text-align: center;
+}
+
+.role-layer {
+  align-content: center;
+  gap: 0.75rem;
+  padding: 1.2rem;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+  overflow-y: auto;
+}
+
+.role-layer svg,
+.role-layer-icon {
+  width: 3rem;
+  height: 3rem;
+  padding: 0.65rem;
+  border-radius: 1rem;
+  color: #fff;
+  background: var(--accent);
+}
+
+.role-layer-icon {
+  display: block;
+  padding: 0;
+  object-fit: cover;
+}
+
+.role-layer strong {
+  font-size: 1.55rem;
+}
+
+.reveal-former-role {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.role-layer p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.cover-card {
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  color: #fff;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.22), transparent 7rem),
+    linear-gradient(150deg, #00615d, #092b32);
+  box-shadow: 0 16px 34px rgba(9, 43, 50, 0.2);
+}
+
+.cover-card-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-card:focus-visible {
+  outline: 3px solid rgba(0, 97, 93, 0.25);
+  outline-offset: 4px;
+}
+
+.cover-card::before {
+  content: "";
+  position: absolute;
+  inset: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 1rem;
+}
+
+.cover-card-mark svg {
+  width: 5rem;
+  height: 5rem;
+  opacity: 0.34;
+}
+
+.cover-card-hint {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1.2rem;
+  z-index: 1;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 800;
+  font-size: 0.84rem;
+}
+
+.role-reveal-actions {
+  gap: 0.45rem;
+  padding-bottom: 0.5rem;
+}
+
+.werewolf-flow-shell .role-reveal-actions {
+  justify-items: stretch;
+  text-align: center;
+  padding-bottom: 0;
+}
+
+.role-reveal-inline-actions {
+  padding: 0 1rem 1rem;
+}
+
+.reveal-action-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reveal-action-row.with-info {
+  grid-template-columns: minmax(0, 1fr) 3.25rem;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.reveal-action-row .primary-action {
+  margin-top: 0;
+}
+
+.reveal-info-icon-button {
+  width: 3.25rem;
+  min-height: 3.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: #fff;
+  color: var(--accent-strong);
+  box-shadow: 0 8px 18px rgba(10, 28, 35, 0.08);
+}
+
+.reveal-info-icon-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.player-role-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.player-role-card h2 {
+  font-size: 1.45rem;
+}
+
+.player-role-card .primary-action.compact {
+  margin-top: 0;
+}
+
+.player-status-panel {
+  margin-top: 0;
+}
+
+.player-status-panel .player-row {
+  min-height: 3rem;
+}
+
+.game-theme-werewolf,
+.werewolf-settings-sheet,
+body:has(.game-theme-werewolf) .game-confirm-sheet,
+.role-info-modal,
+.role-rules-modal,
+.player-overview-sheet,
+.game-log-sheet {
+  --wolf-bg: #050b13;
+  --wolf-bg-soft: #07101b;
+  --wolf-panel: #101a29;
+  --wolf-panel-soft: #162438;
+  --wolf-panel-raised: #1a2b42;
+  --wolf-line: rgba(128, 157, 184, 0.24);
+  --wolf-line-strong: rgba(135, 185, 207, 0.36);
+  --wolf-text: #f4eadb;
+  --wolf-muted: #9fb2c4;
+  --wolf-teal: #2fb8b2;
+  --wolf-teal-strong: #74e7df;
+  --wolf-teal-soft: rgba(47, 184, 178, 0.14);
+  --wolf-burgundy: #a83a52;
+  --wolf-burgundy-soft: rgba(168, 58, 82, 0.18);
+  --wolf-burgundy-deep: #5f1829;
+  --wolf-good: #54cf94;
+  --wolf-good-soft: rgba(84, 207, 148, 0.16);
+  --wolf-amber: #d9a95d;
+  --accent: var(--wolf-teal);
+  --accent-strong: var(--wolf-teal-strong);
+  --accent-soft: var(--wolf-teal-soft);
+  --surface: var(--wolf-panel);
+  --surface-tint: var(--wolf-bg);
+  --app-bg: var(--wolf-bg-soft);
+  --card-bg: var(--wolf-panel);
+  --border: var(--wolf-line);
+  --text: var(--wolf-text);
+  --muted: var(--wolf-muted);
+  --danger: var(--wolf-burgundy);
+  --amber: var(--wolf-amber);
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+
+  color-scheme: dark;
+}
+
+.game-theme-werewolf {
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(62, 135, 178, 0.2), transparent 24rem),
+    radial-gradient(ellipse at 92% 18%, rgba(47, 184, 178, 0.1), transparent 18rem),
+    linear-gradient(180deg, #07101b 0%, #050b13 58%, #03070d 100%);
+}
+
+.game-theme-werewolf .app-frame {
+  background: var(--wolf-bg-soft);
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .werewolf-flow-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(7, 16, 27, 0.82), rgba(5, 11, 19, 0.96)),
+    radial-gradient(ellipse at 50% -8%, rgba(99, 168, 199, 0.12), transparent 16rem);
+}
+
+.game-theme-werewolf .werewolf-flow-header,
+.game-theme-werewolf .werewolf-flow-footer {
+  border-color: var(--wolf-line);
+  background: rgba(9, 18, 31, 0.94);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.game-theme-werewolf .werewolf-flow-footer {
+  border-top-width: 1px;
+  box-shadow:
+    0 -8px 24px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.game-theme-werewolf .werewolf-flow-title {
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .werewolf-flow-body {
+  position: relative;
+  z-index: 1;
+  scrollbar-color: var(--wolf-line-strong) transparent;
+}
+
+.game-theme-werewolf .werewolf-flow-back,
+.game-theme-werewolf .werewolf-flow-icon-button,
+.game-theme-werewolf .reveal-info-icon-button,
+.game-theme-werewolf .role-info-button,
+.role-info-modal .icon-button,
+.role-rules-modal .icon-button,
+.werewolf-settings-sheet .icon-button,
+.player-overview-sheet .icon-button,
+.game-log-sheet .icon-button {
+  border: 1px solid var(--wolf-line);
+  border-radius: 0.95rem;
+  background: rgba(18, 32, 50, 0.92);
+  color: var(--wolf-text);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.game-theme-werewolf .werewolf-flow-tool-badge {
+  border-color: var(--wolf-bg-soft);
+  background: var(--wolf-burgundy);
+  box-shadow: 0 4px 10px rgba(168, 58, 82, 0.24);
+}
+
+.game-theme-werewolf .primary-action,
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.primary {
+  border: 1px solid rgba(116, 231, 223, 0.38);
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(55, 205, 197, 0.96), rgba(19, 128, 124, 0.98)),
+    var(--wolf-teal);
+  color: #f9fffb;
+  box-shadow:
+    0 10px 22px rgba(4, 70, 70, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.game-theme-werewolf .primary-action.danger-action,
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
+  border-color: rgba(255, 126, 149, 0.34);
+  background:
+    linear-gradient(180deg, #b8465e, #751f35),
+    var(--wolf-burgundy);
+  box-shadow:
+    0 10px 22px rgba(95, 24, 41, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.game-theme-werewolf button:disabled {
+  filter: saturate(0.7);
+  opacity: 0.62;
+}
+
+.game-theme-werewolf .secondary-button,
+.game-theme-werewolf .text-button,
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.secondary {
+  border: 1px solid var(--wolf-line);
+  background: rgba(26, 43, 66, 0.86);
+  color: var(--wolf-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .text-button {
+  background: transparent;
+  color: var(--wolf-muted);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .panel,
+.game-theme-werewolf .role-reveal-card,
+.game-theme-werewolf .game-surface,
+.game-theme-werewolf .room-header,
+.werewolf-settings-sheet,
+body:has(.game-theme-werewolf) .game-confirm-sheet,
+.role-info-modal,
+.role-rules-modal,
+.player-overview-sheet,
+.game-log-sheet {
+  border: 1px solid var(--wolf-line);
+  border-radius: 1.05rem;
+  background:
+    linear-gradient(180deg, rgba(18, 31, 48, 0.96), rgba(10, 20, 34, 0.98));
+  color: var(--wolf-text);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .werewolf-flow-shell .panel,
+.game-theme-werewolf .werewolf-flow-shell .role-reveal-card,
+.game-theme-werewolf .werewolf-flow-shell .game-surface,
+.game-theme-werewolf .werewolf-flow-shell .room-header {
+  border-radius: 1.05rem;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .game-surface h2,
+.game-theme-werewolf .panel-heading h3,
+.game-theme-werewolf .role-rules-card h4,
+.role-info-modal h3,
+.role-rules-modal h2,
+.werewolf-settings-sheet h3,
+body:has(.game-theme-werewolf) .game-confirm-sheet h3 {
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .section-label,
+.game-theme-werewolf .muted-text,
+.game-theme-werewolf .setup-shell-progress span,
+.game-theme-werewolf .panel-heading span,
+.role-info-modal .role-info-description,
+.role-rules-modal span,
+.role-rule-list > p,
+.werewolf-settings-sheet p,
+.werewolf-settings-sheet span,
+body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .phase-heading > svg,
+.game-theme-werewolf .role-icon-chip,
+.game-theme-werewolf .auto-villager-card svg,
+.game-theme-werewolf .role-layer svg {
+  border: 1px solid rgba(116, 231, 223, 0.2);
+  border-radius: 0.9rem;
+  background:
+    linear-gradient(180deg, rgba(26, 65, 91, 0.92), rgba(13, 34, 55, 0.96));
+  color: #c8fff9;
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.game-theme-werewolf .night-step-card,
+.game-theme-werewolf .night-action-block,
+.game-theme-werewolf .night-action-note,
+.game-theme-werewolf .night-report-row,
+.game-theme-werewolf .gm-only-info,
+.game-theme-werewolf .role-balance-card,
+.game-theme-werewolf .auto-villager-card,
+.game-theme-werewolf .rules-panel,
+.game-theme-werewolf .role-summary-grid,
+.game-theme-werewolf .role-rule-list article,
+.game-theme-werewolf .role-rules-card,
+.game-theme-werewolf .role-rule-list.compact details,
+.game-theme-werewolf .manual-assignment-row,
+.game-theme-werewolf .transfer-list button,
+.game-theme-werewolf .settings-note {
+  border-color: var(--wolf-line);
+  background:
+    linear-gradient(180deg, rgba(22, 37, 57, 0.74), rgba(12, 24, 39, 0.9));
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .night-step-card,
+.game-theme-werewolf .night-action-block,
+.game-theme-werewolf .night-action-note,
+.game-theme-werewolf .night-report-row,
+.game-theme-werewolf .role-summary-grid,
+.game-theme-werewolf .rules-panel,
+.game-theme-werewolf .manual-assignment-row {
+  border-width: 1px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .auto-villager-card {
+  color: var(--wolf-text);
+  background:
+    linear-gradient(180deg, rgba(47, 184, 178, 0.14), rgba(14, 25, 40, 0.94));
+}
+
+.game-theme-werewolf .rules-toggle,
+.game-theme-werewolf .category-tabs,
+.game-theme-werewolf .category-tabs button,
+.game-theme-werewolf .night-action-button,
+.game-theme-werewolf .night-action-choice-grid button,
+.game-theme-werewolf .gm-role-button {
+  background: rgba(9, 18, 31, 0.72);
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .rules-body {
+  border-color: var(--wolf-line);
+  background:
+    linear-gradient(180deg, rgba(10, 20, 34, 0.62), rgba(5, 11, 19, 0.34));
+}
+
+.game-theme-werewolf .option-group p {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .option-group button {
+  border: 1px solid rgba(128, 157, 184, 0.34);
+  background:
+    linear-gradient(180deg, rgba(20, 34, 53, 0.92), rgba(12, 23, 38, 0.98));
+  color: var(--wolf-text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 6px 14px rgba(0, 0, 0, 0.1);
+}
+
+.game-theme-werewolf .option-group button span {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .option-group button.active,
+.game-theme-werewolf .option-group button[aria-pressed="true"] {
+  border-color: rgba(116, 231, 223, 0.56);
+  background:
+    linear-gradient(180deg, rgba(47, 184, 178, 0.26), rgba(15, 72, 84, 0.84));
+  color: #f9fffb;
+  box-shadow:
+    0 0 0 1px rgba(116, 231, 223, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+}
+
+.game-theme-werewolf .option-group button.active span,
+.game-theme-werewolf .option-group button[aria-pressed="true"] span {
+  color: rgba(244, 234, 219, 0.82);
+}
+
+.game-theme-werewolf .toggle-row {
+  border-top: 1px solid var(--wolf-line);
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .toggle-row small {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .toggle-row input {
+  accent-color: var(--wolf-teal);
+}
+
+.game-theme-werewolf .category-tabs button.active,
+.game-theme-werewolf .night-action-button.selected,
+.game-theme-werewolf .night-action-choice-grid button.active {
+  border-color: var(--wolf-teal);
+  background: linear-gradient(180deg, rgba(47, 184, 178, 0.26), rgba(19, 67, 78, 0.78));
+  color: #f9fffb;
+}
+
+.game-theme-werewolf .player-grid button {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(128, 157, 184, 0.28);
+  border-radius: 0.95rem;
+  background:
+    linear-gradient(180deg, rgba(20, 34, 53, 0.96), rgba(12, 23, 38, 0.98));
+  color: var(--wolf-text);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+
+.game-theme-werewolf .player-grid button strong {
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .player-grid button span {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .player-grid button.selected {
+  border-color: rgba(255, 116, 144, 0.6);
+  background:
+    linear-gradient(180deg, rgba(168, 58, 82, 0.58), rgba(95, 24, 41, 0.84));
+  box-shadow:
+    0 0 0 1px rgba(255, 126, 149, 0.2),
+    0 10px 22px rgba(95, 24, 41, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+}
+
+.game-theme-werewolf .progress-rail span {
+  background: rgba(128, 157, 184, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .progress-rail span.active {
+  background: linear-gradient(180deg, #d85a73, var(--wolf-burgundy));
+}
+
+.game-theme-werewolf input,
+.game-theme-werewolf select,
+.game-theme-werewolf .room-link-input,
+.game-theme-werewolf .add-player-form input,
+.game-theme-werewolf .manual-assignment-row select {
+  border: 1px solid var(--wolf-line);
+  background: rgba(5, 11, 19, 0.72);
+  color: var(--wolf-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf input::placeholder {
+  color: rgba(159, 178, 196, 0.72);
+}
+
+.game-theme-werewolf .room-link-input {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .copy-feedback {
+  color: var(--wolf-amber);
+}
+
+.game-theme-werewolf .quota-badges span,
+.game-theme-werewolf .awake-player-chips strong {
+  border-color: var(--wolf-line);
+  background: rgba(9, 18, 31, 0.72);
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .quota-badges span.complete {
+  border-color: rgba(116, 231, 223, 0.36);
+  background: var(--wolf-teal-soft);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .reveal-dots span {
+  background: rgba(128, 157, 184, 0.32);
+}
+
+.game-theme-werewolf .reveal-dots span.current {
+  background: var(--wolf-burgundy);
+  box-shadow: 0 0 0 2px rgba(168, 58, 82, 0.18);
+}
+
+.game-theme-werewolf .reveal-dots span.done {
+  background: var(--wolf-teal-soft);
+  box-shadow: inset 0 0 0 1px var(--wolf-teal);
+}
+
+.game-theme-werewolf .reveal-player-badge,
+.game-theme-werewolf .role-layer {
+  border: 1px solid var(--wolf-line);
+  background:
+    linear-gradient(180deg, rgba(22, 36, 56, 0.96), rgba(10, 20, 34, 0.98));
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .cover-card {
+  border: 1px solid rgba(116, 231, 223, 0.3);
+  background:
+    radial-gradient(circle at 32% 18%, rgba(107, 183, 205, 0.2), transparent 5.4rem),
+    linear-gradient(155deg, #14354e 0%, #0a2437 42%, #061723 100%);
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.game-theme-werewolf .cover-card::before {
+  border: 1px solid rgba(198, 244, 239, 0.28);
+}
+
+.game-theme-werewolf .cover-card::after {
+  content: "";
+  position: absolute;
+  inset: 1.45rem;
+  z-index: 0;
+  border-radius: 0.9rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(5, 11, 19, 0.24));
+  pointer-events: none;
+}
+
+.game-theme-werewolf .cover-card-mark {
+  position: relative;
+  z-index: 1;
+}
+
+.game-theme-werewolf .cover-card-mark svg {
+  color: rgba(244, 234, 219, 0.72);
+  opacity: 0.58;
+}
+
+.game-theme-werewolf .cover-card-hint {
+  position: absolute;
+  left: 0.8rem;
+  right: 0.8rem;
+  bottom: 1.05rem;
+  z-index: 1;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  white-space: normal;
+  color: rgba(244, 234, 219, 0.92);
+}
+
+.game-theme-werewolf .cover-card-hint svg {
+  flex: 0 0 auto;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.game-theme-werewolf .night-result-card {
+  border-width: 1px;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .night-result-card.good {
+  border-color: rgba(84, 207, 148, 0.42);
+  background: linear-gradient(180deg, rgba(84, 207, 148, 0.16), rgba(12, 35, 29, 0.92));
+  color: #dffceb;
+}
+
+.game-theme-werewolf .night-result-card.evil {
+  border-color: rgba(255, 126, 149, 0.42);
+  background: linear-gradient(180deg, rgba(168, 58, 82, 0.18), rgba(42, 7, 17, 0.92));
+  color: #ffdce2;
+}
+
+.game-theme-werewolf .room-header img,
+.game-theme-werewolf .room-header > svg {
+  border-width: 1px;
+  border-color: var(--wolf-line-strong);
+  background: #f7f4ec;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.game-theme-werewolf .player-row {
+  border-color: var(--wolf-line);
+}
+
+.game-theme-werewolf .player-row button {
+  border: 1px solid var(--wolf-line);
+  background: rgba(18, 32, 50, 0.92);
+  color: var(--wolf-muted);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.game-theme-werewolf .player-row button:hover,
+.game-theme-werewolf .player-row button:focus-visible {
+  border-color: var(--wolf-teal);
+  color: var(--wolf-teal-strong);
+  outline: 2px solid rgba(116, 231, 223, 0.24);
+  outline-offset: 2px;
+}
+
+.game-theme-werewolf .valid-text {
+  color: var(--wolf-good);
+}
+
+.game-theme-werewolf .error-text,
+.game-theme-werewolf .text-button.danger {
+  color: #ff8ea3;
+}
+
+.role-info-modal .role-rule-list article,
+.role-rules-modal .role-rules-card,
+.role-rules-modal .role-rule-list.compact details,
+.werewolf-settings-sheet .settings-note {
+  border-color: var(--wolf-line);
+  background: rgba(9, 18, 31, 0.74);
+}
+
+.role-rules-modal .role-rules-header {
+  border-color: var(--wolf-line);
+  background: linear-gradient(180deg, rgba(13, 24, 39, 0.98), rgba(8, 15, 26, 0.96));
+}
+
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action {
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf,
+.werewolf-settings-sheet,
+body:has(.game-theme-werewolf) .game-confirm-sheet,
+.role-info-modal,
+.role-rules-modal,
+.player-overview-sheet,
+.game-log-sheet {
+  --wolf-bg: #020a13;
+  --wolf-bg-soft: #04111f;
+  --wolf-panel: #071626;
+  --wolf-panel-soft: #0b1d31;
+  --wolf-panel-raised: #10263d;
+  --wolf-line: rgba(123, 181, 218, 0.22);
+  --wolf-line-strong: rgba(93, 216, 247, 0.48);
+  --wolf-text: #f4f9ff;
+  --wolf-muted: #8fa8c2;
+  --wolf-teal: #3bd7f0;
+  --wolf-teal-strong: #84efff;
+  --wolf-teal-soft: rgba(59, 215, 240, 0.14);
+  --wolf-burgundy: #e45d7a;
+  --wolf-burgundy-soft: rgba(228, 93, 122, 0.16);
+  --wolf-burgundy-deep: #4b1427;
+  --wolf-good: #7ddb9b;
+  --wolf-good-soft: rgba(125, 219, 155, 0.14);
+  --wolf-amber: #e7b96f;
+  --accent: var(--wolf-teal);
+  --accent-strong: var(--wolf-teal-strong);
+  --accent-soft: var(--wolf-teal-soft);
+  --surface: var(--wolf-panel);
+  --surface-tint: var(--wolf-bg);
+  --app-bg: var(--wolf-bg-soft);
+  --card-bg: var(--wolf-panel);
+  --border: var(--wolf-line);
+  --text: var(--wolf-text);
+  --muted: var(--wolf-muted);
+  --danger: var(--wolf-burgundy);
+  --amber: var(--wolf-amber);
+  --shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+}
+
+.game-theme-werewolf {
+  background:
+    radial-gradient(ellipse at 50% -8%, rgba(51, 145, 196, 0.22), transparent 20rem),
+    linear-gradient(180deg, #061423 0%, #020a13 62%, #01060c 100%);
+}
+
+.game-theme-werewolf .werewolf-flow-shell {
+  background:
+    linear-gradient(180deg, rgba(5, 17, 30, 0.94), rgba(2, 10, 19, 0.98)),
+    radial-gradient(ellipse at 78% 16%, rgba(59, 215, 240, 0.08), transparent 22rem);
+}
+
+.game-theme-werewolf .werewolf-flow-header,
+.game-theme-werewolf .werewolf-flow-footer {
+  border-color: rgba(123, 181, 218, 0.22);
+  background: rgba(3, 12, 22, 0.96);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+
+.game-theme-werewolf .werewolf-flow-header {
+  min-height: 3.75rem;
+  border-bottom-color: rgba(123, 181, 218, 0.26);
+}
+
+.game-theme-werewolf .werewolf-flow-footer {
+  border-top-color: rgba(123, 181, 218, 0.3);
+  padding-top: 0.7rem;
+  background:
+    linear-gradient(180deg, rgba(4, 14, 25, 0.9), rgba(2, 10, 19, 0.98)),
+    rgba(3, 12, 22, 0.96);
+}
+
+.game-theme-werewolf .werewolf-flow-title {
+  font-size: 1.04rem;
+  font-weight: 760;
+  letter-spacing: 0.01em;
+}
+
+.game-theme-werewolf .werewolf-flow-back,
+.game-theme-werewolf .werewolf-flow-icon-button,
+.game-theme-werewolf .reveal-info-icon-button,
+.game-theme-werewolf .role-info-button,
+.role-info-modal .icon-button,
+.role-rules-modal .icon-button,
+.werewolf-settings-sheet .icon-button,
+.player-overview-sheet .icon-button,
+.game-log-sheet .icon-button {
+  border: 1px solid rgba(123, 181, 218, 0.28);
+  border-radius: 0.85rem;
+  background: rgba(12, 29, 49, 0.78);
+  color: var(--wolf-text);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .werewolf-flow-back:hover,
+.game-theme-werewolf .werewolf-flow-icon-button:hover,
+.game-theme-werewolf .reveal-info-icon-button:hover,
+.game-theme-werewolf .role-info-button:hover {
+  border-color: rgba(132, 239, 255, 0.58);
+  background: rgba(16, 49, 76, 0.78);
+}
+
+.game-theme-werewolf .primary-action,
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.primary,
+.game-theme-werewolf .secondary-button.full {
+  border: 1px solid rgba(77, 218, 246, 0.62);
+  border-radius: 0.72rem;
+  background:
+    linear-gradient(180deg, rgba(14, 72, 101, 0.7), rgba(6, 40, 63, 0.92)),
+    rgba(8, 35, 56, 0.98);
+  color: var(--wolf-text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(59, 215, 240, 0.06);
+  font-weight: 820;
+  letter-spacing: 0.02em;
+}
+
+.game-theme-werewolf .werewolf-flow-footer-content > .primary-action,
+.game-theme-werewolf .werewolf-flow-footer-content > .secondary-button.full,
+.game-theme-werewolf .werewolf-flow-action-stack .primary-action,
+.game-theme-werewolf .role-reveal-actions .primary-action.compact {
+  position: relative;
+  min-height: 3.4rem;
+  padding: 0 3rem 0 1rem;
+  overflow: hidden;
+  text-transform: none;
+}
+
+.game-theme-werewolf .werewolf-flow-footer-content > .primary-action::after,
+.game-theme-werewolf .werewolf-flow-action-stack .primary-action::after,
+.game-theme-werewolf .role-reveal-actions .primary-action.compact::after {
+  content: "";
+  position: absolute;
+  right: 1.15rem;
+  width: 0.58rem;
+  height: 0.58rem;
+  border-top: 2px solid currentcolor;
+  border-right: 2px solid currentcolor;
+  opacity: 0.88;
+  transform: rotate(45deg);
+}
+
+.game-theme-werewolf .werewolf-flow-footer-content > .primary-action::before,
+.game-theme-werewolf .werewolf-flow-action-stack .primary-action::before,
+.game-theme-werewolf .role-reveal-actions .primary-action.compact::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.22rem;
+  background: var(--wolf-teal);
+  opacity: 0.9;
+}
+
+.game-theme-werewolf .primary-action.danger-action,
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
+  border-color: rgba(228, 93, 122, 0.64);
+  background:
+    linear-gradient(180deg, rgba(88, 26, 45, 0.82), rgba(51, 12, 27, 0.96)),
+    rgba(75, 20, 39, 0.98);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-theme-werewolf .primary-action.danger-action::before {
+  background: var(--wolf-burgundy);
+}
+
+.game-theme-werewolf .primary-action:disabled,
+.game-theme-werewolf .secondary-button:disabled {
+  border-color: rgba(123, 181, 218, 0.2);
+  background: rgba(15, 29, 46, 0.76);
+  color: rgba(244, 249, 255, 0.48);
+  filter: none;
+  opacity: 1;
+}
+
+.game-theme-werewolf .secondary-button,
+.game-theme-werewolf .text-button,
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.secondary {
+  border: 1px solid rgba(123, 181, 218, 0.26);
+  border-radius: 0.72rem;
+  background: rgba(12, 29, 49, 0.68);
+  color: var(--wolf-text);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .panel,
+.game-theme-werewolf .role-reveal-card,
+.game-theme-werewolf .game-surface,
+.game-theme-werewolf .room-header,
+.werewolf-settings-sheet,
+body:has(.game-theme-werewolf) .game-confirm-sheet,
+.role-info-modal,
+.role-rules-modal,
+.player-overview-sheet,
+.game-log-sheet {
+  border: 1px solid rgba(123, 181, 218, 0.2);
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(9, 25, 42, 0.88), rgba(6, 18, 31, 0.94));
+  box-shadow: none;
+}
+
+.werewolf-settings-sheet,
+body:has(.game-theme-werewolf) .game-confirm-sheet,
+.role-info-modal,
+.role-rules-modal,
+.player-overview-sheet,
+.game-log-sheet {
+  background: #071626;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+}
+
+.role-info-modal .role-rule-list article,
+.role-rules-modal .role-rules-card,
+.role-rules-modal .role-rule-list.compact details,
+.werewolf-settings-sheet .settings-note,
+.player-overview-sheet .gm-player-overview-row,
+.game-log-sheet .log-list {
+  background: #0b1d31;
+}
+
+.role-rules-modal .role-rules-header {
+  background: #061320;
+}
+
+.game-theme-werewolf .werewolf-flow-shell .panel,
+.game-theme-werewolf .werewolf-flow-shell .role-reveal-card,
+.game-theme-werewolf .werewolf-flow-shell .game-surface,
+.game-theme-werewolf .werewolf-flow-shell .room-header {
+  border-radius: 1rem;
+  box-shadow: none;
+}
+
+.game-theme-werewolf .game-surface {
+  padding: 1.05rem;
+}
+
+.game-theme-werewolf .phase-heading {
+  align-items: center;
+  padding: 0.15rem 0 0.7rem;
+  border-bottom: 1px solid rgba(123, 181, 218, 0.16);
+}
+
+.game-theme-werewolf .phase-heading > svg,
+.game-theme-werewolf .role-icon-chip,
+.game-theme-werewolf .auto-villager-card svg,
+.game-theme-werewolf .role-layer svg {
+  border: 1px solid rgba(77, 218, 246, 0.28);
+  border-radius: 0.9rem;
+  background: rgba(8, 39, 62, 0.74);
+  color: var(--wolf-teal-strong);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .section-label,
+.game-theme-werewolf .role-group h4,
+.game-theme-werewolf .option-group p {
+  color: rgba(143, 168, 194, 0.92);
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.game-theme-werewolf .night-step-card {
+  gap: 0.85rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.game-theme-werewolf .night-step-card p {
+  color: var(--wolf-muted);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.game-theme-werewolf .awake-player-chips {
+  align-items: center;
+}
+
+.game-theme-werewolf .awake-player-chips strong,
+.game-theme-werewolf .quota-badges span {
+  border: 1px solid rgba(123, 181, 218, 0.2);
+  border-radius: 999px;
+  background: rgba(12, 29, 49, 0.58);
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .progress-rail {
+  gap: 0.42rem;
+}
+
+.game-theme-werewolf .night-progress-rail {
+  margin: 0.15rem 0 0;
+  padding: 0;
+}
+
+.game-theme-werewolf .progress-rail span {
+  height: 0.22rem;
+  background: rgba(123, 181, 218, 0.18);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .progress-rail span.active {
+  background: var(--wolf-teal);
+}
+
+.game-theme-werewolf .werewolf-action-icon {
+  border: 1px solid rgba(77, 218, 246, 0.28);
+  background: rgba(8, 39, 62, 0.74);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .night-action-block,
+.game-theme-werewolf .night-action-note,
+.game-theme-werewolf .night-report-row {
+  border: 1px solid rgba(123, 181, 218, 0.18);
+  background: rgba(5, 17, 30, 0.5);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .night-action-heading span,
+.game-theme-werewolf .night-action-note span span,
+.game-theme-werewolf .night-report-main span,
+.game-theme-werewolf .night-action-choice-copy span {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .night-action-button,
+.game-theme-werewolf .night-action-choice-grid button {
+  border: 1px solid rgba(77, 218, 246, 0.34);
+  border-radius: 0.72rem;
+  background: rgba(5, 17, 30, 0.66);
+  color: var(--wolf-text);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .night-action-button.selected,
+.game-theme-werewolf .night-action-choice-grid button.active {
+  border-color: rgba(77, 218, 246, 0.58);
+  background: rgba(59, 215, 240, 0.16);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .night-action-choice-grid button.active .werewolf-action-icon {
+  border-color: rgba(77, 218, 246, 0.42);
+  background: rgba(59, 215, 240, 0.14);
+}
+
+.game-theme-werewolf .night-report-row.good {
+  border-color: rgba(125, 219, 155, 0.28);
+}
+
+.game-theme-werewolf .night-report-row.evil {
+  border-color: rgba(228, 93, 122, 0.34);
+}
+
+.game-theme-werewolf .night-report-row.evil .night-report-event-icon,
+.game-theme-werewolf .night-report-team-badge.evil .night-report-team-icon {
+  border-color: rgba(228, 93, 122, 0.28);
+  background: rgba(62, 16, 34, 0.78);
+  color: #ff9daf;
+}
+
+.game-theme-werewolf .night-report-team-badge {
+  border-color: rgba(123, 181, 218, 0.18);
+  background: rgba(5, 17, 30, 0.58);
+}
+
+.game-theme-werewolf .night-report-team-badge.good {
+  color: #9decb5;
+}
+
+.game-theme-werewolf .night-report-team-badge.evil {
+  color: #ff9daf;
+}
+
+.game-theme-werewolf .day-timer-panel {
+  border: 1px solid rgba(123, 181, 218, 0.18);
+  border-radius: 0.75rem;
+  background: rgba(5, 17, 30, 0.5);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .day-timer-panel.expired {
+  border-color: rgba(228, 93, 122, 0.42);
+  background: rgba(62, 16, 34, 0.48);
+}
+
+.game-theme-werewolf .day-timer-display > svg {
+  border: 1px solid rgba(77, 218, 246, 0.28);
+  background: rgba(8, 39, 62, 0.74);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .day-timer-panel.expired .day-timer-display > svg {
+  border-color: rgba(228, 93, 122, 0.38);
+  background: rgba(88, 26, 45, 0.62);
+  color: #ff9daf;
+}
+
+.game-theme-werewolf .day-timer-display strong {
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .day-timer-display span {
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .day-timer-panel.expired .day-timer-display span {
+  color: #ffb1c0;
+}
+
+.game-theme-werewolf .day-timer-duration-grid button {
+  border: 1px solid rgba(77, 218, 246, 0.34);
+  background: rgba(5, 17, 30, 0.66);
+  color: var(--wolf-text);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .day-timer-duration-grid button.active {
+  border-color: rgba(77, 218, 246, 0.58);
+  background: rgba(59, 215, 240, 0.16);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .day-timer-duration-grid button:disabled {
+  border-color: rgba(123, 181, 218, 0.16);
+  background: rgba(15, 29, 46, 0.54);
+  color: rgba(244, 249, 255, 0.4);
+  opacity: 1;
+}
+
+.game-theme-werewolf .day-timer-duration-grid button.active:disabled {
+  border-color: rgba(77, 218, 246, 0.42);
+  background: rgba(59, 215, 240, 0.12);
+  color: rgba(116, 231, 223, 0.74);
+}
+
+.game-theme-werewolf .player-grid {
+  gap: 0.55rem;
+}
+
+.game-theme-werewolf .player-selector-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.game-theme-werewolf .werewolf-flow-shell .player-selector-panel {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.game-theme-werewolf .player-selector-panel .panel-heading {
+  margin-bottom: 0.7rem;
+}
+
+.game-theme-werewolf .player-selector-panel .panel-heading h3 {
+  color: var(--wolf-text);
+  font-size: 1rem;
+  font-weight: 740;
+}
+
+.game-theme-werewolf .player-grid button {
+  position: relative;
+  min-height: 3.65rem;
+  border: 1px solid rgba(77, 218, 246, 0.48);
+  border-radius: 0.7rem;
+  background: rgba(5, 17, 30, 0.66);
+  color: var(--wolf-text);
+  box-shadow: none;
+  padding: 0.72rem 0.9rem 0.72rem 1rem;
+}
+
+.game-theme-werewolf .player-grid button::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.2rem;
+  background: transparent;
+}
+
+.game-theme-werewolf .player-grid button strong {
+  font-size: 1rem;
+  font-weight: 720;
+}
+
+.game-theme-werewolf .player-grid button.selected {
+  border-color: rgba(228, 93, 122, 0.78);
+  background:
+    linear-gradient(90deg, rgba(228, 93, 122, 0.22), rgba(5, 17, 30, 0.74) 54%),
+    rgba(28, 13, 29, 0.88);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .player-grid button.selected::before {
+  background: var(--wolf-burgundy);
+}
+
+.game-theme-werewolf .night-result-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem 0.85rem 1.25rem;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.game-theme-werewolf .night-result-card .night-result-icon {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-color: currentcolor;
+  background: rgba(255, 255, 255, 0.06);
+  color: currentcolor;
+}
+
+.game-theme-werewolf .night-result-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.22rem;
+  background: currentcolor;
+}
+
+.game-theme-werewolf .night-result-card.good {
+  border-color: rgba(125, 219, 155, 0.44);
+  background: rgba(12, 47, 38, 0.82);
+  color: #9decb5;
+}
+
+.game-theme-werewolf .night-result-card.evil {
+  border-color: rgba(228, 93, 122, 0.48);
+  background: rgba(62, 16, 34, 0.84);
+  color: #ff9daf;
+}
+
+.game-theme-werewolf .role-summary-grid {
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 0.9rem;
+  background: rgba(5, 17, 30, 0.58);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .summary-stat {
+  min-height: 4rem;
+  border-left-color: rgba(123, 181, 218, 0.16);
+}
+
+.game-theme-werewolf .summary-stat strong {
+  font-size: 1.28rem;
+  font-weight: 780;
+}
+
+.game-theme-werewolf .role-balance-card,
+.game-theme-werewolf .auto-villager-card {
+  border: 1px solid rgba(123, 181, 218, 0.18);
+  border-radius: 0.75rem;
+  background: rgba(5, 17, 30, 0.5);
+}
+
+.game-theme-werewolf .rules-panel {
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 1rem;
+  background: #071626;
+  box-shadow: none;
+}
+
+.game-theme-werewolf .rules-toggle {
+  min-height: 3.15rem;
+  padding: 0 1rem;
+  background: transparent;
+  color: var(--wolf-text);
+}
+
+.game-theme-werewolf .rules-body {
+  gap: 1rem;
+  padding: 0.95rem;
+  border-top: 1px solid rgba(123, 181, 218, 0.16);
+  background: #061320;
+}
+
+.game-theme-werewolf .option-group > div {
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.7rem;
+}
+
+.game-theme-werewolf .option-group button {
+  position: relative;
+  min-height: 8.1rem;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  align-content: start;
+  gap: 0.55rem;
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 0.82rem;
+  background: rgba(5, 17, 30, 0.52);
+  color: var(--wolf-text);
+  box-shadow: none;
+  padding: 0.8rem;
+  text-align: center;
+}
+
+.game-theme-werewolf .option-group button.active,
+.game-theme-werewolf .option-group button[aria-pressed="true"] {
+  border-color: rgba(77, 218, 246, 0.74);
+  background:
+    linear-gradient(180deg, rgba(59, 215, 240, 0.16), rgba(5, 17, 30, 0.66)),
+    rgba(5, 17, 30, 0.7);
+  box-shadow: 0 0 0 1px rgba(59, 215, 240, 0.1);
+}
+
+.game-theme-werewolf .rules-option-icon {
+  width: 2.7rem;
+  height: 2.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(123, 181, 218, 0.18);
+  border-radius: 999px;
+  color: rgba(143, 168, 194, 0.72);
+  background: rgba(8, 23, 39, 0.72);
+}
+
+.game-theme-werewolf .rules-option-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.game-theme-werewolf .option-group button.active .rules-option-icon,
+.game-theme-werewolf .option-group button[aria-pressed="true"] .rules-option-icon {
+  border-color: rgba(77, 218, 246, 0.42);
+  color: var(--wolf-teal-strong);
+  background: rgba(59, 215, 240, 0.14);
+}
+
+.game-theme-werewolf .rules-option-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.game-theme-werewolf .rules-option-copy strong {
+  font-size: 1rem;
+}
+
+.game-theme-werewolf .rules-option-copy span {
+  margin: 0;
+  color: var(--wolf-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.game-theme-werewolf .rules-option-check {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--wolf-teal);
+  color: #03101a;
+}
+
+.game-theme-werewolf .rules-option-check svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.game-theme-werewolf .role-count-list {
+  border: 1px solid rgba(123, 181, 218, 0.18);
+  border-radius: 0.95rem;
+  overflow: hidden;
+  background: rgba(5, 17, 30, 0.42);
+}
+
+.game-theme-werewolf .role-group h4 {
+  margin: 0;
+  padding: 0.85rem 0.85rem 0.5rem;
+  border-top: 1px solid rgba(123, 181, 218, 0.16);
+}
+
+.game-theme-werewolf .role-group:first-child h4 {
+  border-top: 0;
+}
+
+.game-theme-werewolf .role-count-row {
+  grid-template-columns: minmax(0, 1fr) 2.25rem auto;
+  min-height: 4.45rem;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid rgba(123, 181, 218, 0.14);
+}
+
+.game-theme-werewolf .role-count-row:first-of-type {
+  border-top: 0;
+}
+
+.game-theme-werewolf .role-count-main {
+  gap: 0.8rem;
+}
+
+.game-theme-werewolf .role-count-main strong {
+  font-size: 1rem;
+  font-weight: 760;
+}
+
+.game-theme-werewolf .role-count-main small {
+  color: var(--wolf-muted);
+  font-size: 0.78rem;
+}
+
+.game-theme-werewolf .role-icon-chip {
+  width: 2.65rem;
+  height: 2.65rem;
+  border-color: rgba(123, 181, 218, 0.22);
+  border-radius: 0.72rem;
+}
+
+.game-theme-werewolf .night-report-role-icon {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 0.55rem;
+}
+
+.game-theme-werewolf .night-report-role-icon svg,
+.game-theme-werewolf .night-report-role-icon img {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.game-theme-werewolf .role-tone-wolf .role-icon-chip {
+  border-color: rgba(228, 93, 122, 0.36);
+  color: #ff7f9a;
+  background: rgba(228, 93, 122, 0.12);
+}
+
+.game-theme-werewolf .role-tone-village .role-icon-chip {
+  border-color: rgba(59, 215, 240, 0.32);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .stepper {
+  gap: 0.55rem;
+}
+
+.game-theme-werewolf .stepper button {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid rgba(123, 181, 218, 0.24);
+  border-radius: 0.65rem;
+  background: rgba(12, 29, 49, 0.72);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .stepper button:disabled {
+  color: rgba(143, 168, 194, 0.38);
+  background: rgba(12, 29, 49, 0.34);
+}
+
+.game-theme-werewolf .stepper strong {
+  min-width: 1.65rem;
+  color: var(--wolf-text);
+  font-size: 1.05rem;
+}
+
+.game-theme-werewolf .category-tabs {
+  border-color: rgba(123, 181, 218, 0.2);
+  background: rgba(5, 17, 30, 0.58);
+}
+
+.game-theme-werewolf .category-tabs button {
+  border-radius: 0.7rem;
+}
+
+.game-theme-werewolf .category-tabs button.active,
+.game-theme-werewolf .night-action-button.selected,
+.game-theme-werewolf .night-action-choice-grid button.active {
+  border-color: rgba(77, 218, 246, 0.58);
+  background: rgba(59, 215, 240, 0.16);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf input,
+.game-theme-werewolf select,
+.game-theme-werewolf .room-link-input,
+.game-theme-werewolf .add-player-form input,
+.game-theme-werewolf .manual-assignment-row select {
+  border-color: rgba(123, 181, 218, 0.24);
+  border-radius: 0.72rem;
+  background: rgba(2, 10, 19, 0.58);
+  box-shadow: none;
+}
+
+.game-theme-werewolf .option-group button,
+.game-theme-werewolf .role-count-list,
+.game-theme-werewolf .role-balance-card,
+.game-theme-werewolf .auto-villager-card,
+.game-theme-werewolf .category-tabs,
+.game-theme-werewolf .night-action-block,
+.game-theme-werewolf .night-action-note,
+.game-theme-werewolf .night-report-row,
+.game-theme-werewolf .night-action-button,
+.game-theme-werewolf .night-action-choice-grid button,
+.game-theme-werewolf .player-grid button,
+.game-theme-werewolf .stepper button,
+.game-theme-werewolf .awake-player-chips strong,
+.game-theme-werewolf .quota-badges span,
+.game-theme-werewolf .gm-role-button,
+.role-info-modal .role-rule-list article,
+.role-rules-modal .role-rules-card,
+.role-rules-modal .role-rule-list.compact details,
+.werewolf-settings-sheet .settings-section,
+.werewolf-settings-sheet .settings-note,
+.werewolf-settings-sheet .settings-choice-grid button,
+.player-overview-sheet .gm-player-overview-row,
+.game-log-sheet .log-list {
+  background: #0b1d31;
+  background-image: none;
+}
+
+.game-theme-werewolf .option-group button.active,
+.game-theme-werewolf .option-group button[aria-pressed="true"],
+.game-theme-werewolf .category-tabs button.active,
+.game-theme-werewolf .night-action-button.selected,
+.game-theme-werewolf .night-action-choice-grid button.active,
+.werewolf-settings-sheet .settings-choice-grid button.active,
+.werewolf-settings-sheet .settings-choice-grid button[aria-checked="true"] {
+  background: #0d3447;
+  background-image: none;
+}
+
+.game-theme-werewolf .player-grid button.selected {
+  background: #2a1024;
+  background-image: linear-gradient(90deg, rgba(228, 93, 122, 0.22), transparent 58%);
+}
+
+.game-theme-werewolf .rules-option-icon,
+.game-theme-werewolf .stepper button:disabled,
+.game-theme-werewolf input,
+.game-theme-werewolf select,
+.game-theme-werewolf .room-link-input,
+.game-theme-werewolf .add-player-form input,
+.game-theme-werewolf .manual-assignment-row select {
+  background: #061320;
+}
+
+.game-theme-werewolf .night-result-card.good {
+  background: #0d2e24;
+}
+
+.game-theme-werewolf .night-result-card.evil {
+  background: #3a1021;
+}
+
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.secondary {
+  background: #0b1d31;
+  background-image: none;
+}
+
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.primary {
+  background: #0d3447;
+  background-image: none;
+}
+
+body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
+  background: #3a1021;
+  background-image: none;
+}
+
+.werewolf-settings-sheet .settings-section,
+.werewolf-settings-sheet .settings-note,
+.player-overview-sheet .gm-player-overview-row,
+.game-log-sheet .log-list {
+  background: transparent;
+  background-image: none;
+}
+
+.werewolf-settings-sheet .settings-section {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(123, 181, 218, 0.16);
+}
+
+.werewolf-settings-sheet .settings-choice-grid {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(123, 181, 218, 0.2);
+  border-radius: 0.8rem;
+  background: #061320;
+}
+
+.werewolf-settings-sheet .settings-choice-grid button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+}
+
+.werewolf-settings-sheet .settings-choice-grid button + button {
+  border-left: 1px solid rgba(123, 181, 218, 0.14);
+}
+
+.werewolf-settings-sheet .settings-note {
+  margin-top: 0.85rem;
+  padding: 0.85rem 0 0;
+  border-top: 1px solid rgba(123, 181, 218, 0.16);
+  border-radius: 0;
+}
+
+.player-overview-sheet .gm-player-overview-list {
+  gap: 0.35rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(123, 181, 218, 0.16);
+}
+
+.player-overview-sheet .gm-player-overview-row {
+  grid-template-columns: auto minmax(0, 1fr) minmax(5.6rem, auto);
+  gap: 0.55rem;
+  min-height: 3.1rem;
+  border: 1px solid rgba(123, 181, 218, 0.14);
+  border-radius: 0.75rem;
+  padding: 0.42rem;
+  background: rgba(5, 17, 30, 0.38);
+}
+
+.player-overview-sheet .gm-role-button {
+  width: min(9.5rem, 32vw);
+  justify-self: end;
+  border: 1px solid rgba(123, 181, 218, 0.2);
+  background: rgba(5, 17, 30, 0.58);
+  background-image: none;
+  color: var(--wolf-text);
+  padding: 0.32rem 0.58rem;
+  text-align: center;
+}
+
+.player-overview-sheet .gm-role-button.good {
+  border-color: rgba(59, 215, 240, 0.26);
+  color: var(--wolf-teal-strong);
+}
+
+.player-overview-sheet .gm-role-button.evil {
+  border-color: rgba(228, 93, 122, 0.32);
+  color: #ff9daf;
+}
+
+.player-overview-sheet .gm-player-overview-role-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+}
+
+.player-overview-sheet .gm-player-overview-role-icon svg {
+  width: 1.08rem;
+  height: 1.08rem;
+}
+
+.player-overview-sheet .gm-player-status-chip {
+  border-color: rgba(123, 181, 218, 0.16);
+  background: rgba(5, 17, 30, 0.44);
+  color: var(--wolf-muted);
+}
+
+.player-overview-sheet .gm-player-status-chip.ok {
+  border-color: rgba(125, 219, 155, 0.2);
+  color: #9decb5;
+}
+
+.player-overview-sheet .gm-player-status-chip.danger {
+  border-color: rgba(228, 93, 122, 0.26);
+  color: #ff9daf;
+}
+
+.player-overview-sheet .gm-player-status-chip.special {
+  border-color: rgba(248, 194, 92, 0.25);
+  color: #ffd890;
+}
+
+.game-log-sheet .log-list {
+  padding: 0.8rem 0 0 1.25rem;
+  border-top: 1px solid rgba(123, 181, 218, 0.16);
+}
+
+.game-theme-werewolf .player-join-screen,
+.game-theme-werewolf .room-code-entry-screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1.05rem;
+  padding: clamp(1.25rem, 5vw, 2.4rem) 0 1rem;
+  text-align: center;
+}
+
+.game-theme-werewolf .werewolf-brand-mark {
+  width: clamp(5rem, 22vw, 7.5rem);
+  aspect-ratio: 1;
+  display: inline-grid;
+  place-items: center;
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.25));
+}
+
+.game-theme-werewolf .werewolf-brand-mark img {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  object-fit: contain;
+}
+
+.game-theme-werewolf .player-join-hero,
+.game-theme-werewolf .room-code-entry-copy {
+  width: min(100%, 38rem);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.game-theme-werewolf .player-join-hero h2,
+.game-theme-werewolf .room-code-entry-copy h2 {
+  margin: 0;
+  color: var(--wolf-text);
+  font-size: clamp(2rem, 8vw, 3.1rem);
+  line-height: 1;
+}
+
+.game-theme-werewolf .player-join-hero p,
+.game-theme-werewolf .room-code-entry-copy p {
+  margin: 0;
+  color: var(--wolf-muted);
+}
+
+.game-theme-werewolf .room-status-pill {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(123, 181, 218, 0.18);
+  border-radius: 999px;
+  background: rgba(5, 17, 30, 0.56);
+  color: var(--wolf-muted);
+  font-size: 0.84rem;
+  font-weight: 760;
+}
+
+.game-theme-werewolf .room-status-pill.joinable {
+  border-color: rgba(59, 215, 240, 0.3);
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .room-status-pill.notFound,
+.game-theme-werewolf .room-status-pill.started {
+  border-color: rgba(228, 93, 122, 0.32);
+  color: #ff9daf;
+}
+
+.game-theme-werewolf .player-join-form,
+.game-theme-werewolf .room-code-entry-form {
+  width: min(100%, 38rem);
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.45rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(123, 181, 218, 0.16);
+}
+
+.game-theme-werewolf .player-join-form label,
+.game-theme-werewolf .room-code-entry-form label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--wolf-muted);
+  font-size: 0.78rem;
+  font-weight: 820;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.game-theme-werewolf .player-join-form input {
+  width: 100%;
+  min-height: 3.4rem;
+  box-sizing: border-box;
+  color: var(--wolf-text);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.game-theme-werewolf .room-code-entry-form > label > input {
+  width: 100%;
+  min-height: 3.4rem;
+  padding: 0 1rem;
+}
+
+.game-theme-werewolf .room-code-input-row {
+  min-height: 3.7rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(59, 215, 240, 0.28);
+  border-radius: 0.9rem;
+  background: rgba(5, 17, 30, 0.58);
+}
+
+.game-theme-werewolf .room-code-input-row svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--wolf-teal-strong);
+}
+
+.game-theme-werewolf .room-code-input-row input {
+  min-height: 3.4rem;
+  border: 0;
+  background: transparent;
+  color: var(--wolf-text);
+  font-size: 1.4rem;
+  font-weight: 860;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.game-theme-werewolf .player-join-screen > .error-text,
+.game-theme-werewolf .room-code-entry-screen > .error-text {
+  width: min(100%, 38rem);
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 430px) {
+  .player-overview-sheet .gm-player-overview-row {
+    grid-template-columns: auto minmax(0, 1fr) minmax(4.9rem, auto);
+    gap: 0.45rem;
+  }
+
+  .player-overview-sheet .gm-role-button {
+    width: min(7.2rem, 30vw);
+    max-width: 100%;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .werewolf-flow-header {
+    grid-template-columns: minmax(2.5rem, 1fr) minmax(0, auto) minmax(2.5rem, 1fr);
+  }
+
+  .werewolf-flow-back {
+    width: 2.35rem;
+    padding: 0;
+  }
+
+  .werewolf-flow-back span {
+    display: none;
+  }
+}
+
+@media (min-width: 760px) {
+  .werewolf-flow-header,
+  .werewolf-flow-body,
+  .werewolf-flow-footer {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+
+  .setup-shell-header {
+    top: 4.65rem;
+    margin-left: -2rem;
+    margin-right: -2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .game-flow-shell .setup-shell-header {
+    top: -0.65rem;
+    margin-left: -2rem;
+    margin-right: -2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .game-theme-werewolf .room-header img,
+  .game-theme-werewolf .room-header > svg {
+    width: 11rem;
+    height: 11rem;
+    min-width: 11rem;
+  }
+}
+
+.stage-link-panel .panel-heading h3 {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stage-link-panel .panel-heading svg {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.stage-link-body {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.stage-link-body img,
+.stage-link-body > svg {
+  background: #fff;
+  border-radius: 0.5rem;
+  height: 7rem;
+  padding: 0.5rem;
+  width: 7rem;
+}
+
+.stage-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.stage-language-control {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.stage-language-control p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.stage-language-choice-grid {
+  max-width: 18rem;
+}
+
+.stage-settings-dialog .panel-heading h3 {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stage-settings-dialog .panel-heading svg {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.stage-settings-dialog .stage-language-control {
+  margin-top: 0;
+}
+
+.stage-settings-dialog .stage-settings-link-input {
+  border-color: rgba(123, 181, 218, 0.24);
+  border-radius: 0.72rem;
+  background: #061320;
+  color: var(--wolf-muted);
+  box-shadow: none;
+}
+
+.stage-settings-action-grid,
+.stage-settings-empty {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.stage-settings-action-grid button,
+.stage-settings-empty .secondary-button {
+  width: 100%;
+}
+
+.werewolf-stage-screen {
+  background-color: #020a13;
+  background-image: url("./assets/stage-night-ambience.webp");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: var(--wolf-text, var(--text));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1.5rem;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: clamp(1rem, 3vw, 3rem);
+  position: relative;
+  isolation: isolate;
+}
+
+.werewolf-stage-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2, 10, 19, 0.36) 0%, rgba(2, 10, 19, 0.14) 12rem, transparent 24rem),
+    radial-gradient(ellipse at 50% 52%, rgba(2, 10, 19, 0.2), rgba(2, 10, 19, 0.06) 34rem, transparent 58rem);
+}
+
+.werewolf-stage-screen > * {
+  position: relative;
+  z-index: 1;
+}
+
+.werewolf-stage-screen.day {
+  background-color: #071626;
+  background-image: url("./assets/stage-day-ambience.webp");
+}
+
+.werewolf-stage-screen.day::before {
+  background:
+    linear-gradient(180deg, rgba(2, 10, 19, 0.42) 0%, rgba(2, 10, 19, 0.16) 12rem, transparent 24rem),
+    radial-gradient(ellipse at 50% 52%, rgba(2, 10, 19, 0.18), rgba(2, 10, 19, 0.05) 34rem, transparent 58rem);
+}
+
+.werewolf-stage-screen .section-label {
+  letter-spacing: 0;
+}
+
+.werewolf-stage-header-kicker,
+.werewolf-stage-scene-label,
+.werewolf-stage-panel-label,
+.werewolf-stage-rail-label {
+  color: var(--wolf-muted, var(--muted));
+  font-weight: 820;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.werewolf-stage-header-kicker {
+  font-size: 0.78rem;
+}
+
+.werewolf-stage-scene-label,
+.werewolf-stage-panel-label,
+.werewolf-stage-rail-label {
+  font-size: 1.02rem;
+}
+
+.werewolf-stage-panel-label,
+.werewolf-stage-rail-label {
+  color: rgba(168, 201, 228, 0.94);
+}
+
+.werewolf-stage-rail-label {
+  font-size: 1.32rem;
+}
+
+.werewolf-stage-header {
+  align-items: center;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+}
+
+.werewolf-stage-phase {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.werewolf-stage-header h1 {
+  color: rgba(244, 249, 255, 0.86);
+  font-size: 2.25rem;
+  font-weight: 520;
+  line-height: 1;
+  margin: 0;
+}
+
+.werewolf-stage-header-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.85rem;
+}
+
+.werewolf-stage-language {
+  align-items: center;
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 0.5rem;
+  display: flex;
+  overflow: hidden;
+}
+
+.werewolf-stage-language button {
+  background: rgba(5, 17, 30, 0.52);
+  border: 0;
+  color: var(--wolf-muted, var(--muted));
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 850;
+  min-width: 3rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.werewolf-stage-language button.active {
+  background: rgba(59, 215, 240, 0.16);
+  color: var(--wolf-teal-strong, var(--accent));
+}
+
+.werewolf-stage-code {
+  border: 1px solid rgba(123, 181, 218, 0.26);
+  border-radius: 0.5rem;
+  color: var(--wolf-teal, var(--accent));
+  font-size: 3.2rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 0.8rem 1.15rem;
+}
+
+.werewolf-stage-center,
+.werewolf-stage-grid {
+  align-content: center;
+  display: grid;
+  gap: 1.65rem;
+  justify-items: center;
+  min-height: 0;
+  text-align: center;
+}
+
+.werewolf-stage-symbol {
+  align-items: center;
+  border: 1px solid rgba(59, 215, 240, 0.32);
+  border-radius: 999px;
+  color: var(--wolf-teal, var(--accent));
+  display: inline-flex;
+  height: 5rem;
+  justify-content: center;
+  width: 5rem;
+}
+
+.werewolf-stage-symbol.small {
+  height: 3.2rem;
+  width: 3.2rem;
+}
+
+.werewolf-stage-symbol svg {
+  height: 62%;
+  width: 62%;
+}
+
+.werewolf-stage-center h2,
+.werewolf-stage-hero h2 {
+  font-size: 4.8rem;
+  font-weight: 520;
+  line-height: 0.98;
+  margin: 0;
+  max-width: 76rem;
+  overflow-wrap: anywhere;
+}
+
+.werewolf-stage-center p,
+.werewolf-stage-hero p {
+  color: var(--wolf-muted, var(--muted));
+  font-size: 1.35rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.werewolf-stage-status h1 {
+  font-size: 3rem;
+  font-weight: 620;
+  margin: 0;
+  max-width: 60rem;
+}
+
+.werewolf-stage-subtitle {
+  color: #a8c9e4;
+  font-size: 1.9rem;
+  font-weight: 620;
+  line-height: 1.28;
+  margin-top: -0.4rem;
+  max-width: 48rem;
+}
+
+.werewolf-stage-grid {
+  grid-template-columns: minmax(0, 1fr) auto;
+  text-align: left;
+}
+
+.werewolf-stage-grid.single {
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+
+.werewolf-stage-hero {
+  align-content: center;
+  display: grid;
+  gap: 1.25rem;
+  justify-items: start;
+}
+
+.werewolf-stage-qr {
+  align-self: center;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+}
+
+.werewolf-stage-qr img {
+  background: #fff;
+  border-radius: 0.5rem;
+  height: 17rem;
+  padding: 0.75rem;
+  width: 17rem;
+}
+
+.werewolf-stage-qr span {
+  color: var(--wolf-muted, var(--muted));
+  font-size: 1.05rem;
+  font-weight: 760;
+}
+
+.werewolf-stage-player-wall {
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.werewolf-stage-player-wall span {
+  background: rgba(5, 17, 30, 0.58);
+  border: 1px solid rgba(123, 181, 218, 0.2);
+  border-radius: 0.5rem;
+  color: var(--wolf-text, var(--text));
+  font-size: 1.18rem;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+}
+
+.werewolf-stage-player-wall span.dead {
+  color: var(--wolf-muted, var(--muted));
+  text-decoration: line-through;
+}
+
+.werewolf-stage-day-timer {
+  align-items: center;
+  border: 1px solid rgba(123, 181, 218, 0.26);
+  border-radius: 0.7rem;
+  background: rgba(5, 17, 30, 0.62);
+  display: grid;
+  gap: 1.2rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-self: center;
+  max-width: 38rem;
+  padding: 1.2rem 1.45rem;
+  text-align: left;
+  width: min(100%, 38rem);
+}
+
+.werewolf-stage-day-timer.expired {
+  border-color: rgba(241, 92, 120, 0.52);
+  box-shadow: 0 0 32px rgba(241, 92, 120, 0.12);
+}
+
+.werewolf-stage-day-timer > svg {
+  color: var(--wolf-teal, var(--accent));
+  height: 3.2rem;
+  width: 3.2rem;
+}
+
+.werewolf-stage-day-timer.expired > svg {
+  color: #ff7891;
+}
+
+.werewolf-stage-day-timer strong {
+  color: rgba(244, 249, 255, 0.95);
+  display: block;
+  font-size: 4.6rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 720;
+  letter-spacing: 0;
+  line-height: 0.95;
+}
+
+.werewolf-stage-day-timer span {
+  color: var(--wolf-muted, var(--muted));
+  display: block;
+  font-size: 1.18rem;
+  font-weight: 760;
+  margin-top: 0.35rem;
+}
+
+.werewolf-stage-day-timer.expired span {
+  color: #ffb1c0;
+}
+
+.werewolf-stage-reveal-panel {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  max-width: 74rem;
+  width: min(100%, 74rem);
+}
+
+.werewolf-stage-reveal-panel.quiet {
+  border: 1px solid rgba(123, 181, 218, 0.24);
+  border-radius: 0.5rem;
+  background: rgba(5, 17, 30, 0.54);
+  padding: 1.6rem;
+}
+
+.werewolf-stage-reveal-panel.quiet strong {
+  font-size: 2.1rem;
+}
+
+.werewolf-stage-player-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  width: min(100%, 72rem);
+}
+
+.werewolf-stage-player-tile {
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(16, 38, 61, 0.88), rgba(7, 22, 38, 0.94)),
+    rgba(5, 17, 30, 0.7);
+  border: 1px solid rgba(123, 181, 218, 0.3);
+  border-radius: 0.5rem;
+  color: var(--wolf-text, var(--text));
+  display: flex;
+  gap: 0.95rem;
+  justify-content: center;
+  min-height: 6.2rem;
+  padding: 1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+
+.werewolf-stage-player-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.28rem;
+  background: var(--wolf-teal, var(--accent));
+}
+
+.werewolf-stage-player-tile.voteDeath::before,
+.werewolf-stage-player-tile.nightDeaths::before {
+  background: var(--wolf-burgundy, #e45d7a);
+}
+
+.werewolf-stage-player-tile.loverDeath::before {
+  background: #ff8fac;
+}
+
+.werewolf-stage-player-tile.hunterShot::before {
+  background: var(--wolf-amber, #e7b96f);
+}
+
+.werewolf-stage-player-tile strong {
+  font-size: 2.45rem;
+  font-weight: 820;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.werewolf-stage-player-tile.compact {
+  background: transparent;
+  border: 0;
+  gap: 0.45rem;
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 0;
+}
+
+.werewolf-stage-player-tile.compact::before {
+  display: none;
+}
+
+.werewolf-stage-player-tile.compact strong {
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.werewolf-stage-player-mark {
+  align-items: center;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  color: rgba(244, 249, 255, 0.72);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 2.5rem;
+  justify-content: center;
+  width: 2.5rem;
+}
+
+.werewolf-stage-player-mark svg {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.werewolf-stage-player-tile.compact .werewolf-stage-player-mark {
+  height: 1.45rem;
+  width: 1.45rem;
+}
+
+.werewolf-stage-player-tile.compact .werewolf-stage-player-mark svg {
+  height: 0.78rem;
+  width: 0.78rem;
+}
+
+.werewolf-stage-reveal-badge {
+  align-items: center;
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 999px;
+  background: rgba(5, 17, 30, 0.58);
+  color: var(--wolf-text, var(--text));
+  display: inline-flex;
+  gap: 0.55rem;
+  justify-content: center;
+  padding: 0.68rem 0.95rem;
+}
+
+.werewolf-stage-reveal-badge > span:not(.werewolf-stage-reveal-role-icon, .werewolf-stage-reveal-team-icon) {
+  color: var(--wolf-muted, var(--muted));
+  font-size: 0.9rem;
+  font-weight: 820;
+}
+
+.werewolf-stage-reveal-badge strong {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.werewolf-stage-reveal-badge.good {
+  border-color: rgba(125, 219, 155, 0.34);
+  color: #a8efbf;
+}
+
+.werewolf-stage-reveal-badge.evil {
+  border-color: rgba(228, 93, 122, 0.38);
+  color: #ff9daf;
+}
+
+.werewolf-stage-reveal-badge.hidden {
+  color: var(--wolf-muted, var(--muted));
+  font-weight: 760;
+}
+
+.werewolf-stage-reveal-badge.compact {
+  border: 0;
+  background: transparent;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.werewolf-stage-reveal-badge.compact strong {
+  font-size: 0.98rem;
+}
+
+.werewolf-stage-reveal-role-icon,
+.werewolf-stage-reveal-team-icon {
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.werewolf-stage-reveal-role-icon {
+  border-radius: 0.56rem;
+}
+
+.werewolf-stage-reveal-team-icon {
+  border-color: currentcolor;
+  background: rgba(255, 255, 255, 0.06);
+  color: currentcolor;
+}
+
+.werewolf-stage-reveal-team-icon svg {
+  height: 0.95rem;
+  width: 0.95rem;
+}
+
+.werewolf-stage-reveal-badge.compact .werewolf-stage-reveal-role-icon,
+.werewolf-stage-reveal-badge.compact .werewolf-stage-reveal-team-icon {
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.werewolf-stage-reveal-badge.compact .werewolf-stage-reveal-team-icon svg {
+  height: 0.74rem;
+  width: 0.74rem;
+}
+
+.werewolf-stage-elimination-rail {
+  display: grid;
+  gap: 1.05rem;
+  justify-items: center;
+  margin-top: 0.65rem;
+  width: min(100%, 72rem);
+}
+
+.werewolf-stage-timeline {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  justify-content: center;
+  margin-inline: auto;
+  max-width: 72rem;
+  position: relative;
+  width: 100%;
+}
+
+.werewolf-stage-timeline.single {
+  grid-template-columns: minmax(0, 36rem);
+  max-width: 36rem;
+}
+
+.werewolf-stage-timeline.pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 58rem;
+}
+
+.werewolf-stage-timeline.many {
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  max-width: 72rem;
+}
+
+.werewolf-stage-timeline-step {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: center;
+  min-width: 0;
+  position: relative;
+}
+
+.werewolf-stage-timeline-step:not(:last-child)::after {
+  background: linear-gradient(90deg, rgba(59, 215, 240, 0.34), rgba(123, 181, 218, 0.12));
+  content: "";
+  height: 1px;
+  left: calc(50% + 1.35rem);
+  position: absolute;
+  right: calc(-50% - 0.5rem);
+  top: 1.12rem;
+}
+
+.werewolf-stage-timeline-marker {
+  align-items: center;
+  background: rgba(5, 17, 30, 0.92);
+  border: 1px solid rgba(59, 215, 240, 0.35);
+  border-radius: 999px;
+  color: var(--wolf-teal-strong, var(--accent));
+  display: inline-flex;
+  font-size: 0.95rem;
+  font-weight: 900;
+  height: 2.25rem;
+  justify-content: center;
+  line-height: 1;
+  position: relative;
+  width: 2.25rem;
+  z-index: 1;
+}
+
+.werewolf-stage-timeline-card {
+  align-content: start;
+  background:
+    linear-gradient(180deg, rgba(16, 38, 61, 0.7), rgba(5, 17, 30, 0.72)),
+    rgba(5, 17, 30, 0.6);
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 0.65rem;
+  display: grid;
+  gap: 0.78rem;
+  min-height: 8.35rem;
+  min-width: 0;
+  padding: 1rem;
+  text-align: left;
+  width: 100%;
+}
+
+.werewolf-stage-timeline-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.werewolf-stage-timeline-heading strong {
+  color: var(--wolf-teal-strong, var(--accent));
+  font-size: 1.22rem;
+  font-weight: 860;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.werewolf-stage-timeline-icon {
+  align-items: center;
+  border: 1px solid rgba(123, 181, 218, 0.28);
+  border-radius: 0.55rem;
+  background: rgba(3, 13, 24, 0.34);
+  color: rgba(244, 249, 255, 0.72);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 2.15rem;
+  justify-content: center;
+  width: 2.15rem;
+}
+
+.werewolf-stage-timeline-icon svg {
+  height: 1.12rem;
+  width: 1.12rem;
+}
+
+.werewolf-stage-timeline-step.loverDeath .werewolf-stage-timeline-card {
+  border-color: rgba(228, 93, 122, 0.3);
+}
+
+.werewolf-stage-timeline-step.hunterShot .werewolf-stage-timeline-card {
+  border-color: rgba(231, 185, 111, 0.34);
+}
+
+.werewolf-stage-timeline-participants {
+  display: grid;
+  gap: 0.58rem;
+  min-width: 0;
+}
+
+.werewolf-stage-timeline-participant {
+  align-items: center;
+  background: rgba(3, 13, 24, 0.46);
+  border: 1px solid rgba(123, 181, 218, 0.16);
+  border-radius: 0.52rem;
+  color: var(--wolf-text, var(--text));
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3.25rem;
+  padding: 0.58rem 0.65rem 0.58rem 0.82rem;
+}
+
+.werewolf-stage-timeline-name {
+  align-self: center;
+  font-size: 1.35rem;
+  font-weight: 780;
+  line-height: 1.12;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.werewolf-stage-timeline-participant.nightDeaths {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.werewolf-stage-timeline-participant.nightDeaths .werewolf-stage-timeline-name {
+  font-size: 1.45rem;
+}
+
+.werewolf-stage-timeline-participant .werewolf-stage-reveal-badge.compact {
+  align-self: center;
+  background: rgba(3, 13, 24, 0.42);
+  border: 1px solid rgba(123, 181, 218, 0.16);
+  border-radius: 0.48rem;
+  gap: 0.58rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.werewolf-stage-timeline-participant .werewolf-stage-reveal-badge.compact > span:not(.werewolf-stage-reveal-role-icon, .werewolf-stage-reveal-team-icon) {
+  font-size: 1.02rem;
+}
+
+.werewolf-stage-timeline-participant .werewolf-stage-reveal-badge.compact strong {
+  font-size: 1.2rem;
+}
+
+.werewolf-stage-timeline-participant .werewolf-stage-reveal-badge.compact .werewolf-stage-reveal-role-icon,
+.werewolf-stage-timeline-participant .werewolf-stage-reveal-badge.compact .werewolf-stage-reveal-team-icon {
+  height: 1.65rem;
+  width: 1.65rem;
+}
+
+.werewolf-stage-timeline-participant .werewolf-stage-reveal-badge.hidden.compact {
+  font-size: 1rem;
+}
+
+@media (max-width: 760px) {
+  .stage-link-body,
+  .werewolf-stage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .werewolf-stage-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .werewolf-stage-header-actions {
+    align-items: stretch;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .werewolf-stage-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .werewolf-stage-code {
+    font-size: 2rem;
+  }
+
+  .werewolf-stage-center h2,
+  .werewolf-stage-hero h2 {
+    font-size: 2.65rem;
+  }
+
+  .werewolf-stage-day-timer {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .werewolf-stage-day-timer strong {
+    font-size: 3.1rem;
+  }
+
+  .werewolf-stage-player-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .werewolf-stage-subtitle {
+    font-size: 1.25rem;
+  }
+
+  .werewolf-stage-rail-label {
+    font-size: 1.05rem;
+  }
+
+  .werewolf-stage-timeline,
+  .werewolf-stage-timeline.single,
+  .werewolf-stage-timeline.pair,
+  .werewolf-stage-timeline.many {
+    grid-template-columns: 1fr;
+    max-width: 30rem;
+    width: min(100%, 30rem);
+  }
+
+  .werewolf-stage-timeline-step {
+    justify-items: stretch;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .werewolf-stage-timeline-step:not(:last-child)::after {
+    bottom: -0.85rem;
+    height: auto;
+    left: 1rem;
+    right: auto;
+    top: 2rem;
+    width: 1px;
+  }
+
+  .werewolf-stage-timeline-marker {
+    grid-column: 1;
+    grid-row: 1;
+    height: 2rem;
+    width: 2rem;
+    font-size: 0.82rem;
+  }
+
+  .werewolf-stage-timeline-card {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+    padding: 0.82rem;
+  }
+
+  .werewolf-stage-timeline-participant {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .werewolf-stage-timeline-heading strong,
+  .werewolf-stage-timeline-name,
+  .werewolf-stage-timeline-participant.nightDeaths .werewolf-stage-timeline-name {
+    font-size: 1.08rem;
+  }
+
+  .werewolf-stage-player-tile strong {
+    font-size: 1.8rem;
+  }
+
+  .werewolf-stage-qr img {
+    height: 12rem;
+    width: 12rem;
+  }
+}

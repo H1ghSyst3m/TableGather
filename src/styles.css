@@ -1,0 +1,1288 @@
+@import "tailwindcss";
+
+:root {
+  color: #0c1b22;
+  background: #ffffff;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --accent: #00615d;
+  --accent-strong: #004d49;
+  --accent-soft: #dcefed;
+  --surface: #ffffff;
+  --surface-tint: #f7f5f1;
+  --app-bg: rgba(255, 255, 255, 0.96);
+  --card-bg: #ffffff;
+  --border: #ddd8cf;
+  --text: #0c1b22;
+  --muted: #62717d;
+  --danger: #d95d45;
+  --amber: #d69a26;
+  --shadow: 0 14px 36px rgba(10, 28, 35, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #f8f7f4;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(0, 97, 93, 0.06), transparent 28rem),
+    linear-gradient(180deg, #fff 0%, #f8f7f4 100%);
+  overflow-x: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+svg {
+  width: 1.2em;
+  height: 1.2em;
+  flex: none;
+}
+
+.app-frame {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--app-bg);
+  color: var(--text);
+}
+
+.hub-screen {
+  padding-bottom: 0;
+}
+
+.flow-screen {
+  padding: 0 1rem 8.5rem;
+}
+
+.game-flow-shell {
+  height: 100dvh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  padding: 0;
+}
+
+.game-flow-shell-top {
+  position: relative;
+  z-index: 18;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 28px rgba(10, 28, 35, 0.06);
+  backdrop-filter: blur(16px);
+}
+
+.game-flow-shell-body {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.65rem 0.75rem calc(0.85rem + env(safe-area-inset-bottom));
+}
+
+.game-flow-shell .header-bar {
+  position: static;
+  padding: 0.55rem 0.75rem 0.45rem;
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.game-flow-shell .brand-row {
+  gap: 0.5rem;
+}
+
+.game-flow-shell .header-actions {
+  gap: 0.45rem;
+}
+
+.game-flow-shell .back-button,
+.game-flow-shell .icon-button {
+  min-height: 2.35rem;
+  border-radius: 0.78rem;
+}
+
+.game-flow-shell .back-button {
+  padding: 0 0.8rem;
+}
+
+.game-flow-shell .icon-button {
+  width: 2.35rem;
+}
+
+.header-bar {
+  padding: 1rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.9);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(16px);
+}
+
+.brand-row,
+.header-actions,
+.current-game-layout,
+.game-facts,
+.segmented-tabs,
+.mode-button,
+.game-row,
+.phase-heading,
+.button-row,
+.panel-heading,
+.player-row,
+.room-header,
+.secondary-button,
+.primary-action {
+  display: flex;
+  align-items: center;
+}
+
+.brand-row {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand-row h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1;
+  letter-spacing: 0;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.header-actions {
+  gap: 0.7rem;
+}
+
+.language-button,
+.icon-button,
+.back-button {
+  min-height: 2.7rem;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 1.1rem;
+  box-shadow: 0 4px 16px rgba(10, 28, 35, 0.04);
+}
+
+.language-button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.85rem;
+  font-weight: 700;
+}
+
+.language-menu-wrap {
+  position: relative;
+}
+
+.language-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 0.3rem;
+  min-width: 10.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.language-menu button,
+.settings-choice-grid button {
+  min-height: 2.7rem;
+  justify-content: space-between;
+  gap: 0.8rem;
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0 0.75rem;
+  background: transparent;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.language-menu button.active,
+.settings-choice-grid button.active {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.icon-button {
+  width: 2.7rem;
+  padding: 0;
+}
+
+.back-button {
+  padding: 0 1rem;
+  font-weight: 750;
+}
+
+.section-block {
+  padding: 1rem 1rem 0;
+}
+
+.section-label {
+  margin: 0 0 0.7rem;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.segmented-tabs {
+  margin: 1rem 1rem 0;
+  padding: 0.25rem;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: #fff;
+}
+
+.segmented-tab {
+  flex: 1;
+  min-height: 3.25rem;
+  border: 0;
+  border-radius: 1rem;
+  background: transparent;
+  color: #17343b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.segmented-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, #00615d, #004d49);
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.08);
+}
+
+.current-game {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+}
+
+.current-game-layout {
+  gap: 1rem;
+}
+
+.current-game-layout h2,
+.setup-hero h2,
+.role-reveal-card h2,
+.game-surface h2,
+.room-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.05;
+  letter-spacing: 0;
+  font-weight: 850;
+}
+
+.current-game-layout p,
+.setup-hero p,
+.room-header p,
+.role-reveal-card p {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.game-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  aspect-ratio: 1;
+  border-radius: 0.95rem;
+  color: #fff;
+  background: var(--accent);
+}
+
+.game-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.game-icon-large {
+  flex-basis: 5.4rem;
+  width: 5.4rem;
+  height: 5.4rem;
+  min-width: 5.4rem;
+  min-height: 5.4rem;
+  border-radius: 50%;
+}
+
+.game-icon-werewolf {
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 20%, rgba(255, 255, 255, 0.24), transparent 32%), var(--accent);
+}
+
+.game-icon-werewolf img {
+  transform: scale(1.12);
+}
+
+.game-icon-imposter {
+  background: var(--accent);
+}
+
+.game-icon-undercover {
+  background: var(--accent);
+}
+
+.game-icon svg {
+  width: 52%;
+  height: 52%;
+}
+
+.game-facts {
+  width: calc(100% - 4rem);
+  margin: 0.9rem 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.game-facts span {
+  flex: 1;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: #536270;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.game-facts span + span {
+  border-left: 1px solid var(--border);
+}
+
+.game-facts svg {
+  color: var(--accent);
+}
+
+.list-surface,
+.panel,
+.role-reveal-card,
+.game-surface,
+.room-header {
+  border: 1px solid rgba(221, 216, 207, 0.88);
+  border-radius: 1.1rem;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
+
+.list-surface {
+  overflow: hidden;
+  background: #fbfaf8;
+}
+
+.game-row,
+.mode-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.game-row {
+  gap: 0.8rem;
+  min-height: 4.55rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.game-row + .game-row {
+  border-top: 1px solid var(--border);
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.row-main strong {
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.row-main span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--danger);
+  font-weight: 750;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.status-undercover {
+  color: var(--amber);
+}
+
+.mode-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.mode-button {
+  gap: 0.75rem;
+  min-height: 4.7rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card-bg);
+}
+
+.mode-button.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.mode-icon {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.mode-button.active .mode-icon {
+  color: #fff;
+  background: var(--accent);
+}
+
+.radio-dot {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  position: relative;
+}
+
+.mode-button.active .radio-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0.42rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.sticky-action {
+  width: auto;
+  max-width: none;
+  padding: 1rem;
+  background: #fff;
+}
+
+.hub-screen .sticky-action {
+  padding: 1rem;
+}
+
+.sticky-action p {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.primary-action {
+  width: 100%;
+  min-height: 3.75rem;
+  justify-content: center;
+  gap: 0.8rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, #00615d, #004d49);
+  color: #fff;
+  box-shadow: 0 12px 22px rgba(0, 97, 93, 0.24);
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.primary-action.compact {
+  min-height: 3.45rem;
+  margin-top: 1rem;
+}
+
+.primary-action.danger-action {
+  background: linear-gradient(135deg, #9a263d, #6f1d32);
+  box-shadow: 0 12px 22px rgba(154, 38, 61, 0.22);
+}
+
+.secondary-button,
+.text-button {
+  border: 0;
+  border-radius: 0.8rem;
+  min-height: 2.8rem;
+  padding: 0 1rem;
+  gap: 0.5rem;
+  font-weight: 800;
+}
+
+.secondary-button {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.secondary-button.full {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.8rem;
+}
+
+.secondary-button.compact {
+  min-height: 2.55rem;
+  padding: 0 0.85rem;
+}
+
+.text-button {
+  background: transparent;
+  color: var(--muted);
+}
+
+.text-button.danger {
+  color: var(--danger);
+}
+
+.setup-hero {
+  padding: 1.35rem 0 1rem;
+}
+
+.panel,
+.role-reveal-card,
+.game-surface,
+.room-header {
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.panel-heading {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.panel-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panel-heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.add-player-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.65rem;
+}
+
+.add-player-form input {
+  min-height: 3rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  padding: 0 0.9rem;
+  color: var(--text);
+  background: #fff;
+}
+
+.add-player-form button {
+  min-width: 3rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  padding: 0 1rem;
+}
+
+.add-player-form button:has(svg:only-child) {
+  padding: 0;
+}
+
+.player-table,
+.log-list {
+  display: grid;
+  gap: 0;
+}
+
+.player-row {
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 3.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.player-row:first-child {
+  border-top: 0;
+}
+
+.player-row span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.player-row-actions {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.player-row small {
+  color: var(--muted);
+}
+
+.player-row button {
+  border: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.65rem;
+  background: #f3efea;
+  color: var(--muted);
+  padding: 0;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.stepper button {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 0;
+  border-radius: 0.7rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0;
+}
+
+.stepper strong {
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+.valid-text {
+  color: var(--accent);
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.muted-text {
+  color: var(--muted);
+}
+
+.role-reveal-card h2 {
+  margin-top: 0;
+}
+
+.game-surface {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.game-flow-shell .game-surface {
+  gap: 0.65rem;
+}
+
+.game-flow-tool-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0.15rem 0 0;
+}
+
+.game-flow-shell-body > .game-flow-tool-row {
+  position: sticky;
+  top: -0.65rem;
+  z-index: 12;
+  margin: -0.65rem -0.75rem 0.1rem;
+  padding: 0.55rem 0.75rem 0.45rem;
+  border-bottom: 1px solid rgba(221, 216, 207, 0.78);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.game-flow-tool-row .secondary-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.game-flow-tool-row svg,
+.secondary-button.compact svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.phase-heading {
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.game-flow-shell .phase-heading {
+  gap: 0.6rem;
+}
+
+.phase-heading > svg {
+  width: 3rem;
+  height: 3rem;
+  padding: 0.72rem;
+  color: #fff;
+  border-radius: 0.9rem;
+  background: var(--accent);
+}
+
+.game-flow-shell .phase-heading > svg {
+  width: 2.65rem;
+  height: 2.65rem;
+  padding: 0.62rem;
+}
+
+.game-surface h2 {
+  font-size: 1.6rem;
+}
+
+.game-flow-shell .game-surface h2 {
+  font-size: 1.35rem;
+  line-height: 1.12;
+}
+
+.progress-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(2rem, 1fr));
+  gap: 0.35rem;
+}
+
+.progress-rail span {
+  height: 0.45rem;
+  border-radius: 1rem;
+  background: #e9e3da;
+}
+
+.progress-rail span.active {
+  background: var(--accent);
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.game-flow-shell .player-grid {
+  max-height: min(34dvh, 18rem);
+  overflow-y: auto;
+  padding-right: 0.1rem;
+  overscroll-behavior: contain;
+}
+
+.player-grid button {
+  min-height: 3.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: #fff;
+  color: var(--text);
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+  padding: 0.65rem;
+}
+
+.game-flow-shell .player-grid button {
+  min-height: 3rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.player-grid button.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.player-grid span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.player-grid .muted-text {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.4rem 0.2rem;
+}
+
+.result-note {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 0.85rem;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.log-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.game-flow-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.75rem 0 0.6rem;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(221, 216, 207, 0.88);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.game-flow-shell .game-flow-status {
+  margin: 0.45rem 0.75rem 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.8rem;
+  box-shadow: none;
+}
+
+.game-flow-shell .panel,
+.game-flow-shell .role-reveal-card,
+.game-flow-shell .room-header {
+  margin: 0;
+  border-radius: 0.9rem;
+  box-shadow: none;
+}
+
+.game-flow-shell .game-flow-status strong {
+  font-size: 0.98rem;
+}
+
+.game-flow-status > div:first-child {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.game-flow-status span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.game-flow-status strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.game-flow-status-action {
+  min-width: 0;
+  justify-self: end;
+}
+
+.game-flow-status-link {
+  min-height: 2.35rem;
+  padding: 0 0.2rem;
+  white-space: normal;
+  text-align: right;
+}
+
+.game-flow-action-bar {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(221, 216, 207, 0.78);
+}
+
+.game-flow-shell .game-flow-action-bar,
+.game-flow-shell .sticky-action {
+  margin: 0;
+  padding: 0.75rem 0 calc(0.25rem + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(221, 216, 207, 0.72);
+  background: transparent;
+  box-shadow: none;
+}
+
+.game-flow-shell .sticky-action {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.game-flow-shell .game-flow-action-bar .primary-action.compact,
+.game-flow-shell .game-flow-action-bar .secondary-button.full,
+.game-flow-shell .sticky-action .primary-action,
+.game-flow-shell .sticky-action .primary-action.compact,
+.game-flow-shell .sticky-action .secondary-button.full {
+  min-height: 3.25rem;
+  margin-top: 0;
+}
+
+.game-flow-action-bar .primary-action.compact,
+.game-flow-action-bar .secondary-button.full {
+  margin-top: 0;
+}
+
+.game-flow-action-bar .secondary-button.full {
+  min-height: 3.35rem;
+}
+
+@media (max-width: 380px) {
+  .game-flow-status {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-flow-status-action {
+    justify-self: start;
+  }
+
+  .game-flow-status-link {
+    text-align: left;
+  }
+}
+
+.option-group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.option-group p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.option-group > div {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.option-group button {
+  min-height: 3.25rem;
+  justify-content: flex-start;
+  gap: 0.2rem;
+  align-items: flex-start;
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: #fff;
+  color: var(--text);
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.option-group button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.option-group button span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.3rem;
+}
+
+.toggle-row span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.toggle-row small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.toggle-row input {
+  width: 1.35rem;
+  height: 1.35rem;
+  accent-color: var(--accent);
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  padding: 1rem;
+  background: rgba(12, 27, 34, 0.32);
+}
+
+.settings-sheet {
+  width: min(100%, 27rem);
+  max-height: min(84vh, 42rem);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card-bg);
+  box-shadow: 0 24px 70px rgba(10, 28, 35, 0.24);
+  padding: 1rem;
+}
+
+.dialog-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.dialog-action {
+  min-width: 0;
+  min-height: 3rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  padding: 0 0.75rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.dialog-action.secondary {
+  border-color: var(--border);
+  background: #fff;
+  color: var(--muted);
+}
+
+.dialog-action.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dialog-action.danger {
+  border-color: rgba(217, 93, 69, 0.28);
+  background: #fff;
+  color: var(--danger);
+}
+
+.settings-section,
+.settings-note,
+.settings-action-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.settings-section p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.settings-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.settings-action-list {
+  margin-top: 1rem;
+}
+
+.settings-action-list > button {
+  width: 100%;
+  justify-content: center;
+}
+
+.settings-danger-action {
+  min-height: 2.8rem;
+  border: 1px solid rgba(217, 93, 69, 0.24);
+}
+
+.settings-note {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border-radius: 0.85rem;
+  background: #fbfaf8;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.settings-note strong {
+  color: var(--text);
+}
+
+.app-error-panel {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.app-error-panel h2,
+.app-error-panel p {
+  margin: 0;
+}
+
+.app-error-panel p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.confirm-description {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.game-confirm-sheet h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.3rem;
+  line-height: 1.15;
+}
+
+.game-confirm-sheet .dialog-action-row {
+  margin-top: 0.85rem;
+}
+
+.invisible-text {
+  visibility: hidden;
+}
+
+@media (min-width: 760px) {
+  .app-frame {
+    max-width: 980px;
+    box-shadow: 0 0 0 1px rgba(221, 216, 207, 0.65);
+  }
+
+  .hub-screen,
+  .flow-screen {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .header-bar {
+    margin-left: -2rem;
+    margin-right: -2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .game-flow-shell .header-bar {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .game-flow-shell-body {
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+
+  .game-flow-shell .game-flow-status {
+    margin-right: 2rem;
+    margin-left: 2rem;
+  }
+
+  .game-flow-shell-body > .game-flow-tool-row {
+    margin-right: -2rem;
+    margin-left: -2rem;
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+
+  .segmented-tabs,
+  .section-block {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .mode-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .game-flow-tool-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .game-flow-tool-row .secondary-button {
+    width: auto;
+  }
+
+  .game-surface h2 {
+    font-size: 1.8rem;
+  }
+}
