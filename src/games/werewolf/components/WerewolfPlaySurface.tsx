@@ -1402,7 +1402,8 @@ function logGroupKind(entry: WerewolfLogEntry): LogGroupKind {
   if (entry.type === "dayElimination" || entry.type === "noDayElimination") return "vote";
   if (entry.type === "hunterShot" || entry.type === "hunterSkipped") return "hunter";
   if (entry.type === "villagersWin" || entry.type === "werewolvesWin" || entry.type === "specialWin") return "winner";
-  if (entry.type === "nightDeath" || entry.type === "noNightDeath" || entry.type === "toughGuyDeath" || entry.type === "wolvesWeakened") return "dawn";
+  if (entry.type === "nightDeath" || entry.type === "noNightDeath" || entry.type === "toughGuyWounded" || entry.type === "toughGuyDeath" || entry.type === "wolvesWeakened")
+    return "dawn";
   if (entry.stepId) return entry.stepId;
   if (entry.type === "roleConverted" && entry.result === "wildChildConverted") return "wildChild";
   return entry.actorRoleId === "hunter" ? "hunter" : "setup";
@@ -1445,7 +1446,10 @@ function logGroupIcon(group: GameLogGroupView) {
   if (group.kind === "hunter") return <RoleIconChip roleId="hunter" className="game-log-step-icon" />;
   if (group.kind === "vote") return <ActionIconChip icon="kill" className="game-log-step-action-icon" />;
   if (group.kind === "dawn") return <ActionIconChip icon="dawn" className="game-log-step-action-icon" />;
-  if (group.kind === "winner") return <ActionIconChip icon="good" className="game-log-step-action-icon" />;
+  if (group.kind === "winner") {
+    const icon = group.entries.some((entry) => entry.type === "werewolvesWin") ? "evil" : "good";
+    return <ActionIconChip icon={icon} className="game-log-step-action-icon" />;
+  }
   return <ActionIconChip icon="info" className="game-log-step-action-icon" />;
 }
 

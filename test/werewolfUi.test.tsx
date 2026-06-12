@@ -499,6 +499,58 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain(translate("de", "roles.alphaWolf.name"));
   });
 
+  it("groups tough guy wounds with dawn outcomes", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "tough", name: "Hart", roleId: "toughGuy" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        {
+          id: "wound",
+          type: "toughGuyWounded" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          targetIds: ["tough"],
+          targetRoleIds: ["toughGuy"],
+        },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(stepHeadingText(html)).toContain(translate("de", "log.groupDawn"));
+    expect(html).toContain(translate("de", "log.titleToughGuyWounded"));
+  });
+
+  it("renders winner log icons by winning side", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+        { id: "four", name: "Vier", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const werewolvesHtml = renderWithI18n(<GameLog state={game} entries={[{ id: "wolves", type: "werewolvesWin" as const, phase: "ended" as const }]} />);
+    const villagersHtml = renderWithI18n(<GameLog state={game} entries={[{ id: "village", type: "villagersWin" as const, phase: "ended" as const }]} />);
+
+    expect(werewolvesHtml).toContain("lucide-skull");
+    expect(werewolvesHtml).not.toContain("lucide-shield");
+    expect(villagersHtml).toContain("lucide-shield");
+    expect(villagersHtml).not.toContain("lucide-skull");
+  });
+
   it("renders undo as a compact footer action without replacing header navigation", () => {
     const game = createWerewolfGameFromAssignments(
       [
@@ -1317,8 +1369,12 @@ function countOccurrences(value: string, search: string) {
 }
 
 function stepHeadingText(html: string) {
-  return [...html.matchAll(/<div class="game-log-step-heading">([\s\S]*?)<\/div>/g)]
-    .map((match) => match[1].replace(/<[^>]*>/g, ""))
+  return [
+    ...html.matchAll(
+      /<div\b(?=[^>]*\bclass\s*=\s*(["'])(?:game-log-step-heading(?:\s[^"']*)?|[^"']*\sgame-log-step-heading(?:\s[^"']*)?)\1)[^>]*>([\s\S]*?)<\/div>/g,
+    ),
+  ]
+    .map((match) => match[2].replace(/<[^>]*>/g, ""))
     .join("\n");
 }
 
