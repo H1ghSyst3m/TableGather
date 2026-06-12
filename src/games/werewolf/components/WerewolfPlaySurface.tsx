@@ -1,6 +1,6 @@
 import { Clock, HeartCrack, Moon, Pause, Play, RotateCcw, ScrollText, Skull, Sun, Target, Undo2, Users, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { Children, Fragment, isValidElement, useState } from "react";
 import { effectiveRoleId as getEffectiveRoleId, playerTeamInState } from "../domain/alignment";
 import { activePublicEvent, canAlphaWolfTransformTarget, canWitchHealWolfTarget } from "../domain/engine";
 import { roleDefinitions } from "../domain/roles";
@@ -79,12 +79,18 @@ export function WerewolfPlaySurface({
     </>
   );
 
-  const undoAction =
-    canUndo && actions.undoStep ? (
-      <button className="secondary-button full werewolf-undo-action" type="button" onClick={actions.undoStep}>
-        <Undo2 /> {t("werewolf.undoStep")}
-      </button>
-    ) : null;
+  const undoAction = actions.undoStep ? (
+    <button
+      className="secondary-button compact werewolf-undo-action"
+      type="button"
+      disabled={!canUndo}
+      aria-label={t("werewolf.undoStep")}
+      title={t("werewolf.undoStep")}
+      onClick={actions.undoStep}
+    >
+      <Undo2 />
+    </button>
+  ) : null;
   const renderShell = ({ title, footer, children }: { title: string; footer?: ReactNode; children: ReactNode }) => (
     <WerewolfFlowShell title={title} onBack={onBack} headerActions={headerActions} settingsActions={settingsActions} footer={withUndoFooter(footer, undoAction)}>
       {children}
@@ -143,12 +149,29 @@ interface NightResultView {
 
 function withUndoFooter(footer: ReactNode | undefined, undoAction: ReactNode) {
   if (!undoAction) return footer;
+  const footerItems = footerChildren(footer);
+  const primaryAction = footerItems.at(-1);
+  const supportingContent = primaryAction ? footerItems.slice(0, -1) : [];
+
   return (
     <div className="werewolf-flow-action-stack">
-      {footer}
-      {undoAction}
+      {supportingContent}
+      <div className="werewolf-flow-footer-action-row">
+        {undoAction}
+        {primaryAction}
+      </div>
     </div>
   );
+}
+
+function footerChildren(footer: ReactNode): ReactNode[] {
+  return Children.toArray(footer).flatMap((item) => {
+    if (isValidElement<{ children?: ReactNode }>(item) && item.type === Fragment) {
+      return footerChildren(item.props.children);
+    }
+
+    return [item];
+  });
 }
 
 function NightSurface({ state, actions, renderShell }: { state: WerewolfState; actions: WerewolfActions; renderShell: RenderPlayShell }) {
