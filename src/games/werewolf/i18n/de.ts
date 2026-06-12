@@ -93,6 +93,7 @@ export const werewolfDe = {
     "wolfTarget": "Wen fressen die Werwölfe?",
     "selectPlayer": "Spieler wählen",
     "skip": "Überspringen",
+    "undoStep": "Schritt zurück",
     "nextStep": "Nächster Schritt",
     "resolveNight": "Nacht auswerten",
     "startDay": "Tag beginnen",

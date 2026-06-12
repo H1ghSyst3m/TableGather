@@ -42,6 +42,7 @@ const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   pauseDayTimer: () => undefined,
   resetDayTimer: () => undefined,
   startNextNight: () => undefined,
+  undoStep: () => undefined,
   reset: () => undefined,
 };
 
@@ -324,6 +325,39 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain("game-flow-status");
     expect(html).not.toContain("game-flow-tool-row");
     expect(html).not.toContain("<footer");
+  });
+
+  it("renders undo as a compact footer action without replacing header navigation", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "seer", name: "Seher", roleId: "seer" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const unavailableHtml = renderWithI18n(<WerewolfPlaySurface state={game} actions={actions} onBack={() => undefined} />);
+    const availableHtml = renderWithI18n(<WerewolfPlaySurface state={game} actions={actions} canUndo onBack={() => undefined} />);
+    const html = availableHtml;
+    const headerHtml = html.slice(html.indexOf('class="werewolf-flow-header"'), html.indexOf('class="werewolf-flow-body"'));
+    const footerHtml = renderFooterHtml(html);
+    const unavailableFooterHtml = renderFooterHtml(unavailableHtml);
+
+    expect(headerHtml).toContain(translate("de", "common.back"));
+    expect(headerHtml).not.toContain(translate("de", "werewolf.undoStep"));
+    expect(footerHtml).toContain(translate("de", "werewolf.nextStep"));
+    expect(footerHtml).toContain("werewolf-flow-footer-action-row");
+    expect(footerHtml).toContain(translate("de", "werewolf.undoStep"));
+    expect(footerHtml).toContain("werewolf-undo-action");
+    expect(footerHtml).toContain("secondary-button compact werewolf-undo-action");
+    expect(buttonHtmlForClass(footerHtml, "werewolf-undo-action")).toContain(`aria-label="${translate("de", "werewolf.undoStep")}"`);
+    expect(buttonHtmlForClass(footerHtml, "werewolf-undo-action")).not.toContain(translate("de", "common.back"));
+    expect(buttonHtmlForClass(footerHtml, "werewolf-undo-action")).not.toContain("disabled");
+    expect(unavailableFooterHtml).toContain(translate("de", "werewolf.undoStep"));
+    expect(unavailableFooterHtml).toContain("werewolf-undo-action");
+    expect(buttonHtmlForClass(unavailableFooterHtml, "werewolf-undo-action")).toContain("disabled");
   });
 
   it("renders player overview rows as compact icon rows with clickable role chips", () => {
@@ -1014,7 +1048,7 @@ describe("werewolf stage", () => {
   });
 });
 
-function renderGame(state: WerewolfState, serverTime?: number) {
+function renderGame(state: WerewolfState, serverTime?: number, canUndo = false) {
   return renderToStaticMarkup(
     <I18nContext.Provider
       value={{
@@ -1023,7 +1057,7 @@ function renderGame(state: WerewolfState, serverTime?: number) {
         t: (key, values) => translate("de", key, values),
       }}
     >
-      <WerewolfPlaySurface state={state} actions={actions} serverTime={serverTime} />
+      <WerewolfPlaySurface state={state} actions={actions} serverTime={serverTime} canUndo={canUndo} />
     </I18nContext.Provider>,
   );
 }
@@ -1057,6 +1091,14 @@ function createNightResultGame() {
 
 function renderFooterHtml(html: string) {
   return html.slice(html.indexOf('class="werewolf-flow-footer"'));
+}
+
+function buttonHtmlForClass(html: string, className: string) {
+  const classIndex = html.indexOf(className);
+  if (classIndex === -1) return "";
+  const buttonStart = html.lastIndexOf("<button", classIndex);
+  const buttonEnd = html.indexOf("</button>", classIndex);
+  return buttonStart >= 0 && buttonEnd >= 0 ? html.slice(buttonStart, buttonEnd) : "";
 }
 
 function renderWithI18n(node: ReactNode, locale: "de" | "en" = "de") {

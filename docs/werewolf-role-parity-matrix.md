@@ -35,7 +35,7 @@ Use these files before changing role behavior:
 | Wild Child conversion | Conversion happens only after handled resolution points where the model is newly dead: night report, day vote, Hunter/lover follow-up. |
 | Effective role/team | Seer, Aura Seer, Detective, wolf targeting, win checks, and displays use current roles after Cursed/Wild Child transformations and Alpha Wolf hidden alignment overlays. |
 | Result reveal | Seer, Aura Seer, and Detective results appear only after the host presses "Show result"; the UI renders the result in the bottom action area with good/evil tone. |
-| Room privacy | Host snapshots may include full game state; player snapshots expose only public status plus the requesting player's private role/hidden alignment when visible. |
+| Room privacy | Host snapshots may include full game state and a host-only `canUndo` flag; player snapshots expose only public status plus the requesting player's private role/hidden alignment when visible. |
 | Stage privacy | Stage snapshots expose only public room/game state and public reveal events. They must not expose assignment drafts, target selections, GM logs, hidden queues, or private player role data. |
 | Public reveal queue | `publicEvents` plus `publicEventIndex` controls host and Stage public reveal order. `advancePublicEvent` moves between public events; `hunterPending` is resolved by `resolveHunterShot`. |
 | Table-only roles | Little Girl is documented and selectable but has no automated night step, target state, or death effect. |

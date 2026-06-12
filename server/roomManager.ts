@@ -42,6 +42,7 @@ export class RoomManager {
       setupState: game.roomAdapter.createInitialSetupState(5),
       assignment: [],
       gameState: null,
+      undoState: null,
       createdAt: now,
       lastActivityAt: now,
     };

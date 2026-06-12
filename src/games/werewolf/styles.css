@@ -133,13 +133,52 @@
   gap: 0.65rem;
 }
 
+.werewolf-flow-footer-action-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.werewolf-flow-footer-action-row > .primary-action,
+.werewolf-flow-footer-action-row > .secondary-button {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.werewolf-flow-footer-action-row > .primary-action,
+.werewolf-flow-footer-action-row > .secondary-button.full {
+  width: 100%;
+}
+
+.werewolf-flow-footer-action-row > .secondary-button.full {
+  margin-top: 0;
+}
+
+.werewolf-undo-action {
+  min-width: 3.25rem;
+  width: 3.25rem;
+  padding: 0 0.85rem;
+  white-space: nowrap;
+}
+
 .werewolf-flow-footer-content > .primary-action,
 .werewolf-flow-footer-content > .secondary-button.full,
+.werewolf-flow-footer-action-row > .primary-action,
+.werewolf-flow-footer-action-row > .secondary-button.full,
 .werewolf-flow-action-stack .primary-action,
 .werewolf-flow-action-stack .secondary-button.full,
 .role-reveal-actions .primary-action.compact {
   min-height: 3.25rem;
   margin-top: 0;
+}
+
+@media (max-width: 420px) {
+  .werewolf-undo-action {
+    width: 3rem;
+    min-width: 3rem;
+    padding: 0 0.75rem;
+  }
 }
 
 .day-timer-panel {
@@ -2230,6 +2269,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.primary,
 
 .game-theme-werewolf .werewolf-flow-footer-content > .primary-action,
 .game-theme-werewolf .werewolf-flow-footer-content > .secondary-button.full,
+.game-theme-werewolf .werewolf-flow-footer-action-row > .secondary-button.full,
 .game-theme-werewolf .werewolf-flow-action-stack .primary-action,
 .game-theme-werewolf .role-reveal-actions .primary-action.compact {
   position: relative;

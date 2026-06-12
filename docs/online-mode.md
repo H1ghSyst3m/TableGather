@@ -267,9 +267,11 @@ Werewolf host commands include:
 - explicit reveals and progression: `revealNightResult`, `advanceNightStep`, `resolveNight`, `startDay`, `startNextNight`;
 - public reveal queue: `advancePublicEvent`;
 - day timer controls: `setDayTimerDuration`, `startDayTimer`, `pauseDayTimer`, `resetDayTimer`;
-- day/hunter resolution: `eliminateByVote`, `resolveHunterShot`.
+- day/hunter resolution: `eliminateByVote`, `resolveHunterShot`;
+- host safety: `undoStep` restores the one most recent committed play step.
 
 Nullable target commands are used for clear/undo while a step is still reversible.
+`undoStep` is different: it is host-only, server-side, one-step deep, and captures only committed Werewolf play progression such as night-step advance, night/day resolution, public reveal advance, day vote, Hunter shot, and starting the next phase. It does not capture target selection, result reveal, assignment, stage-link, room management, or day timer controls. Player and Stage snapshots never expose the private undo state; host snapshots expose only `canUndo`.
 
 ## Player Commands In Werewolf
 

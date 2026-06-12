@@ -38,6 +38,7 @@ import {
   sanitizeRoleCount,
   validateRoleCounts,
 } from "../domain/setup";
+import { areWerewolfStatesEqual, cloneWerewolfState, resetRestoredDayTimer } from "../domain/state";
 import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "../domain/types";
 import { ensureDayTimer } from "../domain/timer";
 import { useI18n } from "../../../i18n/useI18n";
@@ -72,6 +73,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
   const [manualAssign, setManualAssign] = useState<Record<string, RoleId | undefined>>({});
   const [randomPreview, setRandomPreview] = useState<WerewolfState | null>(null);
   const [state, setState] = useState<WerewolfState | null>(() => loadSavedGame());
+  const [undoState, setUndoState] = useState<WerewolfState | null>(null);
   const [abortOpen, setAbortOpen] = useState(false);
 
   useEffect(() => {
@@ -120,11 +122,13 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
   };
 
   const startRandomGame = () => {
+    setUndoState(null);
     setState(randomPreview ?? createRandomPreview(players, displayCounts, options));
   };
 
   const startManualGame = () => {
     if (!allManualAssigned) return;
+    setUndoState(null);
     setState(
       createWerewolfGameFromAssignments(
         players.map((player) => ({
@@ -140,6 +144,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
   const reset = () => {
     localStorage.removeItem(STORAGE_KEY);
     if (state) setPlayers(state.players.map((player) => createSetupPlayer(player.name)));
+    setUndoState(null);
     setState(null);
     setSetupStep(1);
     setAssignMode(null);
@@ -183,6 +188,23 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
 
     navigate("/");
   };
+  const updateStateWithUndo = (updater: (current: WerewolfState) => WerewolfState) => {
+    if (!state) return;
+    const nextState = updater(state);
+    if (!areWerewolfStatesEqual(state, nextState)) setUndoState(cloneWerewolfState(state));
+    setState(nextState);
+  };
+  const updateStateWithoutUndo = (updater: (current: WerewolfState) => WerewolfState) => {
+    if (!state) return;
+    const nextState = updater(state);
+    if (nextState !== state) setUndoState(null);
+    setState(nextState);
+  };
+  const undoStep = () => {
+    if (!undoState) return;
+    setState(resetRestoredDayTimer(cloneWerewolfState(undoState)));
+    setUndoState(null);
+  };
 
   if (state?.phase === "roleReveal") {
     return (
@@ -207,6 +229,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
       <>
         <WerewolfPlaySurface
           state={state}
+          canUndo={Boolean(undoState)}
           onBack={() => navigate("/")}
           settingsActions={settingsActions}
           actions={{
@@ -217,22 +240,23 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
             setInspectedPlayer: (playerId) => setState((current) => (current ? setInspectedPlayer(current, playerId) : current)),
             setAuraTarget: (playerId) => setState((current) => (current ? setAuraTarget(current, playerId) : current)),
             setDetectiveTargets: (playerIds) => setState((current) => (current ? setDetectiveTargets(current, playerIds) : current)),
-            revealNightResult: (step) => setState((current) => (current ? revealNightResult(current, step) : current)),
+            revealNightResult: (step) => updateStateWithoutUndo((current) => revealNightResult(current, step)),
             setWolfTarget: (playerId) => setState((current) => (current ? setWolfTarget(current, playerId) : current)),
             setAlphaWolfTransform: (value) => setState((current) => (current ? setAlphaWolfTransform(current, value) : current)),
             setWitchHealTonight: (value) => setState((current) => (current ? setWitchHealTonight(current, value) : current)),
             setWitchPoisonTarget: (playerId) => setState((current) => (current ? setWitchPoisonTarget(current, playerId) : current)),
-            advanceNightStep: () => setState((current) => (current ? advanceNightStep(current) : current)),
-            advancePublicEvent: () => setState((current) => (current ? advancePublicEvent(current) : current)),
-            resolveNight: () => setState((current) => (current ? resolveNight(current) : current)),
-            resolveHunterShot: (playerId) => setState((current) => (current ? resolveHunterShot(current, playerId) : current)),
-            eliminateByVote: (playerId) => setState((current) => (current ? eliminateByVote(current, playerId) : current)),
-            startDay: () => setState((current) => (current ? startDay(current) : current)),
+            advanceNightStep: () => updateStateWithUndo(advanceNightStep),
+            advancePublicEvent: () => updateStateWithUndo(advancePublicEvent),
+            resolveNight: () => updateStateWithUndo(resolveNight),
+            resolveHunterShot: (playerId) => updateStateWithUndo((current) => resolveHunterShot(current, playerId)),
+            eliminateByVote: (playerId) => updateStateWithUndo((current) => eliminateByVote(current, playerId)),
+            startDay: () => updateStateWithUndo(startDay),
             setDayTimerDuration: (durationSeconds) => setState((current) => (current ? setDayTimerDuration(current, durationSeconds) : current)),
             startDayTimer: () => setState((current) => (current ? startDayTimer(current) : current)),
             pauseDayTimer: () => setState((current) => (current ? pauseDayTimer(current) : current)),
             resetDayTimer: () => setState((current) => (current ? resetDayTimer(current) : current)),
-            startNextNight: () => setState((current) => (current ? startNextNight(current) : current)),
+            startNextNight: () => updateStateWithUndo(startNextNight),
+            undoStep,
             reset,
           }}
         />

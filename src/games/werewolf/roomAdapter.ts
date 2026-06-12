@@ -37,9 +37,10 @@ import {
   sanitizeRoleCount,
   validateRoleCounts,
 } from "./domain/setup";
+import { areWerewolfStatesEqual, cloneWerewolfState, resetRestoredDayTimer } from "./domain/state";
 import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "./domain/types";
 import type { WerewolfHostCommand, WerewolfPlayerCommand } from "./commands";
-import type { WerewolfHostRoomSnapshot, WerewolfRoomAssignmentEntry, WerewolfSetupState } from "./roomTypes";
+import type { WerewolfHostRoomSnapshot, WerewolfRoomAssignmentEntry, WerewolfRoomUndoState, WerewolfSetupState } from "./roomTypes";
 import { createWerewolfStageSnapshot } from "./stage";
 
 export const werewolfRoomAdapter = {
@@ -52,6 +53,7 @@ export const werewolfRoomAdapter = {
     room.setupState = createWerewolfSetupState(Math.max(room.players.length, 5));
     room.assignment = [];
     room.gameState = null;
+    room.undoState = null;
   },
 
   applyHostCommand(room, rawCommand) {
@@ -66,6 +68,7 @@ export const werewolfRoomAdapter = {
         writeSetup(room, roleCounts, { ...(command.options ?? readSetup(room).options), roleReveal: true }, null);
         room.assignment = [];
         room.gameState = null;
+        room.undoState = null;
         room.phase = "assignment";
         break;
       }
@@ -128,6 +131,7 @@ export const werewolfRoomAdapter = {
         writeSetup(room, roleCounts, options);
         room.assignment = gameState.players.map((player) => ({ playerId: player.id, roleId: player.roleId }));
         room.gameState = gameState;
+        room.undoState = null;
         room.phase = "roleReveal";
         break;
       }
@@ -153,7 +157,11 @@ export const werewolfRoomAdapter = {
         room.gameState = withGame(room.gameState, (state) => setDetectiveTargets(state, command.playerIds));
         break;
       case "revealNightResult":
-        room.gameState = withGame(room.gameState, (state) => revealNightResult(state, command.step));
+        room.gameState = withGame(room.gameState, (state) => {
+          const nextState = revealNightResult(state, command.step);
+          if (nextState !== state) room.undoState = null;
+          return nextState;
+        });
         break;
       case "setWolfTarget":
         room.gameState = withGame(room.gameState, (state) => setWolfTarget(state, command.playerId));
@@ -168,27 +176,27 @@ export const werewolfRoomAdapter = {
         room.gameState = withGame(room.gameState, (state) => setWitchPoisonTarget(state, command.playerId));
         break;
       case "advanceNightStep":
-        room.gameState = withGame(room.gameState, advanceNightStep);
+        applyUndoableGameCommand(room, advanceNightStep);
         break;
       case "advancePublicEvent":
-        room.gameState = withGame(room.gameState, advancePublicEvent);
-        room.phase = (room.gameState as WerewolfState).phase === "ended" ? "ended" : "playing";
+        applyUndoableGameCommand(room, advancePublicEvent);
+        syncRoomPlayPhase(room);
         break;
       case "resolveNight":
-        room.gameState = withGame(room.gameState, resolveNight);
-        room.phase = (room.gameState as WerewolfState).phase === "ended" ? "ended" : "playing";
+        applyUndoableGameCommand(room, resolveNight);
+        syncRoomPlayPhase(room);
         break;
       case "resolveHunterShot":
-        room.gameState = withGame(room.gameState, (state) => resolveHunterShot(state, command.playerId));
-        room.phase = (room.gameState as WerewolfState).phase === "ended" ? "ended" : "playing";
+        applyUndoableGameCommand(room, (state) => resolveHunterShot(state, command.playerId));
+        syncRoomPlayPhase(room);
         break;
       case "eliminateByVote":
-        room.gameState = withGame(room.gameState, (state) => eliminateByVote(state, command.playerId));
-        room.phase = (room.gameState as WerewolfState).phase === "ended" ? "ended" : "playing";
+        applyUndoableGameCommand(room, (state) => eliminateByVote(state, command.playerId));
+        syncRoomPlayPhase(room);
         break;
       case "startDay":
-        room.gameState = withGame(room.gameState, startDay);
-        room.phase = (room.gameState as WerewolfState).phase === "ended" ? "ended" : "playing";
+        applyUndoableGameCommand(room, startDay);
+        syncRoomPlayPhase(room);
         break;
       case "setDayTimerDuration":
         room.gameState = withGame(room.gameState, (state) => setDayTimerDuration(state, command.durationSeconds));
@@ -203,8 +211,11 @@ export const werewolfRoomAdapter = {
         room.gameState = withGame(room.gameState, resetDayTimer);
         break;
       case "startNextNight":
-        room.gameState = withGame(room.gameState, startNextNight);
-        room.phase = "playing";
+        applyUndoableGameCommand(room, startNextNight);
+        syncRoomPlayPhase(room);
+        break;
+      case "undoStep":
+        restoreUndoState(room);
         break;
       default:
         throw new Error(`Unsupported werewolf host command: ${commandType(rawCommand)}`);
@@ -253,6 +264,7 @@ export const werewolfRoomAdapter = {
       assignment: room.assignment as WerewolfRoomAssignmentEntry[],
       serverTime: Date.now(),
       gameState: room.gameState as WerewolfState | null,
+      canUndo: Boolean((room.undoState as WerewolfRoomUndoState | null)?.gameState),
     } satisfies WerewolfHostRoomSnapshot;
   },
 
@@ -395,6 +407,41 @@ function findGamePlayer(room: GameRoomRuntime, player: GameRoomPlayer) {
 function withGame(gameState: unknown, updater: (state: WerewolfState) => WerewolfState) {
   if (!gameState) throw new Error("Game has not started.");
   return updater(gameState as WerewolfState);
+}
+
+function applyUndoableGameCommand(room: GameRoomRuntime, updater: (state: WerewolfState) => WerewolfState) {
+  const previousState = requireGameState(room.gameState);
+  const previousPhase = room.phase;
+  const nextState = updater(previousState);
+
+  if (!areWerewolfStatesEqual(previousState, nextState)) {
+    room.undoState = {
+      phase: previousPhase,
+      gameState: cloneWerewolfState(previousState),
+    } satisfies WerewolfRoomUndoState;
+  }
+
+  room.gameState = nextState;
+}
+
+function restoreUndoState(room: GameRoomRuntime) {
+  const undoState = room.undoState as WerewolfRoomUndoState | null;
+  if (!undoState) return;
+
+  room.phase = undoState.phase;
+  room.gameState = resetRestoredDayTimer(cloneWerewolfState(undoState.gameState));
+  room.undoState = null;
+}
+
+function syncRoomPlayPhase(room: GameRoomRuntime) {
+  const gameState = room.gameState as WerewolfState | null;
+  if (!gameState) return;
+  room.phase = gameState.phase === "ended" ? "ended" : "playing";
+}
+
+function requireGameState(gameState: unknown): WerewolfState {
+  if (!gameState) throw new Error("Game has not started.");
+  return gameState as WerewolfState;
 }
 
 function normalizeRoomRoleCounts(playerCount: number, counts: RoleCounts | undefined) {

@@ -69,6 +69,7 @@ export interface GameRoomRuntime {
   setupState: unknown;
   assignment: RoomAssignmentEntry[];
   gameState: unknown | null;
+  undoState: unknown | null;
 }
 
 export interface GameCommand {

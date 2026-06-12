@@ -1,6 +1,6 @@
-import { Clock, HeartCrack, Moon, Pause, Play, RotateCcw, ScrollText, Skull, Sun, Target, Users, X } from "lucide-react";
+import { Clock, HeartCrack, Moon, Pause, Play, RotateCcw, ScrollText, Skull, Sun, Target, Undo2, Users, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { Children, Fragment, isValidElement, useState } from "react";
 import { effectiveRoleId as getEffectiveRoleId, playerTeamInState } from "../domain/alignment";
 import { activePublicEvent, canAlphaWolfTransformTarget, canWitchHealWolfTarget } from "../domain/engine";
 import { roleDefinitions } from "../domain/roles";
@@ -40,6 +40,7 @@ interface WerewolfActions {
   pauseDayTimer: () => void;
   resetDayTimer: () => void;
   startNextNight: () => void;
+  undoStep?: () => void;
   reset: () => void;
 }
 
@@ -48,6 +49,7 @@ export function WerewolfPlaySurface({
   actions,
   roomPlayers = [],
   serverTime,
+  canUndo = false,
   onBack,
   settingsActions,
 }: {
@@ -55,6 +57,7 @@ export function WerewolfPlaySurface({
   actions: WerewolfActions;
   roomPlayers?: RoomPlayerPublic[];
   serverTime?: number;
+  canUndo?: boolean;
   onBack?: () => void;
   settingsActions?: WerewolfFlowShellProps["settingsActions"];
 }) {
@@ -76,8 +79,20 @@ export function WerewolfPlaySurface({
     </>
   );
 
+  const undoAction = actions.undoStep ? (
+    <button
+      className="secondary-button compact werewolf-undo-action"
+      type="button"
+      disabled={!canUndo}
+      aria-label={t("werewolf.undoStep")}
+      title={t("werewolf.undoStep")}
+      onClick={actions.undoStep}
+    >
+      <Undo2 />
+    </button>
+  ) : null;
   const renderShell = ({ title, footer, children }: { title: string; footer?: ReactNode; children: ReactNode }) => (
-    <WerewolfFlowShell title={title} onBack={onBack} headerActions={headerActions} settingsActions={settingsActions} footer={footer}>
+    <WerewolfFlowShell title={title} onBack={onBack} headerActions={headerActions} settingsActions={settingsActions} footer={withUndoFooter(footer, undoAction)}>
       {children}
     </WerewolfFlowShell>
   );
@@ -130,6 +145,33 @@ interface NightResultView {
   icon: WerewolfActionIconId;
   text: string;
   tone: NightResultTone;
+}
+
+function withUndoFooter(footer: ReactNode | undefined, undoAction: ReactNode) {
+  if (!undoAction) return footer;
+  const footerItems = footerChildren(footer);
+  const primaryAction = footerItems.at(-1);
+  const supportingContent = primaryAction ? footerItems.slice(0, -1) : [];
+
+  return (
+    <div className="werewolf-flow-action-stack">
+      {supportingContent}
+      <div className="werewolf-flow-footer-action-row">
+        {undoAction}
+        {primaryAction}
+      </div>
+    </div>
+  );
+}
+
+function footerChildren(footer: ReactNode): ReactNode[] {
+  return Children.toArray(footer).flatMap((item) => {
+    if (isValidElement<{ children?: ReactNode }>(item) && item.type === Fragment) {
+      return footerChildren(item.props.children);
+    }
+
+    return [item];
+  });
 }
 
 function NightSurface({ state, actions, renderShell }: { state: WerewolfState; actions: WerewolfActions; renderShell: RenderPlayShell }) {
