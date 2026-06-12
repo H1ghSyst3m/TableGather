@@ -1602,10 +1602,12 @@ function logText(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<ty
     return t(`log.${entry.type}` as TranslationKey, { name: targetLabels(entry, state, t) || entry.playerName || "" });
   }
   if (entry.type === "hunterShot") {
-    return t("log.hunterShot", { actor: actorLabel(entry, state, t), name: targetLabels(entry, state, t) || entry.playerName || "" });
+    const actor = actorLabel(entry, state, t) || entry.playerName || t("roles.hunter.name");
+    return t("log.hunterShot", { actor, name: targetLabels(entry, state, t) || entry.playerName || "" });
   }
   if (entry.type === "hunterSkipped") {
-    return t("log.hunterSkipped", { actor: actorLabel(entry, state, t) });
+    const actor = actorLabel(entry, state, t) || entry.playerName || t("roles.hunter.name");
+    return t("log.hunterSkipped", { actor });
   }
   if (entry.type === "specialWin" && (entry.playerName || entry.targetIds?.length)) {
     return t("log.specialWinNamed", { name: targetLabels(entry, state, t) || entry.playerName || "" });
@@ -1614,7 +1616,7 @@ function logText(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<ty
 }
 
 function roleActionLogText(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
-  const actor = actorLabel(entry, state, t);
+  const actor = actorLabel(entry, state, t) || entry.playerName || "";
   const target = targetLabels(entry, state, t);
 
   if (entry.result === "selectedLovers") return t("log.roleActionSelectedLovers", { actor, targets: target });

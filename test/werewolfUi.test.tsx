@@ -426,7 +426,7 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "log.sectionSetup"));
     expect(html).toContain(translate("de", "log.sectionNight", { round: 1 }));
     expect(html).toContain(translate("de", "log.sectionDay", { round: 1 }));
-    expect(countOccurrences(html, "<strong>Hexe</strong>")).toBe(1);
+    expect(countOccurrences(stepHeadingText(html), translate("de", "roles.witch.name"))).toBe(1);
     expect(html).toContain(translate("de", "log.titleWitchHealed"));
     expect(html).toContain(translate("de", "log.titleWitchPoisoned"));
     expect(html).toContain("Sofia");
@@ -434,6 +434,31 @@ describe("werewolf play surface", () => {
     expect(html).toContain("Malik");
     expect(html).not.toContain("Sofia (Hexe)");
     expect(html).not.toContain("Dennis (Dorfbewohner)");
+  });
+
+  it("renders legacy hunter log entries with a fallback actor", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "hunter", name: "Jäger", roleId: "hunter" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        { id: "legacy-shot", type: "hunterShot" as const, privacy: "sensitive" as const, playerName: "Jäger" },
+        { id: "legacy-skip", type: "hunterSkipped" as const, privacy: "public" as const, playerName: "Jäger" },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain(translate("de", "log.hunterShot", { actor: "Jäger", name: "Jäger" }));
+    expect(html).toContain(translate("de", "log.hunterSkipped", { actor: "Jäger" }));
   });
 
   it("renders undo as a compact footer action without replacing header navigation", () => {
@@ -1251,6 +1276,12 @@ function renderStage(overrides: Partial<WerewolfStageRoomSnapshot>, locale: "de"
 
 function countOccurrences(value: string, search: string) {
   return value.split(search).length - 1;
+}
+
+function stepHeadingText(html: string) {
+  return [...html.matchAll(/<div class="game-log-step-heading">([\s\S]*?)<\/div>/g)]
+    .map((match) => match[1].replace(/<[^>]*>/g, ""))
+    .join("\n");
 }
 
 function activeStageHtml(html: string) {
