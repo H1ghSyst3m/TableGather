@@ -294,6 +294,7 @@ export function WerewolfRoomHostScreen({
         <WerewolfPlaySurface
           state={gameState}
           serverTime={snapshot.serverTime}
+          canUndo={snapshot.canUndo}
           onBack={() => navigate("/")}
           settingsActions={settingsActions}
           actions={{
@@ -320,6 +321,7 @@ export function WerewolfRoomHostScreen({
             pauseDayTimer: () => hostCommand({ type: "pauseDayTimer" }),
             resetDayTimer: () => hostCommand({ type: "resetDayTimer" }),
             startNextNight: () => hostCommand({ type: "startNextNight" }),
+            undoStep: () => hostCommand({ type: "undoStep" }),
             reset: () => hostCommand({ type: "resetToLobby" }),
           }}
           roomPlayers={snapshot.players}

@@ -93,6 +93,7 @@ export const werewolfEn = {
     "wolfTarget": "Who do the werewolves eat?",
     "selectPlayer": "Select player",
     "skip": "Skip",
+    "undoStep": "Step back",
     "nextStep": "Next step",
     "resolveNight": "Resolve night",
     "startDay": "Begin day",

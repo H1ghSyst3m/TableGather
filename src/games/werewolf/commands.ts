@@ -29,7 +29,8 @@ export type WerewolfHostCommand =
   | { type: "startDayTimer" }
   | { type: "pauseDayTimer" }
   | { type: "resetDayTimer" }
-  | { type: "startNextNight" };
+  | { type: "startNextNight" }
+  | { type: "undoStep" };
 
 export type WerewolfPlayerCommand = { type: "markRoleSeen" };
 
@@ -62,6 +63,7 @@ export const werewolfHostCommandTypes = [
   "pauseDayTimer",
   "resetDayTimer",
   "startNextNight",
+  "undoStep",
 ] as const;
 
 export const werewolfPlayerCommandTypes = ["markRoleSeen"] as const;

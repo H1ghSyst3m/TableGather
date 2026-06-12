@@ -1,4 +1,4 @@
-import type { HostRoomSnapshot, PlayerRoomSnapshot, RoomAssignmentEntry, RoomPlayerPublic, StageRoomSnapshot } from "../../types";
+import type { HostRoomSnapshot, PlayerRoomSnapshot, RoomAssignmentEntry, RoomPhase, RoomPlayerPublic, StageRoomSnapshot } from "../../types";
 import type {
   RevealMode,
   RoleCounts,
@@ -19,6 +19,11 @@ export interface WerewolfSetupState {
 
 export type WerewolfRoomAssignmentEntry = RoomAssignmentEntry<RoleId>;
 
+export interface WerewolfRoomUndoState {
+  phase: RoomPhase;
+  gameState: WerewolfState;
+}
+
 export interface WerewolfHostRoomSnapshot extends HostRoomSnapshot {
   roleCounts: RoleCounts;
   options: WerewolfOptions;
@@ -26,6 +31,7 @@ export interface WerewolfHostRoomSnapshot extends HostRoomSnapshot {
   assignment: WerewolfRoomAssignmentEntry[];
   serverTime: number;
   gameState: WerewolfState | null;
+  canUndo: boolean;
 }
 
 export interface WerewolfPlayerRoomSnapshot extends PlayerRoomSnapshot {

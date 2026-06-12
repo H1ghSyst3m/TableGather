@@ -489,6 +489,163 @@ describe("room manager", () => {
     expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.witchPoisonTargetId).toBeNull();
   });
 
+  it("keeps undo host-only and does not capture reversible target selections", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    const joined = ["Wolf", "Seer", "Witch", "Villager", "Hunter"].map((name, index) =>
+      manager.joinRoom(room.code, name, `player-${index}`),
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "createStageLink" });
+    const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
+    activeRoom.phase = "playing";
+    activeRoom.gameState = createWerewolfGameFromAssignments(
+      [
+        { id: joined[0].player.id, name: "Wolf", roleId: "werewolf" },
+        { id: joined[1].player.id, name: "Seer", roleId: "seer" },
+        { id: joined[2].player.id, name: "Witch", roleId: "witch" },
+        { id: joined[3].player.id, name: "Villager", roleId: "villager" },
+        { id: joined[4].player.id, name: "Hunter", roleId: "hunter" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: joined[3].player.id });
+
+    const hostView = werewolfHostSnapshot(manager, activeRoom);
+    const playerView = werewolfPlayerSnapshot(manager, activeRoom, joined[1].clientToken);
+    const stageView = werewolfStageSnapshot(manager, activeRoom);
+    const playerJson = JSON.stringify(playerView);
+    const stageJson = JSON.stringify(stageView);
+
+    expect(hostView.canUndo).toBe(false);
+    expect(hostView.gameState?.wolfTargetId).toBe(joined[3].player.id);
+    expect(playerJson).not.toContain("canUndo");
+    expect(playerJson).not.toContain("undoState");
+    expect(playerJson).not.toContain("wolfTargetId");
+    expect(stageJson).not.toContain("canUndo");
+    expect(stageJson).not.toContain("undoState");
+    expect(stageJson).not.toContain("wolfTargetId");
+  });
+
+  it("undoes one committed room step and clears the undo slot", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
+    activeRoom.phase = "playing";
+    activeRoom.gameState = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "seer", name: "Seer", roleId: "seer" },
+        { id: "witch", name: "Witch", roleId: "witch" },
+        { id: "villager", name: "Villager", roleId: "villager" },
+        { id: "hunter", name: "Hunter", roleId: "hunter" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: "villager" });
+    expect(werewolfHostSnapshot(manager, activeRoom).canUndo).toBe(false);
+
+    manager.applyHostCommand(room.code, hostToken, { type: "resolveNight" });
+    let gameState = asWerewolfRoom(manager.getRoom(room.code)).gameState!;
+
+    expect(werewolfHostSnapshot(manager, activeRoom).canUndo).toBe(true);
+    expect(gameState.nightResolved).toBe(true);
+    expect(gameState.lastNightDeaths).toEqual(["villager"]);
+    expect(gameState.players.find((player) => player.id === "villager")?.alive).toBe(false);
+
+    manager.applyHostCommand(room.code, hostToken, { type: "undoStep" });
+    gameState = asWerewolfRoom(manager.getRoom(room.code)).gameState!;
+
+    expect(werewolfHostSnapshot(manager, activeRoom).canUndo).toBe(false);
+    expect(gameState.phase).toBe("night");
+    expect(gameState.nightResolved).toBe(false);
+    expect(gameState.wolfTargetId).toBe("villager");
+    expect(gameState.lastNightDeaths).toEqual([]);
+    expect(gameState.players.find((player) => player.id === "villager")?.alive).toBe(true);
+
+    manager.applyHostCommand(room.code, hostToken, { type: "undoStep" });
+    expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.wolfTargetId).toBe("villager");
+  });
+
+  it("rolls stage snapshots back after a host undo", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    const joined = ["Wolf", "Alex", "Sam", "Jordan", "Taylor"].map((name, index) =>
+      manager.joinRoom(room.code, name, `player-${index}`),
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "createStageLink" });
+    const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
+    activeRoom.phase = "playing";
+    activeRoom.gameState = createWerewolfGameFromAssignments(
+      [
+        { id: joined[0].player.id, name: "Wolf", roleId: "werewolf" },
+        { id: joined[1].player.id, name: "Alex", roleId: "villager" },
+        { id: joined[2].player.id, name: "Sam", roleId: "villager" },
+        { id: joined[3].player.id, name: "Jordan", roleId: "villager" },
+        { id: joined[4].player.id, name: "Taylor", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "hidden", roleReveal: false },
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: joined[1].player.id });
+    manager.applyHostCommand(room.code, hostToken, { type: "resolveNight" });
+
+    const reportView = werewolfStageSnapshot(manager, activeRoom);
+    expect(reportView.scene).toBe("nightReport");
+    expect(reportView.events).toEqual([{ type: "nightDeaths", source: "night", playerIds: [joined[1].player.id] }]);
+
+    manager.applyHostCommand(room.code, hostToken, { type: "undoStep" });
+    const rolledBackView = werewolfStageSnapshot(manager, activeRoom);
+
+    expect(rolledBackView.scene).toBe("night");
+    expect(rolledBackView.events).toEqual([]);
+    expect(rolledBackView.activeEvent).toBeNull();
+  });
+
+  it("resets the restored day timer when undo returns to a day scene", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
+    activeRoom.phase = "playing";
+    activeRoom.gameState = {
+      ...createWerewolfGameFromAssignments(
+        [
+          { id: "wolf", name: "Wolf", roleId: "werewolf" },
+          { id: "one", name: "One", roleId: "villager" },
+          { id: "two", name: "Two", roleId: "villager" },
+          { id: "three", name: "Three", roleId: "villager" },
+          { id: "four", name: "Four", roleId: "villager" },
+        ],
+        { winMode: "standard", revealMode: "role", roleReveal: false },
+      ),
+      phase: "day",
+      dayTimer: {
+        durationSeconds: 120,
+        status: "running",
+        startedAt: 1_000,
+        pausedRemainingSeconds: 90,
+      },
+    };
+
+    manager.applyHostCommand(room.code, hostToken, { type: "startNextNight" });
+    expect(werewolfHostSnapshot(manager, activeRoom).canUndo).toBe(true);
+    expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.phase).toBe("night");
+
+    manager.applyHostCommand(room.code, hostToken, { type: "undoStep" });
+    const restored = asWerewolfRoom(manager.getRoom(room.code)).gameState!;
+
+    expect(restored.phase).toBe("day");
+    expect(restored.dayTimer).toEqual({
+      durationSeconds: 120,
+      status: "idle",
+      startedAt: null,
+      pausedRemainingSeconds: 120,
+    });
+  });
+
   it("resolves hunter queues through room host commands", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");

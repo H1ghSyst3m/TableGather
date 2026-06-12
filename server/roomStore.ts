@@ -20,6 +20,7 @@ export interface Room {
   setupState: unknown;
   assignment: RoomAssignmentEntry[];
   gameState: unknown | null;
+  undoState: unknown | null;
   createdAt: number;
   lastActivityAt: number;
 }
