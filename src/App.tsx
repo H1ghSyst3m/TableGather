@@ -8,6 +8,7 @@ import { WerewolfStageScreen } from "./games/werewolf/components/WerewolfStageSc
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { getGameDefinition } from "./games/registry";
 import { gameThemeClassName, gameThemeStyle } from "./games/theme";
+import { getStoredHostRoomToken } from "./online/roomSessionStorage";
 import type { GameDefinition } from "./games/types";
 import type { GameId } from "./types";
 
@@ -61,7 +62,7 @@ function JoinRoomCodeRoute({ navigate }: { navigate: (path: string) => void }) {
 }
 
 function RoomRouteScreen({ code, navigate }: { code: string; navigate: (path: string) => void }) {
-  const hostToken = localStorage.getItem(`tablegather-room-${code}-host`);
+  const hostToken = getStoredHostRoomToken(code);
   return (
     <GameThemeFrame game={getGameDefinition("werewolf")}>
       {hostToken ? (

@@ -6,7 +6,7 @@ export const commonDe = {
     "german": "Deutsch",
     "settings": "Einstellungen",
     "interfaceLanguage": "Sprache der Oberfläche",
-    "settingsSessionHint": "Raum- und lokale Spielsessions bleiben auf diesem Gerät. Es gibt keinen Account und keine Datenbank.",
+    "settingsSessionHint": "Raum- und lokale Spielsessions bleiben auf diesem Gerät. Raumsessions laufen nach Inaktivität ab; es gibt keinen Account und keine Datenbank.",
     "games": "Spiele",
     "session": "Session",
     "currentGame": "Aktuelles Spiel",

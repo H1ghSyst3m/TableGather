@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createWerewolfGameFromAssignments, markRoleSeen } from "../src/games/werewolf/domain/engine";
 import type { WerewolfState } from "../src/games/werewolf/domain/types";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
-import { HubScreen } from "../src/components/HubScreen";
+import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
 import { WerewolfRoomPlayerScreen } from "../src/games/werewolf/components/WerewolfRoomPlayerScreen";
 import { RoleRulesModal } from "../src/games/werewolf/components/RoleRulesModal";
@@ -533,6 +533,57 @@ describe("werewolf play surface", () => {
     expect(html).toContain("werewolf-mark.png");
     expect(html).toContain(translate("de", "hub.joinRoomByCode"));
     expect(html).not.toContain('class="current-game-logo"');
+  });
+
+  it("renders the Hub session tab empty state", () => {
+    const html = renderWithI18n(<HubScreen initialTab="session" navigate={() => undefined} />);
+
+    expect(html).toContain(translate("de", "hub.sessionTitle"));
+    expect(html).toContain(translate("de", "hub.sessionEmptyTitle"));
+    expect(html).toContain(translate("de", "hub.sessionRefresh"));
+    expect(html).not.toContain(translate("de", "hub.startGame", { game: translate("de", "games.werewolf") }));
+  });
+
+  it("renders active Hub session room cards", () => {
+    const html = renderWithI18n(
+      <HubSessionPanel
+        cards={[
+          {
+            roomCode: "ABCD",
+            role: "host",
+            gameId: "werewolf",
+            phase: "playing",
+            playerCount: 5,
+            createdAt: Date.now(),
+            lastActivityAt: Date.now(),
+            expiresAt: Date.now() + 3 * 60 * 60 * 1000,
+          },
+          {
+            roomCode: "WXYZ",
+            role: "player",
+            gameId: "werewolf",
+            phase: "lobby",
+            playerCount: 2,
+            playerName: "Alex",
+            createdAt: Date.now(),
+            lastActivityAt: Date.now() - 1_000,
+            expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+          },
+        ]}
+        error={null}
+        loading={false}
+        navigate={() => undefined}
+        onRefresh={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("session-room-card");
+    expect(html).toContain("ABCD");
+    expect(html).toContain("WXYZ");
+    expect(html).toContain(translate("de", "hub.sessionRoleHost"));
+    expect(html).toContain(translate("de", "hub.sessionRolePlayer"));
+    expect(html).toContain(translate("de", "hub.sessionPhasePlaying"));
+    expect(html).toContain(translate("de", "hub.sessionPlayerName", { name: "Alex" }));
   });
 
   it("renders the shared room join screen with code and name fields", () => {

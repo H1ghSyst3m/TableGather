@@ -608,6 +608,101 @@ describe("room manager", () => {
     expect(manager.getRoom(room.code)?.hostClientId).toBe("host-2");
   });
 
+  it("reports room sessions without refreshing activity", () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 100 });
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    const { clientToken: playerToken } = manager.joinRoom(room.code, "Alex", "player-1");
+    const lastActivityAt = manager.getRoom(room.code)?.lastActivityAt;
+
+    now = 1_050;
+
+    expect(manager.inspectRoom(room.code)).toMatchObject({ roomCode: room.code, exists: true, joinable: true });
+    expect(manager.inspectRoomSession(room.code, hostToken)).toMatchObject({
+      roomCode: room.code,
+      valid: true,
+      role: "host",
+      playerCount: 1,
+      lastActivityAt,
+      expiresAt: (lastActivityAt ?? 0) + 100,
+    });
+    expect(manager.inspectRoomSession(room.code, playerToken)).toMatchObject({
+      roomCode: room.code,
+      valid: true,
+      role: "player",
+      playerName: "Alex",
+      lastActivityAt,
+    });
+    expect(manager.inspectRoomSession(room.code, "BADTOKEN")).toEqual({ roomCode: room.code, valid: false });
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(lastActivityAt);
+  });
+
+  it("persists passive disconnect state without refreshing activity", () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 500 });
+    const { room } = manager.createRoom("host-1", "werewolf");
+
+    now = 1_010;
+    const joined = manager.joinRoom(room.code, "Alex", "player-1");
+    const lastActivityAt = manager.getRoom(room.code)?.lastActivityAt;
+
+    now = 1_020;
+    const touched = manager.disconnectClient("player-1");
+    const updated = manager.getRoom(room.code);
+
+    expect(touched).toHaveLength(1);
+    expect(updated?.players.find((player) => player.id === joined.player.id)).toMatchObject({
+      clientId: null,
+      connected: false,
+    });
+    expect(updated?.lastActivityAt).toBe(lastActivityAt);
+  });
+
+  it("refreshes room activity on successful room actions", () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 500 });
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+
+    now = 1_010;
+    const joined = ["Alex", "Sam", "Jordan", "Taylor", "Morgan"].map((name, index) => manager.joinRoom(room.code, name, `player-${index}`));
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_010);
+
+    now = 1_020;
+    manager.leaveRoom(room.code, joined[0].clientToken);
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_020);
+
+    now = 1_030;
+    manager.resumeRoom(room.code, joined[0].clientToken, "player-resumed");
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_030);
+
+    now = 1_040;
+    manager.applyHostCommand(room.code, hostToken, { type: "startGame", roleCounts: { werewolf: 1, villager: 4 } });
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_040);
+
+    now = 1_050;
+    manager.applyPlayerCommand(room.code, joined[0].clientToken, { type: "markRoleSeen" });
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_050);
+  });
+
+  it("prunes expired rooms and treats expired sessions as invalid", () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 100 });
+    const { room, clientToken } = manager.createRoom("host-1", "werewolf");
+
+    now = 1_099;
+    expect(manager.getRoom(room.code)).toBeTruthy();
+
+    now = 1_100;
+    expect(manager.inspectRoomSession(room.code, clientToken)).toEqual({ roomCode: room.code, valid: false });
+    expect(manager.inspectRoom(room.code)).toMatchObject({ roomCode: room.code, exists: false, joinable: false });
+    expect(manager.getRoom(room.code)).toBeUndefined();
+
+    const { room: pruneRoom } = manager.createRoom("host-2", "werewolf");
+    now += 100;
+    expect(manager.pruneExpiredRooms().map((expired) => expired.code)).toEqual([pruneRoom.code]);
+    expect(manager.listRooms()).toEqual([]);
+  });
+
   it("transfers the host to a connected lobby player", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");

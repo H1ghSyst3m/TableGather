@@ -15,6 +15,12 @@ import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
 import { useRoomSocket } from "../../../online/useRoomSocket";
 import type { HostCommand } from "../../../online/messages";
+import {
+  getStoredHostRoomToken,
+  removeHostRoomSession,
+  removeRoomSessions,
+  saveHostRoomSession,
+} from "../../../online/roomSessionStorage";
 import type { WerewolfHostRoomSnapshot } from "../roomTypes";
 import type { GameId, Locale } from "../../../types";
 import { GameConfirmDialog } from "../../../components/GameConfirmDialog";
@@ -37,7 +43,7 @@ export function WerewolfRoomHostScreen({
 }) {
   const { locale, t } = useI18n();
   const [snapshot, setSnapshot] = useState<WerewolfHostRoomSnapshot | null>(null);
-  const [token, setToken] = useState<string | null>(() => (code ? localStorage.getItem(hostStorageKey(code)) : null));
+  const [token, setToken] = useState<string | null>(() => (code ? getStoredHostRoomToken(code) : null));
   const [qr, setQr] = useState<string | null>(null);
   const [stageQr, setStageQr] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -54,17 +60,14 @@ export function WerewolfRoomHostScreen({
   const { connect, send, connected, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "connected" && message.role === "host") {
       setToken(message.clientToken);
-      localStorage.setItem(hostStorageKey(message.roomCode), message.clientToken);
-      localStorage.setItem(currentHostRoomKey, message.roomCode);
+      saveHostRoomSession(message.roomCode, message.clientToken);
       if (window.location.pathname !== `/room/${message.roomCode}`) replaceRoute(`/room/${message.roomCode}`);
     }
     if (message.type === "snapshot" && (message.snapshot as WerewolfHostRoomSnapshot).audience === "host") {
       setSnapshot(message.snapshot as WerewolfHostRoomSnapshot);
     }
     if (message.type === "hostTransferred") {
-      localStorage.removeItem(hostStorageKey(message.roomCode));
-      localStorage.removeItem(playerStorageKey(message.roomCode));
-      if (localStorage.getItem(currentHostRoomKey) === message.roomCode) localStorage.removeItem(currentHostRoomKey);
+      removeHostRoomSession(message.roomCode);
       setSnapshot(null);
       setToken(null);
       setServerError(null);
@@ -72,9 +75,9 @@ export function WerewolfRoomHostScreen({
       navigate(`/room/${message.roomCode}`);
     }
     if (message.type === "roomClosed") {
-      if (snapshot?.code) {
-        localStorage.removeItem(hostStorageKey(snapshot.code));
-        if (localStorage.getItem(currentHostRoomKey) === snapshot.code) localStorage.removeItem(currentHostRoomKey);
+      const closedRoomCode = snapshot?.code ?? code;
+      if (closedRoomCode) {
+        removeRoomSessions(closedRoomCode);
       }
       navigate("/");
     }
@@ -82,8 +85,7 @@ export function WerewolfRoomHostScreen({
       setServerError(message.message);
       const staleHostSession = message.message === "Host session not found." || message.message === "Session not found.";
       if (code && (!snapshot || staleHostSession)) {
-        localStorage.removeItem(hostStorageKey(code));
-        if (localStorage.getItem(currentHostRoomKey) === code) localStorage.removeItem(currentHostRoomKey);
+        removeRoomSessions(code);
         setToken(null);
         setSnapshot(null);
         navigate(`/room/${code}`);
@@ -96,7 +98,7 @@ export function WerewolfRoomHostScreen({
     socket.addEventListener(
       "open",
       () => {
-        const storedToken = code ? localStorage.getItem(hostStorageKey(code)) : null;
+        const storedToken = code ? getStoredHostRoomToken(code) : null;
         if (code) {
           if (storedToken) send({ type: "resumeRoom", roomCode: code, clientToken: storedToken });
           else navigate(`/room/${code}`);
@@ -128,7 +130,7 @@ export function WerewolfRoomHostScreen({
 
   const hostCommand = (payload: HostCommand) => {
     if (!snapshot) return;
-    const activeToken = token ?? localStorage.getItem(hostStorageKey(snapshot.code));
+    const activeToken = token ?? getStoredHostRoomToken(snapshot.code);
     if (!activeToken) return;
     setServerError(null);
     const message = { type: "hostCommand" as const, roomCode: snapshot.code, clientToken: activeToken, payload };
@@ -833,16 +835,6 @@ function availableRoomRolesForPlayer(snapshot: WerewolfHostRoomSnapshot, playerI
     const usedByOthers = Object.entries(assignment).filter(([id, value]) => id !== playerId && value === roleId).length;
     return total - usedByOthers > 0 || assignment[playerId] === roleId;
   });
-}
-
-const currentHostRoomKey = "tablegather-current-host-room";
-
-function hostStorageKey(code: string) {
-  return `tablegather-room-${code}-host`;
-}
-
-function playerStorageKey(code: string) {
-  return `tablegather-room-${code}-player`;
 }
 
 function replaceRoute(path: string) {

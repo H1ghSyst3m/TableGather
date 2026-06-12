@@ -17,6 +17,28 @@ describe("online messages", () => {
     expect(parseClientMessage({ type: "inspectRoom", requestId: 1, roomCode: "ABCD" })).toBeNull();
   });
 
+  it("parses valid room session inspection messages", () => {
+    expect(parseClientMessage({ type: "inspectRoomSession", roomCode: "abcd", clientToken: "TOKEN123" })).toEqual({
+      type: "inspectRoomSession",
+      roomCode: "abcd",
+      clientToken: "TOKEN123",
+    });
+    expect(parseClientMessage({ type: "inspectRoomSession", requestId: "session-1", roomCode: "ABCD", clientToken: "TOKEN123" })).toEqual({
+      type: "inspectRoomSession",
+      requestId: "session-1",
+      roomCode: "ABCD",
+      clientToken: "TOKEN123",
+    });
+  });
+
+  it("rejects invalid room session inspection messages", () => {
+    expect(parseClientMessage({ type: "inspectRoomSession", clientToken: "TOKEN123" })).toBeNull();
+    expect(parseClientMessage({ type: "inspectRoomSession", roomCode: "ABCD" })).toBeNull();
+    expect(parseClientMessage({ type: "inspectRoomSession", roomCode: 1234, clientToken: "TOKEN123" })).toBeNull();
+    expect(parseClientMessage({ type: "inspectRoomSession", roomCode: "ABCD", clientToken: 123 })).toBeNull();
+    expect(parseClientMessage({ type: "inspectRoomSession", requestId: 1, roomCode: "ABCD", clientToken: "TOKEN123" })).toBeNull();
+  });
+
   it("parses valid stage join messages", () => {
     expect(parseClientMessage({ type: "joinStage", roomCode: "ABCD", stageToken: "TOKEN123" })).toEqual({
       type: "joinStage",
