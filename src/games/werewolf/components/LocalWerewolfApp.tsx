@@ -38,8 +38,9 @@ import {
   sanitizeRoleCount,
   validateRoleCounts,
 } from "../domain/setup";
+import { areWerewolfStatesEqual, cloneWerewolfState, resetRestoredDayTimer } from "../domain/state";
 import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "../domain/types";
-import { ensureDayTimer, resetDayTimerValue } from "../domain/timer";
+import { ensureDayTimer } from "../domain/timer";
 import { useI18n } from "../../../i18n/useI18n";
 import { GameConfirmDialog } from "../../../components/GameConfirmDialog";
 import { hasDuplicatePlayerName, normalizePlayerName } from "../../../playerNames";
@@ -190,7 +191,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
   const updateStateWithUndo = (updater: (current: WerewolfState) => WerewolfState) => {
     if (!state) return;
     const nextState = updater(state);
-    if (nextState !== state) setUndoState(cloneWerewolfState(state));
+    if (!areWerewolfStatesEqual(state, nextState)) setUndoState(cloneWerewolfState(state));
     setState(nextState);
   };
   const updateStateWithoutUndo = (updater: (current: WerewolfState) => WerewolfState) => {
@@ -579,13 +580,4 @@ function normalizeSavedGame(state: WerewolfState): WerewolfState {
     publicEventIndex: state.publicEventIndex ?? 0,
     dayTimer: ensureDayTimer(state.dayTimer),
   };
-}
-
-function resetRestoredDayTimer(state: WerewolfState): WerewolfState {
-  if (state.phase !== "day") return state;
-  return { ...state, dayTimer: resetDayTimerValue(ensureDayTimer(state.dayTimer)) };
-}
-
-function cloneWerewolfState(state: WerewolfState): WerewolfState {
-  return structuredClone(state) as WerewolfState;
 }

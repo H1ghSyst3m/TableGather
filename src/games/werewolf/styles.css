@@ -164,6 +164,8 @@
 
 .werewolf-flow-footer-content > .primary-action,
 .werewolf-flow-footer-content > .secondary-button.full,
+.werewolf-flow-footer-action-row > .primary-action,
+.werewolf-flow-footer-action-row > .secondary-button.full,
 .werewolf-flow-action-stack .primary-action,
 .werewolf-flow-action-stack .secondary-button.full,
 .role-reveal-actions .primary-action.compact {
@@ -2267,6 +2269,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.primary,
 
 .game-theme-werewolf .werewolf-flow-footer-content > .primary-action,
 .game-theme-werewolf .werewolf-flow-footer-content > .secondary-button.full,
+.game-theme-werewolf .werewolf-flow-footer-action-row > .secondary-button.full,
 .game-theme-werewolf .werewolf-flow-action-stack .primary-action,
 .game-theme-werewolf .role-reveal-actions .primary-action.compact {
   position: relative;

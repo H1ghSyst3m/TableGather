@@ -37,9 +37,9 @@ import {
   sanitizeRoleCount,
   validateRoleCounts,
 } from "./domain/setup";
+import { areWerewolfStatesEqual, cloneWerewolfState, resetRestoredDayTimer } from "./domain/state";
 import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "./domain/types";
 import type { WerewolfHostCommand, WerewolfPlayerCommand } from "./commands";
-import { ensureDayTimer, resetDayTimerValue } from "./domain/timer";
 import type { WerewolfHostRoomSnapshot, WerewolfRoomAssignmentEntry, WerewolfRoomUndoState, WerewolfSetupState } from "./roomTypes";
 import { createWerewolfStageSnapshot } from "./stage";
 
@@ -414,7 +414,7 @@ function applyUndoableGameCommand(room: GameRoomRuntime, updater: (state: Werewo
   const previousPhase = room.phase;
   const nextState = updater(previousState);
 
-  if (nextState !== previousState) {
+  if (!areWerewolfStatesEqual(previousState, nextState)) {
     room.undoState = {
       phase: previousPhase,
       gameState: cloneWerewolfState(previousState),
@@ -433,11 +433,6 @@ function restoreUndoState(room: GameRoomRuntime) {
   room.undoState = null;
 }
 
-function resetRestoredDayTimer(state: WerewolfState): WerewolfState {
-  if (state.phase !== "day") return state;
-  return { ...state, dayTimer: resetDayTimerValue(ensureDayTimer(state.dayTimer)) };
-}
-
 function syncRoomPlayPhase(room: GameRoomRuntime) {
   const gameState = room.gameState as WerewolfState | null;
   if (!gameState) return;
@@ -447,10 +442,6 @@ function syncRoomPlayPhase(room: GameRoomRuntime) {
 function requireGameState(gameState: unknown): WerewolfState {
   if (!gameState) throw new Error("Game has not started.");
   return gameState as WerewolfState;
-}
-
-function cloneWerewolfState(state: WerewolfState): WerewolfState {
-  return structuredClone(state) as WerewolfState;
 }
 
 function normalizeRoomRoleCounts(playerCount: number, counts: RoleCounts | undefined) {
