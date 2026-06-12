@@ -764,8 +764,8 @@
 
 .game-log-step-group {
   display: grid;
-  grid-template-columns: 1.75rem minmax(0, 1fr);
-  gap: 0.55rem;
+  grid-template-columns: 1.45rem minmax(0, 1fr);
+  gap: 0.5rem;
   position: relative;
 }
 
@@ -778,9 +778,9 @@
 .game-log-step-marker::after {
   content: "";
   position: absolute;
-  top: 1.9rem;
+  top: 1.65rem;
   bottom: -0.65rem;
-  left: 0.875rem;
+  left: 0.725rem;
   width: 1px;
   background: var(--border);
 }
@@ -791,9 +791,9 @@
 
 .game-log-step-icon,
 .game-log-step-action-icon {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.5rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 0.42rem;
 }
 
 .game-log-step-icon svg,
@@ -803,7 +803,7 @@
 }
 
 .game-log-step-heading {
-  min-height: 1.75rem;
+  min-height: 1.45rem;
   display: flex;
   align-items: center;
 }
@@ -3274,6 +3274,20 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
   background: rgba(123, 181, 218, 0.16);
 }
 
+.game-theme-werewolf .game-log-step-icon,
+.game-theme-werewolf .game-log-step-action-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 0.42rem;
+  box-shadow: none;
+}
+
+.game-theme-werewolf .game-log-step-icon svg,
+.game-theme-werewolf .game-log-step-action-icon svg {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
 .game-log-entry {
   border-color: rgba(123, 181, 218, 0.16);
   background: rgba(11, 29, 49, 0.72);
@@ -3592,18 +3606,19 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
   }
 
   .game-log-step-group {
-    grid-template-columns: 1.6rem minmax(0, 1fr);
+    grid-template-columns: 1.35rem minmax(0, 1fr);
     gap: 0.45rem;
   }
 
   .game-log-step-marker::after {
-    left: 0.8rem;
+    top: 1.55rem;
+    left: 0.675rem;
   }
 
   .game-log-step-icon,
   .game-log-step-action-icon {
-    width: 1.6rem;
-    height: 1.6rem;
+    width: 1.35rem;
+    height: 1.35rem;
   }
 
   .game-log-entry {
