@@ -1331,6 +1331,7 @@ describe("werewolf domain", () => {
     expect(game.log.at(-1)).toMatchObject({
       type: "roleAction",
       privacy: "sensitive",
+      phase: "night",
       round: 1,
       stepId: "cupid",
       actorRoleId: "cupid",
@@ -1364,6 +1365,7 @@ describe("werewolf domain", () => {
     expect(game.log.at(-1)).toMatchObject({
       type: "roleAction",
       privacy: "sensitive",
+      phase: "night",
       stepId: "seer",
       actorRoleId: "seer",
       actorIds: ["seer"],
@@ -1395,6 +1397,7 @@ describe("werewolf domain", () => {
       {
         type: "roleAction",
         privacy: "sensitive",
+        phase: "night",
         stepId: "witch",
         actorRoleId: "witch",
         actorIds: ["witch"],
@@ -1405,6 +1408,7 @@ describe("werewolf domain", () => {
       {
         type: "roleAction",
         privacy: "sensitive",
+        phase: "night",
         stepId: "witch",
         actorRoleId: "witch",
         actorIds: ["witch"],
@@ -1432,6 +1436,7 @@ describe("werewolf domain", () => {
 
     expect(game.log.find((entry) => entry.type === "wolvesWeakened")).toMatchObject({
       privacy: "sensitive",
+      phase: "night",
       stepId: "wolves",
       actorRoleId: "werewolf",
       actorIds: ["wolf"],
@@ -1440,6 +1445,7 @@ describe("werewolf domain", () => {
     });
     expect(game.log.find((entry) => entry.type === "nightDeath")).toMatchObject({
       privacy: "sensitive",
+      phase: "night",
       targetIds: ["infected"],
       targetRoleIds: ["infected"],
       publicSummary: { type: "nightDeath", targetCount: 1 },
@@ -1463,6 +1469,7 @@ describe("werewolf domain", () => {
     expect(game.log.at(-1)).toMatchObject({
       type: "noDayElimination",
       privacy: "public",
+      phase: "day",
       publicSummary: { type: "noDayElimination" },
     });
     expect(game.log.some((entry) => String(entry.type).toLowerCase().includes("undo"))).toBe(false);

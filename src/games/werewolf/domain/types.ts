@@ -68,6 +68,8 @@ export type WerewolfLogType =
 
 export type WerewolfLogPrivacy = "public" | "sensitive";
 
+export type WerewolfLogPhase = "setup" | "night" | "day" | "ended";
+
 export type WerewolfLogTeam = "good" | "evil";
 
 export type WerewolfLogResult =
@@ -99,6 +101,7 @@ export interface WerewolfLogEntry {
   id: string;
   type: WerewolfLogType;
   privacy?: WerewolfLogPrivacy;
+  phase?: WerewolfLogPhase;
   round?: number;
   stepId?: NightStepId;
   actorRoleId?: RoleId;

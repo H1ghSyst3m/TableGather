@@ -345,6 +345,7 @@ describe("werewolf play surface", () => {
           id: "structured",
           type: "roleAction" as const,
           privacy: "sensitive" as const,
+          phase: "night" as const,
           round: 1,
           stepId: "cupid" as const,
           actorRoleId: "cupid" as const,
@@ -360,8 +361,79 @@ describe("werewolf play surface", () => {
 
     const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
 
-    expect(html).toContain("Amor (Malik) wählt Dennis (Dorfbewohner) und Jasmin (Seher) als Liebende.");
+    expect(html).toContain(translate("de", "log.sectionNight", { round: 1 }));
+    expect(html).toContain(translate("de", "roles.cupid.name"));
+    expect(html).toContain(translate("de", "log.titleSelectedLovers"));
+    expect(html).toContain("Malik");
+    expect(html).toContain("Dennis");
+    expect(html).toContain("Jasmin");
+    expect(html).toContain(translate("de", "roles.villager.name"));
+    expect(html).toContain(translate("de", "roles.seer.name"));
+    expect(html).toContain(translate("de", "log.sensitive"));
+    expect(html).not.toContain("Amor (Malik)");
+    expect(html).not.toContain("Dennis (Dorfbewohner)");
     expect(html).toContain(translate("de", "log.nightDeath", { name: "Altspieler" }));
+  });
+
+  it("groups game log entries into sections and combines witch actions in one step group", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "witch", name: "Sofia", roleId: "witch" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "malik", name: "Malik", roleId: "hunter" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        { id: "start", type: "gameStarted" as const, privacy: "public" as const, phase: "setup" as const },
+        { id: "seen", type: "roleRevealDone" as const, privacy: "public" as const, phase: "setup" as const },
+        {
+          id: "heal",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "witch" as const,
+          actorRoleId: "witch" as const,
+          actorIds: ["witch"],
+          targetIds: ["dennis"],
+          targetRoleIds: ["villager"],
+          result: "witchHealed" as const,
+        },
+        {
+          id: "poison",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "witch" as const,
+          actorRoleId: "witch" as const,
+          actorIds: ["witch"],
+          targetIds: ["malik"],
+          targetRoleIds: ["hunter"],
+          result: "witchPoisoned" as const,
+        },
+        { id: "no-vote", type: "noDayElimination" as const, privacy: "public" as const, phase: "day" as const, round: 1 },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain(translate("de", "log.sectionSetup"));
+    expect(html).toContain(translate("de", "log.sectionNight", { round: 1 }));
+    expect(html).toContain(translate("de", "log.sectionDay", { round: 1 }));
+    expect(countOccurrences(html, "<strong>Hexe</strong>")).toBe(1);
+    expect(html).toContain(translate("de", "log.titleWitchHealed"));
+    expect(html).toContain(translate("de", "log.titleWitchPoisoned"));
+    expect(html).toContain("Sofia");
+    expect(html).toContain("Dennis");
+    expect(html).toContain("Malik");
+    expect(html).not.toContain("Sofia (Hexe)");
+    expect(html).not.toContain("Dennis (Dorfbewohner)");
   });
 
   it("renders undo as a compact footer action without replacing header navigation", () => {

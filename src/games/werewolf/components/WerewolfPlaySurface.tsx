@@ -1,4 +1,4 @@
-import { Clock, HeartCrack, Moon, Pause, Play, RotateCcw, ScrollText, Skull, Sun, Target, Undo2, Users, X } from "lucide-react";
+import { Clock, HeartCrack, LockKeyhole, Moon, Pause, Play, RotateCcw, ScrollText, Skull, Sun, Target, Undo2, Users, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Children, Fragment, isValidElement, useState } from "react";
 import { effectiveRoleId as getEffectiveRoleId, playerTeamInState } from "../domain/alignment";
@@ -1244,15 +1244,37 @@ function RevealSummary({ state, ids }: { state: WerewolfState; ids: string[] }) 
 export function GameLog({ state, entries = [] }: { state: WerewolfState; entries?: WerewolfLogEntry[] }) {
   const { t } = useI18n();
   const visibleEntries = entries.filter(Boolean);
+  const sections = buildLogSections(visibleEntries);
 
   if (visibleEntries.length === 0) return <p className="muted-text">{t("werewolf.gameLogEmpty")}</p>;
 
   return (
-    <ol className="log-list">
-      {visibleEntries.map((entry) => (
-        <li key={entry.id}>{logText(entry, state, t)}</li>
+    <div className="game-log-timeline">
+      {sections.map((section) => (
+        <section className="game-log-section" key={section.id} aria-label={logSectionTitle(section, t)}>
+          <div className="game-log-section-heading">
+            <span>{logSectionTitle(section, t)}</span>
+          </div>
+          <div className="game-log-section-groups">
+            {section.groups.map((group) => (
+              <article className="game-log-step-group" key={group.id}>
+                <div className="game-log-step-marker">{logGroupIcon(group)}</div>
+                <div className="game-log-step-content">
+                  <div className="game-log-step-heading">
+                    <strong>{logGroupTitle(group, t)}</strong>
+                  </div>
+                  <div className="game-log-entry-list">
+                    {group.entries.map((entry) => (
+                      <LogEntryCard entry={entry} state={state} key={entry.id} />
+                    ))}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       ))}
-    </ol>
+    </div>
   );
 }
 
@@ -1260,18 +1282,248 @@ function GameLogSheet({ state, entries, onClose }: { state: WerewolfState; entri
   const { t } = useI18n();
 
   return (
-    <div className="settings-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="settings-backdrop game-log-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="settings-sheet game-log-sheet" role="dialog" aria-modal="true" aria-label={t("werewolf.gameLog")}>
-        <div className="panel-heading">
+        <div className="panel-heading game-log-heading">
           <h3>{t("werewolf.gameLog")}</h3>
           <button className="icon-button" type="button" aria-label={t("common.close")} onClick={onClose}>
             <X />
           </button>
         </div>
-        <GameLog state={state} entries={entries} />
+        <div className="game-log-body">
+          <GameLog state={state} entries={entries} />
+        </div>
       </section>
     </div>
   );
+}
+
+type LogPhase = NonNullable<WerewolfLogEntry["phase"]>;
+type LogGroupKind = NightStepId | "setup" | "vote" | "hunter" | "winner";
+
+interface GameLogSectionView {
+  id: string;
+  phase: LogPhase;
+  round: number | null;
+  groups: GameLogGroupView[];
+}
+
+interface GameLogGroupView {
+  id: string;
+  kind: LogGroupKind;
+  entries: WerewolfLogEntry[];
+}
+
+function LogEntryCard({ entry, state }: { entry: WerewolfLogEntry; state: WerewolfState }) {
+  const { t } = useI18n();
+  const actorChips = actorChipData(entry, state);
+  const targetChips = targetChipData(entry, state);
+  const hasChips = actorChips.length > 0 || targetChips.length > 0;
+
+  return (
+    <div className={["game-log-entry", entry.privacy === "sensitive" ? "sensitive" : "public", hasChips ? "with-chips" : "plain"].join(" ")}>
+      <div className="game-log-entry-main">
+        <span>{logEntryTitle(entry, state, t)}</span>
+        {entry.privacy === "sensitive" && (
+          <span className="game-log-privacy-chip" title={t("log.sensitive")}>
+            <LockKeyhole />
+            {t("log.sensitive")}
+          </span>
+        )}
+      </div>
+      {hasChips && (
+        <div className="game-log-chip-row">
+          {actorChips.map((chip) => (
+            <PlayerRoleChip chip={chip} kind="actor" key={`actor-${chip.id}-${chip.roleId}`} />
+          ))}
+          {targetChips.map((chip) => (
+            <PlayerRoleChip chip={chip} kind="target" key={`target-${chip.id}-${chip.roleId}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerRoleChip({ chip, kind }: { chip: GameLogPersonChip; kind: "actor" | "target" }) {
+  const { t } = useI18n();
+
+  return (
+    <span className={`game-log-person-chip ${kind}`}>
+      <RoleIconChip roleId={chip.roleId} className="game-log-person-icon" />
+      <span className="game-log-person-name">{chip.name}</span>
+      <span className="game-log-person-role">{t(roleDefinitionFor(chip.roleId).nameKey)}</span>
+    </span>
+  );
+}
+
+interface GameLogPersonChip {
+  id: string;
+  name: string;
+  roleId: RoleId;
+}
+
+function buildLogSections(entries: WerewolfLogEntry[]): GameLogSectionView[] {
+  const sections: GameLogSectionView[] = [];
+
+  for (const entry of entries) {
+    const phase = logEntryPhase(entry);
+    const round = phase === "setup" || phase === "ended" ? null : entry.round ?? 1;
+    const sectionId = `${phase}-${round ?? "all"}`;
+    let section = sections.find((item) => item.id === sectionId);
+    if (!section) {
+      section = { id: sectionId, phase, round, groups: [] };
+      sections.push(section);
+    }
+
+    const kind = logGroupKind(entry);
+    const groupId = `${sectionId}-${kind}`;
+    let group = section.groups.find((item) => item.id === groupId);
+    if (!group) {
+      group = { id: groupId, kind, entries: [] };
+      section.groups.push(group);
+    }
+    group.entries.push(entry);
+  }
+
+  return sections;
+}
+
+function logEntryPhase(entry: WerewolfLogEntry): LogPhase {
+  if (entry.phase) return entry.phase;
+  if (entry.type === "gameStarted" || entry.type === "roleRevealDone") return "setup";
+  if (entry.type === "dayElimination" || entry.type === "noDayElimination") return "day";
+  if (entry.type === "villagersWin" || entry.type === "werewolvesWin" || entry.type === "specialWin") return "ended";
+  return "night";
+}
+
+function logGroupKind(entry: WerewolfLogEntry): LogGroupKind {
+  if (entry.type === "gameStarted" || entry.type === "roleRevealDone") return "setup";
+  if (entry.type === "dayElimination" || entry.type === "noDayElimination") return "vote";
+  if (entry.type === "hunterShot" || entry.type === "hunterSkipped") return "hunter";
+  if (entry.type === "villagersWin" || entry.type === "werewolvesWin" || entry.type === "specialWin") return "winner";
+  if (entry.type === "nightDeath" || entry.type === "noNightDeath" || entry.type === "toughGuyDeath" || entry.type === "wolvesWeakened") return "dawn";
+  if (entry.stepId) return entry.stepId;
+  if (entry.type === "roleConverted" && entry.result === "wildChildConverted") return "wildChild";
+  return entry.actorRoleId === "hunter" ? "hunter" : "setup";
+}
+
+function logSectionTitle(section: GameLogSectionView, t: ReturnType<typeof useI18n>["t"]) {
+  if (section.phase === "setup") return t("log.sectionSetup");
+  if (section.phase === "night") return t("log.sectionNight", { round: section.round ?? 1 });
+  if (section.phase === "day") return t("log.sectionDay", { round: section.round ?? 1 });
+  return t("log.sectionEnded");
+}
+
+function logGroupTitle(group: GameLogGroupView, t: ReturnType<typeof useI18n>["t"]) {
+  if (group.kind === "setup") return t("log.groupSetup");
+  if (group.kind === "vote") return t("log.groupVote");
+  if (group.kind === "hunter") return t("roles.hunter.name");
+  if (group.kind === "winner") return t("log.groupWinner");
+  if (group.kind === "dawn") return t("log.groupDawn");
+  if (group.kind === "sleep") return t("log.groupSleep");
+  if (group.kind === "cupid") return t("roles.cupid.name");
+  if (group.kind === "lovers") return t("log.groupLovers");
+  if (group.kind === "wildChild") return t("roles.wildChild.name");
+  if (group.kind === "nightGuest") return t("roles.nightGuest.name");
+  if (group.kind === "protector") return t("roles.protector.name");
+  if (group.kind === "wolves") return t("log.groupWolves");
+  if (group.kind === "cursedInfo") return t("log.groupCursedInfo");
+  if (group.kind === "alphaWolf") return t("roles.alphaWolf.name");
+  if (group.kind === "alphaWolfInfo") return t("log.groupAlphaWolfInfo");
+  if (group.kind === "seer") return t("roles.seer.name");
+  if (group.kind === "auraSeer") return t("roles.auraSeer.name");
+  if (group.kind === "detective") return t("roles.detective.name");
+  if (group.kind === "witch") return t("roles.witch.name");
+  if (group.kind === "toughGuyInfo") return t("log.groupToughGuyInfo");
+  return nightStepText(group.kind, t);
+}
+
+function logGroupIcon(group: GameLogGroupView) {
+  const roleId = group.entries.find((entry) => entry.actorRoleId)?.actorRoleId;
+  if (roleId) return <RoleIconChip roleId={roleId} className="game-log-step-icon" />;
+  if (group.kind === "hunter") return <RoleIconChip roleId="hunter" className="game-log-step-icon" />;
+  if (group.kind === "vote") return <ActionIconChip icon="kill" className="game-log-step-action-icon" />;
+  if (group.kind === "dawn") return <ActionIconChip icon="dawn" className="game-log-step-action-icon" />;
+  if (group.kind === "winner") return <ActionIconChip icon="good" className="game-log-step-action-icon" />;
+  return <ActionIconChip icon="info" className="game-log-step-action-icon" />;
+}
+
+function logEntryTitle(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
+  if (!hasStructuredLogData(entry) && entry.playerName) return logText(entry, state, t);
+  if (entry.type === "roleAction") return roleActionTitle(entry, t);
+  if (entry.type === "roleConverted") return conversionTitle(entry, t);
+  if (entry.type === "nightDeath") return t("log.titleNightDeath");
+  if (entry.type === "noNightDeath") return t("log.titleNoNightDeath");
+  if (entry.type === "noDayElimination") return t("log.titleNoDayElimination");
+  if (entry.type === "dayElimination") return t("log.titleDayElimination");
+  if (entry.type === "hunterShot") return t("log.titleHunterShot");
+  if (entry.type === "hunterSkipped") return t("log.titleHunterSkipped");
+  if (entry.type === "toughGuyWounded") return t("log.titleToughGuyWounded");
+  if (entry.type === "toughGuyDeath") return t("log.titleToughGuyDeath");
+  if (entry.type === "wolvesWeakened") return t("log.titleWolvesWeakened");
+  if (entry.type === "gameStarted") return t("log.gameStarted");
+  if (entry.type === "roleRevealDone") return t("log.roleRevealDone");
+  if (entry.type === "villagersWin") return t("log.villagersWin");
+  if (entry.type === "werewolvesWin") return t("log.werewolvesWin");
+  if (entry.type === "specialWin") return t("log.specialWin");
+  return logText(entry, state, t);
+}
+
+function hasStructuredLogData(entry: WerewolfLogEntry) {
+  return Boolean(entry.actorRoleId || entry.actorIds?.length || entry.targetIds?.length || entry.result || entry.stepId);
+}
+
+function roleActionTitle(entry: WerewolfLogEntry, t: ReturnType<typeof useI18n>["t"]) {
+  if (entry.result === "selectedLovers") return t("log.titleSelectedLovers");
+  if (entry.result === "selectedModel") return t("log.titleSelectedModel");
+  if (entry.result === "visited") return t("log.titleVisited");
+  if (entry.result === "protected") return t("log.titleProtected");
+  if (entry.result === "attacked") return t("log.titleAttacked");
+  if (entry.result === "skippedAttack") return t("log.titleSkippedAttack");
+  if (entry.result === "keptKill") return t("log.titleKeptKill");
+  if (entry.result === "alphaInfected") return t("log.titleAlphaInfected");
+  if (entry.result === "inspectedRole") return t("log.titleInspectedRole", { role: roleName(entry.resultRoleId, t) });
+  if (entry.result === "checkedAura") return t("log.titleCheckedAura", { team: logTeamName(entry.resultTeam, t) });
+  if (entry.result === "comparedTeams") {
+    return t("log.titleComparedTeams", {
+      result: entry.sameTeam ? t("log.detectiveSameTeamResult") : t("log.detectiveDifferentTeamResult"),
+    });
+  }
+  if (entry.result === "witchHealed") return t("log.titleWitchHealed");
+  if (entry.result === "witchPoisoned") return t("log.titleWitchPoisoned");
+  if (entry.result === "witchNoPotion") return t("log.titleWitchNoPotion");
+  return t("log.titleRoleAction");
+}
+
+function conversionTitle(entry: WerewolfLogEntry, t: ReturnType<typeof useI18n>["t"]) {
+  if (entry.result === "cursedConverted") return t("log.titleCursedConverted");
+  if (entry.result === "alphaInfected") return t("log.titleAlphaConverted");
+  if (entry.result === "wildChildConverted") return t("log.titleWildChildConverted");
+  return t("log.titleRoleConverted");
+}
+
+function actorChipData(entry: WerewolfLogEntry, state: WerewolfState) {
+  return personChipData(state, entry.actorIds ?? [], entry.actorRoleId ? [entry.actorRoleId] : []);
+}
+
+function targetChipData(entry: WerewolfLogEntry, state: WerewolfState) {
+  return personChipData(state, entry.targetIds ?? [], entry.targetRoleIds ?? []);
+}
+
+function personChipData(state: WerewolfState, ids: string[], roleIds: RoleId[]) {
+  return ids
+    .map((id, index) => {
+      const player = state.players.find((candidate) => candidate.id === id);
+      const roleId = roleIds[index] ?? player?.roleId;
+      if (!player || !roleId) return null;
+      return {
+        id,
+        name: player.name,
+        roleId,
+      };
+    })
+    .filter((chip): chip is GameLogPersonChip => Boolean(chip));
 }
 
 function canAdvanceNightStep(state: WerewolfState, step: NightStepId, active: boolean) {

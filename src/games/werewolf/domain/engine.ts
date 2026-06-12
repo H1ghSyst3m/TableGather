@@ -15,6 +15,7 @@ import type {
   RoleCounts,
   RoleId,
   WerewolfLogEntry,
+  WerewolfLogPhase,
   WerewolfLogPrivacy,
   WerewolfLogResult,
   WerewolfLogTeam,
@@ -129,7 +130,7 @@ export function finishRoleReveal(state: WerewolfState): WerewolfState {
     phase: "night",
     roleRevealIndex: Math.max(0, state.players.length - 1),
     players: state.players.map((player) => ({ ...player, seenRole: true })),
-    log: [...state.log, createLog("roleRevealDone")],
+    log: [...state.log, createLog("roleRevealDone", { phase: "setup" })],
   };
 }
 
@@ -244,6 +245,7 @@ export function advanceNightStep(state: WerewolfState): WerewolfState {
             ...nextState.log,
             createLog("toughGuyWounded", {
               privacy: "sensitive",
+              phase: "night",
               round: nextState.round,
               stepId: "toughGuyInfo",
               targetIds: [wounded.id],
@@ -381,18 +383,27 @@ export function resolveNight(state: WerewolfState): WerewolfState {
       ? [
           createLog("nightDeath", {
             privacy: "sensitive",
+            phase: "night",
             round: state.round,
             targetIds: lastNightDeaths,
             targetRoleIds: roleIdsForIds(beforeResolution, lastNightDeaths),
             publicSummary: { type: "nightDeath", targetCount: lastNightDeaths.length },
           }),
         ]
-      : [createLog("noNightDeath", { privacy: "public", round: state.round, publicSummary: { type: "noNightDeath" } })];
+      : [
+          createLog("noNightDeath", {
+            privacy: "public",
+            phase: "night",
+            round: state.round,
+            publicSummary: { type: "noNightDeath" },
+          }),
+        ];
   const delayedToughGuyDeathLog =
     delayedToughGuyDeathId && finalDeathIds.has(delayedToughGuyDeathId)
       ? [
           createLog("toughGuyDeath", {
             privacy: "sensitive",
+            phase: "night",
             round: state.round,
             targetIds: [delayedToughGuyDeathId],
             targetRoleIds: roleIdsForIds(beforeResolution, [delayedToughGuyDeathId]),
@@ -404,6 +415,7 @@ export function resolveNight(state: WerewolfState): WerewolfState {
       ? [
           createLog("wolvesWeakened", {
             privacy: "sensitive",
+            phase: "night",
             round: state.round,
             stepId: "wolves",
             actorRoleId: "werewolf",
@@ -581,6 +593,7 @@ export function eliminateByVote(state: WerewolfState, playerId: string): Werewol
       ...state.log,
       createLog("dayElimination", {
         privacy: "sensitive",
+        phase: "day",
         round: state.round,
         targetIds: [eliminated.id],
         targetRoleIds: [eliminated.roleId],
@@ -683,6 +696,7 @@ export function resolveHunterShot(state: WerewolfState, targetId: string | null)
         ? [
             createLog("hunterShot", {
               privacy: "sensitive",
+              phase: source ?? "day",
               round: state.round,
               actorRoleId: "hunter",
               actorIds: [state.pendingHunterId],
@@ -694,6 +708,7 @@ export function resolveHunterShot(state: WerewolfState, targetId: string | null)
         : [
             createLog("hunterSkipped", {
               privacy: "public",
+              phase: source ?? "day",
               round: state.round,
               actorRoleId: "hunter",
               actorIds: [state.pendingHunterId],
@@ -735,6 +750,7 @@ export function startNextNight(state: WerewolfState): WerewolfState {
             ...state.log,
             createLog("noDayElimination", {
               privacy: "public",
+              phase: "day",
               round: state.round,
               publicSummary: { type: "noDayElimination" },
             }),
@@ -839,7 +855,7 @@ function createWerewolfState(players: WerewolfPlayer[], options: WerewolfOptions
     publicEventIndex: 0,
     dayTimer: createDayTimer(),
     winner: null,
-    log: [createLog("gameStarted")],
+    log: [createLog("gameStarted", { phase: "setup" })],
   };
 }
 
@@ -1108,6 +1124,7 @@ function createNightStepLogs(state: WerewolfState, stepId: NightStepId): Werewol
   ): WerewolfLogEntry =>
     createLog("roleAction", {
       privacy: "sensitive",
+      phase: "night",
       round: state.round,
       stepId,
       actorRoleId,
@@ -1242,6 +1259,7 @@ function createConversionLog(
 
   return createLog("roleConverted", {
     privacy: "sensitive",
+    phase: logPhaseForState(state),
     round: state.round,
     stepId,
     actorRoleId,
@@ -1265,6 +1283,11 @@ function createWildChildConversionLog(
   return converted ? createConversionLog(state, converted, "wildChildConverted", "wildChild") : null;
 }
 
+function logPhaseForState(state: WerewolfState): WerewolfLogPhase {
+  if (state.phase === "roleReveal") return "setup";
+  return state.phase;
+}
+
 function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extract<Winner, "fool" | "villageIdiot">): WerewolfState {
   const eliminated = state.players.find((player) => player.id === playerId);
   const players = state.players.map((player) => (player.id === playerId ? { ...player, alive: false } : player));
@@ -1284,6 +1307,7 @@ function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extrac
       ...state.log,
       createLog("dayElimination", {
         privacy: "sensitive",
+        phase: "day",
         round: state.round,
         targetIds: [playerId],
         targetRoleIds: roleIdsForIds(state.players, [playerId]),
@@ -1291,6 +1315,7 @@ function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extrac
       }),
       createLog("specialWin", {
         privacy: "public",
+        phase: "ended",
         round: state.round,
         targetIds: [playerId],
         targetRoleIds: roleIdsForIds(state.players, [playerId]),
@@ -1302,9 +1327,9 @@ function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extrac
 }
 
 function createWinnerLog(winner: Winner) {
-  if (winner === "villagers") return createLog("villagersWin");
-  if (winner === "werewolves") return createLog("werewolvesWin");
-  return createLog("specialWin");
+  if (winner === "villagers") return createLog("villagersWin", { phase: "ended" });
+  if (winner === "werewolves") return createLog("werewolvesWin", { phase: "ended" });
+  return createLog("specialWin", { phase: "ended" });
 }
 
 function createLog(
