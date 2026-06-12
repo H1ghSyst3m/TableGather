@@ -1504,7 +1504,9 @@ function conversionTitle(entry: WerewolfLogEntry, t: ReturnType<typeof useI18n>[
 }
 
 function actorChipData(entry: WerewolfLogEntry, state: WerewolfState) {
-  return personChipData(state, entry.actorIds ?? [], entry.actorRoleId ? [entry.actorRoleId] : []);
+  const actorIds = entry.actorIds ?? [];
+  const roleIds = entry.actorRoleId ? actorIds.map(() => entry.actorRoleId as RoleId) : [];
+  return personChipData(state, actorIds, roleIds);
 }
 
 function targetChipData(entry: WerewolfLogEntry, state: WerewolfState) {

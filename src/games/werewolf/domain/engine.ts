@@ -1263,7 +1263,12 @@ function createConversionLog(
     round: state.round,
     stepId,
     actorRoleId,
-    actorIds: actorRoleId === "wildChild" ? [target.id] : actorIdsForStep(state, actorRoleId === "alphaWolf" ? "alphaWolf" : "wolves"),
+    actorIds:
+      result === "wildChildConverted"
+        ? []
+        : actorRoleId === "wildChild"
+          ? [target.id]
+          : actorIdsForStep(state, actorRoleId === "alphaWolf" ? "alphaWolf" : "wolves"),
     targetIds: [target.id],
     targetRoleIds: [result === "wildChildConverted" ? "wildChild" : target.roleId],
     result,
@@ -1321,7 +1326,6 @@ function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extrac
         targetRoleIds: roleIdsForIds(state.players, [playerId]),
         playerName: eliminated?.name,
       }),
-      createWinnerLog(winner),
     ],
   };
 }

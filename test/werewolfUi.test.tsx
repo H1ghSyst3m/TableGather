@@ -461,6 +461,44 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "log.hunterSkipped", { actor: "Jäger" }));
   });
 
+  it("renders the shared actor role on every multi-actor log chip", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "alpha", name: "Alpha", roleId: "alphaWolf" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        {
+          id: "wolf-attack",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "wolves" as const,
+          actorRoleId: "werewolf" as const,
+          actorIds: ["wolf", "alpha"],
+          targetIds: ["dennis"],
+          targetRoleIds: ["villager"],
+          result: "attacked" as const,
+        },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain("Wolf");
+    expect(html).toContain("Alpha");
+    expect(countOccurrences(html, translate("de", "roles.werewolf.name"))).toBe(2);
+    expect(html).not.toContain(translate("de", "roles.alphaWolf.name"));
+  });
+
   it("renders undo as a compact footer action without replacing header navigation", () => {
     const game = createWerewolfGameFromAssignments(
       [

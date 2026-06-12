@@ -813,6 +813,12 @@ describe("werewolf domain", () => {
     expect(game.nightResolved).toBe(true);
     expect(game.players.find((item) => item.id === "wild")?.roleId).toBe("werewolf");
     expect(game.players.find((item) => item.id === "wild")?.originalRoleId).toBe("wildChild");
+    expect(game.log.find((entry) => entry.result === "wildChildConverted")).toMatchObject({
+      type: "roleConverted",
+      actorIds: [],
+      targetIds: ["wild"],
+      targetRoleIds: ["wildChild"],
+    });
   });
 
   it("converts the wild child after a day vote kills the role model", () => {
@@ -1094,6 +1100,7 @@ describe("werewolf domain", () => {
     foolGame = eliminateByVote(foolGame, "fool");
     expect(foolGame.phase).toBe("ended");
     expect(foolGame.winner).toBe("fool");
+    expect(foolGame.log.filter((entry) => entry.type === "specialWin")).toHaveLength(1);
 
     let idiotGame = createWerewolfGameFromAssignments(
       [
@@ -1109,6 +1116,7 @@ describe("werewolf domain", () => {
     idiotGame = eliminateByVote(idiotGame, "idiot");
     expect(idiotGame.phase).toBe("ended");
     expect(idiotGame.winner).toBe("villageIdiot");
+    expect(idiotGame.log.filter((entry) => entry.type === "specialWin")).toHaveLength(1);
   });
 
   it("keeps public vote death visible even when reveal details are hidden", () => {
