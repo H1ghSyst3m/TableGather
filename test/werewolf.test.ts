@@ -16,6 +16,7 @@ import {
   resetDayTimer,
   resolveHunterShot,
   resolveNight,
+  setCupidTargets,
   setAlphaWolfTransform,
   setAuraTarget,
   setDetectiveTargets,
@@ -812,6 +813,12 @@ describe("werewolf domain", () => {
     expect(game.nightResolved).toBe(true);
     expect(game.players.find((item) => item.id === "wild")?.roleId).toBe("werewolf");
     expect(game.players.find((item) => item.id === "wild")?.originalRoleId).toBe("wildChild");
+    expect(game.log.find((entry) => entry.result === "wildChildConverted")).toMatchObject({
+      type: "roleConverted",
+      actorIds: [],
+      targetIds: ["wild"],
+      targetRoleIds: ["wildChild"],
+    });
   });
 
   it("converts the wild child after a day vote kills the role model", () => {
@@ -1093,6 +1100,7 @@ describe("werewolf domain", () => {
     foolGame = eliminateByVote(foolGame, "fool");
     expect(foolGame.phase).toBe("ended");
     expect(foolGame.winner).toBe("fool");
+    expect(foolGame.log.filter((entry) => entry.type === "specialWin")).toHaveLength(1);
 
     let idiotGame = createWerewolfGameFromAssignments(
       [
@@ -1108,6 +1116,7 @@ describe("werewolf domain", () => {
     idiotGame = eliminateByVote(idiotGame, "idiot");
     expect(idiotGame.phase).toBe("ended");
     expect(idiotGame.winner).toBe("villageIdiot");
+    expect(idiotGame.log.filter((entry) => entry.type === "specialWin")).toHaveLength(1);
   });
 
   it("keeps public vote death visible even when reveal details are hidden", () => {
@@ -1230,6 +1239,15 @@ describe("werewolf domain", () => {
     };
 
     game = eliminateByVote(game, "lover");
+    const dayEliminationLog = game.log.find((entry) => entry.type === "dayElimination");
+    expect(game.lastDayDeaths).toEqual(["hunter", "lover"]);
+    expect(dayEliminationLog).toMatchObject({
+      privacy: "sensitive",
+      phase: "day",
+      targetIds: game.lastDayDeaths,
+      targetRoleIds: game.lastDayDeaths.map((id) => game.players.find((item) => item.id === id)?.roleId),
+      publicSummary: { type: "dayElimination", targetCount: game.lastDayDeaths.length },
+    });
     expect(game.publicEvents).toEqual([
       { type: "voteDeath", playerId: "lover", source: "day" },
       { type: "loverDeath", playerId: "hunter", source: "day" },
@@ -1307,6 +1325,174 @@ describe("werewolf domain", () => {
     game = advancePublicEvent(game);
     game = resolveHunterShot(game, null);
     expect(game.pendingHunterId).toBeNull();
+  });
+
+  it("logs night role choices only when the host commits the step", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "malik", name: "Malik", roleId: "cupid" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "jasmin", name: "Jasmin", roleId: "seer" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("cupid") };
+    const initialLogLength = game.log.length;
+
+    game = setCupidTargets(game, ["dennis", "jasmin"]);
+    expect(game.log).toHaveLength(initialLogLength);
+
+    game = advanceNightStep(game);
+    expect(game.log.at(-1)).toMatchObject({
+      type: "roleAction",
+      privacy: "sensitive",
+      phase: "night",
+      round: 1,
+      stepId: "cupid",
+      actorRoleId: "cupid",
+      actorIds: ["malik"],
+      targetIds: ["dennis", "jasmin"],
+      targetRoleIds: ["villager", "seer"],
+      result: "selectedLovers",
+      publicSummary: { type: "roleAction", actorRoleId: "cupid", targetCount: 2, result: "selectedLovers" },
+    });
+  });
+
+  it("logs revealed seer results at step commit instead of result reveal", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "seer", name: "Seer", roleId: "seer" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "one", name: "One", roleId: "villager" },
+        { id: "two", name: "Two", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("seer") };
+    game = setInspectedPlayer(game, "target");
+    const selectedLogLength = game.log.length;
+
+    game = revealNightResult(game, "seer");
+    expect(game.log).toHaveLength(selectedLogLength);
+
+    game = advanceNightStep(game);
+    expect(game.log.at(-1)).toMatchObject({
+      type: "roleAction",
+      privacy: "sensitive",
+      phase: "night",
+      stepId: "seer",
+      actorRoleId: "seer",
+      actorIds: ["seer"],
+      targetIds: ["target"],
+      targetRoleIds: ["villager"],
+      result: "inspectedRole",
+      resultRoleId: "villager",
+    });
+  });
+
+  it("logs witch heal and poison choices as sensitive committed role actions", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "witch", name: "Witch", roleId: "witch" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "malik", name: "Malik", roleId: "hunter" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = setWolfTarget(game, "dennis");
+    game = setWitchHealTonight(game, true);
+    game = setWitchPoisonTarget(game, "malik");
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("witch") };
+
+    game = advanceNightStep(game);
+    expect(game.log.slice(-2)).toMatchObject([
+      {
+        type: "roleAction",
+        privacy: "sensitive",
+        phase: "night",
+        stepId: "witch",
+        actorRoleId: "witch",
+        actorIds: ["witch"],
+        targetIds: ["dennis"],
+        targetRoleIds: ["villager"],
+        result: "witchHealed",
+      },
+      {
+        type: "roleAction",
+        privacy: "sensitive",
+        phase: "night",
+        stepId: "witch",
+        actorRoleId: "witch",
+        actorIds: ["witch"],
+        targetIds: ["malik"],
+        targetRoleIds: ["hunter"],
+        result: "witchPoisoned",
+      },
+    ]);
+  });
+
+  it("logs sensitive night outcomes with safe public summaries", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "infected", name: "Infected", roleId: "infected" },
+        { id: "one", name: "One", roleId: "villager" },
+        { id: "two", name: "Two", roleId: "villager" },
+        { id: "three", name: "Three", roleId: "villager" },
+      ],
+      { winMode: "extended", revealMode: "role", roleReveal: false },
+    );
+
+    game = setWolfTarget(game, "infected");
+    game = resolveNight(game);
+
+    expect(game.log.find((entry) => entry.type === "wolvesWeakened")).toMatchObject({
+      privacy: "sensitive",
+      phase: "night",
+      stepId: "wolves",
+      actorRoleId: "werewolf",
+      actorIds: ["wolf"],
+      targetIds: ["infected"],
+      targetRoleIds: ["infected"],
+    });
+    expect(game.log.find((entry) => entry.type === "nightDeath")).toMatchObject({
+      privacy: "sensitive",
+      phase: "night",
+      targetIds: ["infected"],
+      targetRoleIds: ["infected"],
+      publicSummary: { type: "nightDeath", targetCount: 1 },
+    });
+    expect(game.log.find((entry) => entry.type === "nightDeath")?.targetRoleIds).toEqual(
+      game.lastNightDeaths.map((id) => game.players.find((item) => item.id === id)?.roleId),
+    );
+  });
+
+  it("logs no-vote night starts without adding an undo meta entry", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "one", name: "One", roleId: "villager" },
+        { id: "two", name: "Two", roleId: "villager" },
+        { id: "three", name: "Three", roleId: "villager" },
+        { id: "four", name: "Four", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = { ...game, phase: "day" };
+
+    game = startNextNight(game);
+    expect(game.log.at(-1)).toMatchObject({
+      type: "noDayElimination",
+      privacy: "public",
+      phase: "day",
+      publicSummary: { type: "noDayElimination" },
+    });
+    expect(game.log.some((entry) => String(entry.type).toLowerCase().includes("undo"))).toBe(false);
   });
 });
 

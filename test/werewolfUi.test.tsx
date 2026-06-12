@@ -12,7 +12,7 @@ import { RoleRevealScreen } from "../src/games/werewolf/components/RoleRevealScr
 import { StageSettingsDialog } from "../src/games/werewolf/components/WerewolfRoomHostScreen";
 import { WerewolfStageView } from "../src/games/werewolf/components/WerewolfStageScreen";
 import { StageLinkPanel } from "../src/games/werewolf/components/StageLinkPanel";
-import { PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/werewolf/components/WerewolfPlaySurface";
+import { GameLog, PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/werewolf/components/WerewolfPlaySurface";
 import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { I18nContext } from "../src/i18n/context";
 import { translate } from "../src/i18n/translations";
@@ -325,6 +325,230 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain("game-flow-status");
     expect(html).not.toContain("game-flow-tool-row");
     expect(html).not.toContain("<footer");
+  });
+
+  it("renders structured and legacy game log entries", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "malik", name: "Malik", roleId: "cupid" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "jasmin", name: "Jasmin", roleId: "seer" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        {
+          id: "structured",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "cupid" as const,
+          actorRoleId: "cupid" as const,
+          actorIds: ["malik"],
+          targetIds: ["dennis", "jasmin"],
+          targetRoleIds: ["villager", "seer"],
+          result: "selectedLovers" as const,
+          publicSummary: { type: "roleAction" as const, actorRoleId: "cupid" as const, targetCount: 2, result: "selectedLovers" as const },
+        },
+        { id: "legacy", type: "nightDeath" as const, playerName: "Altspieler" },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain(translate("de", "log.sectionNight", { round: 1 }));
+    expect(html).toContain(translate("de", "roles.cupid.name"));
+    expect(html).toContain(translate("de", "log.titleSelectedLovers"));
+    expect(html).toContain("Malik");
+    expect(html).toContain("Dennis");
+    expect(html).toContain("Jasmin");
+    expect(html).toContain(translate("de", "roles.villager.name"));
+    expect(html).toContain(translate("de", "roles.seer.name"));
+    expect(html).toContain(translate("de", "log.sensitive"));
+    expect(html).not.toContain("Amor (Malik)");
+    expect(html).not.toContain("Dennis (Dorfbewohner)");
+    expect(html).toContain(translate("de", "log.nightDeath", { name: "Altspieler" }));
+  });
+
+  it("groups game log entries into sections and combines witch actions in one step group", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "witch", name: "Sofia", roleId: "witch" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "malik", name: "Malik", roleId: "hunter" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        { id: "start", type: "gameStarted" as const, privacy: "public" as const, phase: "setup" as const },
+        { id: "seen", type: "roleRevealDone" as const, privacy: "public" as const, phase: "setup" as const },
+        {
+          id: "heal",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "witch" as const,
+          actorRoleId: "witch" as const,
+          actorIds: ["witch"],
+          targetIds: ["dennis"],
+          targetRoleIds: ["villager"],
+          result: "witchHealed" as const,
+        },
+        {
+          id: "poison",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "witch" as const,
+          actorRoleId: "witch" as const,
+          actorIds: ["witch"],
+          targetIds: ["malik"],
+          targetRoleIds: ["hunter"],
+          result: "witchPoisoned" as const,
+        },
+        { id: "no-vote", type: "noDayElimination" as const, privacy: "public" as const, phase: "day" as const, round: 1 },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain(translate("de", "log.sectionSetup"));
+    expect(html).toContain(translate("de", "log.sectionNight", { round: 1 }));
+    expect(html).toContain(translate("de", "log.sectionDay", { round: 1 }));
+    expect(countOccurrences(stepHeadingText(html), translate("de", "roles.witch.name"))).toBe(1);
+    expect(html).toContain(translate("de", "log.titleWitchHealed"));
+    expect(html).toContain(translate("de", "log.titleWitchPoisoned"));
+    expect(html).toContain("Sofia");
+    expect(html).toContain("Dennis");
+    expect(html).toContain("Malik");
+    expect(html).not.toContain("Sofia (Hexe)");
+    expect(html).not.toContain("Dennis (Dorfbewohner)");
+  });
+
+  it("renders legacy hunter log entries with a fallback actor", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "hunter", name: "Jäger", roleId: "hunter" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        { id: "legacy-shot", type: "hunterShot" as const, privacy: "sensitive" as const, playerName: "Jäger" },
+        { id: "legacy-skip", type: "hunterSkipped" as const, privacy: "public" as const, playerName: "Jäger" },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain(translate("de", "log.hunterShot", { actor: "Jäger", name: "Jäger" }));
+    expect(html).toContain(translate("de", "log.hunterSkipped", { actor: "Jäger" }));
+  });
+
+  it("renders the shared actor role on every multi-actor log chip", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "alpha", name: "Alpha", roleId: "alphaWolf" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        {
+          id: "wolf-attack",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          stepId: "wolves" as const,
+          actorRoleId: "werewolf" as const,
+          actorIds: ["wolf", "alpha"],
+          targetIds: ["dennis"],
+          targetRoleIds: ["villager"],
+          result: "attacked" as const,
+        },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain("Wolf");
+    expect(html).toContain("Alpha");
+    expect(countOccurrences(html, translate("de", "roles.werewolf.name"))).toBe(2);
+    expect(html).not.toContain(translate("de", "roles.alphaWolf.name"));
+  });
+
+  it("groups tough guy wounds with dawn outcomes", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "tough", name: "Hart", roleId: "toughGuy" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        {
+          id: "wound",
+          type: "toughGuyWounded" as const,
+          privacy: "sensitive" as const,
+          phase: "night" as const,
+          round: 1,
+          targetIds: ["tough"],
+          targetRoleIds: ["toughGuy"],
+        },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(stepHeadingText(html)).toContain(translate("de", "log.groupDawn"));
+    expect(html).toContain(translate("de", "log.titleToughGuyWounded"));
+  });
+
+  it("renders winner log icons by winning side", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+        { id: "four", name: "Vier", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const werewolvesHtml = renderWithI18n(<GameLog state={game} entries={[{ id: "wolves", type: "werewolvesWin" as const, phase: "ended" as const }]} />);
+    const villagersHtml = renderWithI18n(<GameLog state={game} entries={[{ id: "village", type: "villagersWin" as const, phase: "ended" as const }]} />);
+
+    expect(werewolvesHtml).toContain("lucide-skull");
+    expect(werewolvesHtml).not.toContain("lucide-shield");
+    expect(villagersHtml).toContain("lucide-shield");
+    expect(villagersHtml).not.toContain("lucide-skull");
   });
 
   it("renders undo as a compact footer action without replacing header navigation", () => {
@@ -1142,6 +1366,16 @@ function renderStage(overrides: Partial<WerewolfStageRoomSnapshot>, locale: "de"
 
 function countOccurrences(value: string, search: string) {
   return value.split(search).length - 1;
+}
+
+function stepHeadingText(html: string) {
+  return [
+    ...html.matchAll(
+      /<div\b(?=[^>]*\bclass\s*=\s*(["'])(?:game-log-step-heading(?:\s[^"']*)?|[^"']*\sgame-log-step-heading(?:\s[^"']*)?)\1)[^>]*>([\s\S]*?)<\/div>/g,
+    ),
+  ]
+    .map((match) => match[2].replace(/<[^>]*>/g, ""))
+    .join("\n");
 }
 
 function activeStageHtml(html: string) {
