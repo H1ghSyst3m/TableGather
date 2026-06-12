@@ -12,7 +12,7 @@ import { RoleRevealScreen } from "../src/games/werewolf/components/RoleRevealScr
 import { StageSettingsDialog } from "../src/games/werewolf/components/WerewolfRoomHostScreen";
 import { WerewolfStageView } from "../src/games/werewolf/components/WerewolfStageScreen";
 import { StageLinkPanel } from "../src/games/werewolf/components/StageLinkPanel";
-import { PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/werewolf/components/WerewolfPlaySurface";
+import { GameLog, PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/werewolf/components/WerewolfPlaySurface";
 import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { I18nContext } from "../src/i18n/context";
 import { translate } from "../src/i18n/translations";
@@ -325,6 +325,43 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain("game-flow-status");
     expect(html).not.toContain("game-flow-tool-row");
     expect(html).not.toContain("<footer");
+  });
+
+  it("renders structured and legacy game log entries", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "malik", name: "Malik", roleId: "cupid" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "jasmin", name: "Jasmin", roleId: "seer" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state: WerewolfState = {
+      ...game,
+      log: [
+        {
+          id: "structured",
+          type: "roleAction" as const,
+          privacy: "sensitive" as const,
+          round: 1,
+          stepId: "cupid" as const,
+          actorRoleId: "cupid" as const,
+          actorIds: ["malik"],
+          targetIds: ["dennis", "jasmin"],
+          targetRoleIds: ["villager", "seer"],
+          result: "selectedLovers" as const,
+          publicSummary: { type: "roleAction" as const, actorRoleId: "cupid" as const, targetCount: 2, result: "selectedLovers" as const },
+        },
+        { id: "legacy", type: "nightDeath" as const, playerName: "Altspieler" },
+      ],
+    };
+
+    const html = renderWithI18n(<GameLog state={state} entries={state.log} />);
+
+    expect(html).toContain("Amor (Malik) wählt Dennis (Dorfbewohner) und Jasmin (Seher) als Liebende.");
+    expect(html).toContain(translate("de", "log.nightDeath", { name: "Altspieler" }));
   });
 
   it("renders undo as a compact footer action without replacing header navigation", () => {

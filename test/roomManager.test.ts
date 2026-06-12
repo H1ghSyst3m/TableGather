@@ -546,11 +546,13 @@ describe("room manager", () => {
 
     manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: "villager" });
     expect(werewolfHostSnapshot(manager, activeRoom).canUndo).toBe(false);
+    const committedLogLength = activeRoom.gameState!.log.length;
 
     manager.applyHostCommand(room.code, hostToken, { type: "resolveNight" });
     let gameState = asWerewolfRoom(manager.getRoom(room.code)).gameState!;
 
     expect(werewolfHostSnapshot(manager, activeRoom).canUndo).toBe(true);
+    expect(gameState.log.length).toBeGreaterThan(committedLogLength);
     expect(gameState.nightResolved).toBe(true);
     expect(gameState.lastNightDeaths).toEqual(["villager"]);
     expect(gameState.players.find((player) => player.id === "villager")?.alive).toBe(false);
@@ -563,6 +565,7 @@ describe("room manager", () => {
     expect(gameState.nightResolved).toBe(false);
     expect(gameState.wolfTargetId).toBe("villager");
     expect(gameState.lastNightDeaths).toEqual([]);
+    expect(gameState.log).toHaveLength(committedLogLength);
     expect(gameState.players.find((player) => player.id === "villager")?.alive).toBe(true);
 
     manager.applyHostCommand(room.code, hostToken, { type: "undoStep" });

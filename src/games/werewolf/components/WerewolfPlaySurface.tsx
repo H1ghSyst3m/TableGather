@@ -6,7 +6,7 @@ import { activePublicEvent, canAlphaWolfTransformTarget, canWitchHealWolfTarget 
 import { roleDefinitions } from "../domain/roles";
 import { dayTimerDurations, dayTimerRemainingSeconds, ensureDayTimer, formatDayTimer } from "../domain/timer";
 import { getNightStepActors, getValidTargets, isNightStepActive } from "../domain/targets";
-import type { NightStepId, WerewolfDayTimerDurationSeconds, WerewolfLogEntry, WerewolfPublicEvent, WerewolfState } from "../domain/types";
+import type { NightStepId, RoleId, WerewolfDayTimerDurationSeconds, WerewolfLogEntry, WerewolfPublicEvent, WerewolfState } from "../domain/types";
 import { useI18n } from "../../../i18n/useI18n";
 import type { TranslationKey } from "../../../i18n/translations";
 import type { RoomPlayerPublic } from "../../../types";
@@ -132,7 +132,7 @@ export function WerewolfPlaySurface({
           onClose={() => setOverviewOpen(false)}
         />
       )}
-      {logOpen && <GameLogSheet entries={state.log} onClose={() => setLogOpen(false)} />}
+      {logOpen && <GameLogSheet state={state} entries={state.log} onClose={() => setLogOpen(false)} />}
       {roleInfoId && <RoleInfoModal role={roleDefinitions[roleInfoId]} onClose={() => setRoleInfoId(null)} />}
     </>
   );
@@ -1241,7 +1241,7 @@ function RevealSummary({ state, ids }: { state: WerewolfState; ids: string[] }) 
   );
 }
 
-function GameLog({ entries = [] }: { entries?: WerewolfLogEntry[] }) {
+export function GameLog({ state, entries = [] }: { state: WerewolfState; entries?: WerewolfLogEntry[] }) {
   const { t } = useI18n();
   const visibleEntries = entries.filter(Boolean);
 
@@ -1250,13 +1250,13 @@ function GameLog({ entries = [] }: { entries?: WerewolfLogEntry[] }) {
   return (
     <ol className="log-list">
       {visibleEntries.map((entry) => (
-        <li key={entry.id}>{logText(entry, t)}</li>
+        <li key={entry.id}>{logText(entry, state, t)}</li>
       ))}
     </ol>
   );
 }
 
-function GameLogSheet({ entries, onClose }: { entries?: WerewolfLogEntry[]; onClose: () => void }) {
+function GameLogSheet({ state, entries, onClose }: { state: WerewolfState; entries?: WerewolfLogEntry[]; onClose: () => void }) {
   const { t } = useI18n();
 
   return (
@@ -1268,7 +1268,7 @@ function GameLogSheet({ entries, onClose }: { entries?: WerewolfLogEntry[]; onCl
             <X />
           </button>
         </div>
-        <GameLog entries={entries} />
+        <GameLog state={state} entries={entries} />
       </section>
     </div>
   );
@@ -1339,17 +1339,103 @@ function nightStepText(step: NightStepId, t: ReturnType<typeof useI18n>["t"]) {
   return t(keys[step]);
 }
 
-function logText(entry: WerewolfLogEntry, t: ReturnType<typeof useI18n>["t"]) {
-  if (entry.type === "nightDeath" || entry.type === "dayElimination" || entry.type === "roleConverted" || entry.type === "toughGuyWounded") {
-    return t(`log.${entry.type}` as TranslationKey, { name: entry.playerName ?? "" });
+function logText(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
+  if (entry.type === "roleAction") return roleActionLogText(entry, state, t);
+  if (entry.type === "roleConverted") return conversionLogText(entry, state, t);
+  if (entry.type === "nightDeath" || entry.type === "dayElimination") {
+    const targets = targetLabels(entry, state, t) || entry.playerName || "";
+    return t(`log.${entry.type}` as TranslationKey, { name: targets });
+  }
+  if (entry.type === "toughGuyWounded" || entry.type === "toughGuyDeath" || entry.type === "wolvesWeakened") {
+    return t(`log.${entry.type}` as TranslationKey, { name: targetLabels(entry, state, t) || entry.playerName || "" });
   }
   if (entry.type === "hunterShot") {
-    return t("log.hunterShot", { name: entry.playerName ?? "" });
+    return t("log.hunterShot", { actor: actorLabel(entry, state, t), name: targetLabels(entry, state, t) || entry.playerName || "" });
   }
-  if (entry.type === "specialWin" && entry.playerName) {
-    return t("log.specialWinNamed", { name: entry.playerName });
+  if (entry.type === "hunterSkipped") {
+    return t("log.hunterSkipped", { actor: actorLabel(entry, state, t) });
+  }
+  if (entry.type === "specialWin" && (entry.playerName || entry.targetIds?.length)) {
+    return t("log.specialWinNamed", { name: targetLabels(entry, state, t) || entry.playerName || "" });
   }
   return t(`log.${entry.type}` as TranslationKey);
+}
+
+function roleActionLogText(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
+  const actor = actorLabel(entry, state, t);
+  const target = targetLabels(entry, state, t);
+
+  if (entry.result === "selectedLovers") return t("log.roleActionSelectedLovers", { actor, targets: target });
+  if (entry.result === "selectedModel") return t("log.roleActionSelectedModel", { actor, target });
+  if (entry.result === "visited") return t("log.roleActionVisited", { actor, target });
+  if (entry.result === "protected") return t("log.roleActionProtected", { actor, target });
+  if (entry.result === "attacked") return t("log.roleActionAttacked", { actor, target });
+  if (entry.result === "skippedAttack") return t("log.roleActionSkippedAttack", { actor });
+  if (entry.result === "keptKill") return t("log.roleActionKeptKill", { actor, target });
+  if (entry.result === "alphaInfected") return t("log.roleActionAlphaInfected", { actor, target });
+  if (entry.result === "inspectedRole") {
+    return t("log.roleActionInspectedRole", { actor, target, role: roleName(entry.resultRoleId, t) });
+  }
+  if (entry.result === "checkedAura") {
+    return t("log.roleActionCheckedAura", { actor, target, team: logTeamName(entry.resultTeam, t) });
+  }
+  if (entry.result === "comparedTeams") {
+    return t("log.roleActionComparedTeams", {
+      actor,
+      targets: target,
+      result: entry.sameTeam ? t("log.detectiveSameTeamResult") : t("log.detectiveDifferentTeamResult"),
+    });
+  }
+  if (entry.result === "witchHealed") return t("log.roleActionWitchHealed", { actor, target });
+  if (entry.result === "witchPoisoned") return t("log.roleActionWitchPoisoned", { actor, target });
+  if (entry.result === "witchNoPotion") return t("log.roleActionWitchNoPotion", { actor });
+
+  return t("log.roleAction", { actor, targets: target });
+}
+
+function conversionLogText(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
+  const target = targetLabels(entry, state, t) || entry.playerName || "";
+  if (entry.result === "cursedConverted") return t("log.roleConvertedCursed", { name: target });
+  if (entry.result === "alphaInfected") return t("log.roleConvertedAlpha", { name: target });
+  if (entry.result === "wildChildConverted") return t("log.roleConvertedWildChild", { name: target });
+  return t("log.roleConverted", { name: target });
+}
+
+function actorLabel(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
+  const role = roleName(entry.actorRoleId, t);
+  const names = namesForIds(state, entry.actorIds ?? []);
+  return names ? t("log.actorWithPlayers", { role, names }) : role;
+}
+
+function targetLabels(entry: WerewolfLogEntry, state: WerewolfState, t: ReturnType<typeof useI18n>["t"]) {
+  const ids = entry.targetIds ?? [];
+  const roles = entry.targetRoleIds ?? [];
+  return joinList(
+    ids
+      .map((id, index) => {
+        const name = state.players.find((player) => player.id === id)?.name;
+        if (!name) return null;
+        const role = roleName(roles[index], t);
+        return role ? t("log.playerWithRole", { name, role }) : name;
+      })
+      .filter((value): value is string => Boolean(value)),
+    t,
+  );
+}
+
+function roleName(roleId: RoleId | undefined, t: ReturnType<typeof useI18n>["t"]) {
+  return roleId ? t(roleDefinitionFor(roleId).nameKey) : "";
+}
+
+function logTeamName(team: WerewolfLogEntry["resultTeam"], t: ReturnType<typeof useI18n>["t"]) {
+  if (team === "evil") return t("werewolf.teamEvil");
+  if (team === "good") return t("werewolf.teamGood");
+  return "";
+}
+
+function joinList(items: string[], t: ReturnType<typeof useI18n>["t"]) {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(t("log.listSeparator"))}${t("log.listFinalSeparator")}${items.at(-1)}`;
 }
 
 function namesForIds(state: WerewolfState, ids: string[] = []) {

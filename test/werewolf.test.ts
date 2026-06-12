@@ -16,6 +16,7 @@ import {
   resetDayTimer,
   resolveHunterShot,
   resolveNight,
+  setCupidTargets,
   setAlphaWolfTransform,
   setAuraTarget,
   setDetectiveTargets,
@@ -1307,6 +1308,164 @@ describe("werewolf domain", () => {
     game = advancePublicEvent(game);
     game = resolveHunterShot(game, null);
     expect(game.pendingHunterId).toBeNull();
+  });
+
+  it("logs night role choices only when the host commits the step", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "malik", name: "Malik", roleId: "cupid" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "jasmin", name: "Jasmin", roleId: "seer" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("cupid") };
+    const initialLogLength = game.log.length;
+
+    game = setCupidTargets(game, ["dennis", "jasmin"]);
+    expect(game.log).toHaveLength(initialLogLength);
+
+    game = advanceNightStep(game);
+    expect(game.log.at(-1)).toMatchObject({
+      type: "roleAction",
+      privacy: "sensitive",
+      round: 1,
+      stepId: "cupid",
+      actorRoleId: "cupid",
+      actorIds: ["malik"],
+      targetIds: ["dennis", "jasmin"],
+      targetRoleIds: ["villager", "seer"],
+      result: "selectedLovers",
+      publicSummary: { type: "roleAction", actorRoleId: "cupid", targetCount: 2, result: "selectedLovers" },
+    });
+  });
+
+  it("logs revealed seer results at step commit instead of result reveal", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "seer", name: "Seer", roleId: "seer" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "one", name: "One", roleId: "villager" },
+        { id: "two", name: "Two", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("seer") };
+    game = setInspectedPlayer(game, "target");
+    const selectedLogLength = game.log.length;
+
+    game = revealNightResult(game, "seer");
+    expect(game.log).toHaveLength(selectedLogLength);
+
+    game = advanceNightStep(game);
+    expect(game.log.at(-1)).toMatchObject({
+      type: "roleAction",
+      privacy: "sensitive",
+      stepId: "seer",
+      actorRoleId: "seer",
+      actorIds: ["seer"],
+      targetIds: ["target"],
+      targetRoleIds: ["villager"],
+      result: "inspectedRole",
+      resultRoleId: "villager",
+    });
+  });
+
+  it("logs witch heal and poison choices as sensitive committed role actions", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "witch", name: "Witch", roleId: "witch" },
+        { id: "dennis", name: "Dennis", roleId: "villager" },
+        { id: "malik", name: "Malik", roleId: "hunter" },
+        { id: "spare", name: "Spare", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = setWolfTarget(game, "dennis");
+    game = setWitchHealTonight(game, true);
+    game = setWitchPoisonTarget(game, "malik");
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("witch") };
+
+    game = advanceNightStep(game);
+    expect(game.log.slice(-2)).toMatchObject([
+      {
+        type: "roleAction",
+        privacy: "sensitive",
+        stepId: "witch",
+        actorRoleId: "witch",
+        actorIds: ["witch"],
+        targetIds: ["dennis"],
+        targetRoleIds: ["villager"],
+        result: "witchHealed",
+      },
+      {
+        type: "roleAction",
+        privacy: "sensitive",
+        stepId: "witch",
+        actorRoleId: "witch",
+        actorIds: ["witch"],
+        targetIds: ["malik"],
+        targetRoleIds: ["hunter"],
+        result: "witchPoisoned",
+      },
+    ]);
+  });
+
+  it("logs sensitive night outcomes with safe public summaries", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "infected", name: "Infected", roleId: "infected" },
+        { id: "one", name: "One", roleId: "villager" },
+        { id: "two", name: "Two", roleId: "villager" },
+        { id: "three", name: "Three", roleId: "villager" },
+      ],
+      { winMode: "extended", revealMode: "role", roleReveal: false },
+    );
+
+    game = setWolfTarget(game, "infected");
+    game = resolveNight(game);
+
+    expect(game.log.find((entry) => entry.type === "wolvesWeakened")).toMatchObject({
+      privacy: "sensitive",
+      stepId: "wolves",
+      actorRoleId: "werewolf",
+      actorIds: ["wolf"],
+      targetIds: ["infected"],
+      targetRoleIds: ["infected"],
+    });
+    expect(game.log.find((entry) => entry.type === "nightDeath")).toMatchObject({
+      privacy: "sensitive",
+      targetIds: ["infected"],
+      targetRoleIds: ["infected"],
+      publicSummary: { type: "nightDeath", targetCount: 1 },
+    });
+  });
+
+  it("logs no-vote night starts without adding an undo meta entry", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "one", name: "One", roleId: "villager" },
+        { id: "two", name: "Two", roleId: "villager" },
+        { id: "three", name: "Three", roleId: "villager" },
+        { id: "four", name: "Four", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    game = { ...game, phase: "day" };
+
+    game = startNextNight(game);
+    expect(game.log.at(-1)).toMatchObject({
+      type: "noDayElimination",
+      privacy: "public",
+      publicSummary: { type: "noDayElimination" },
+    });
+    expect(game.log.some((entry) => String(entry.type).toLowerCase().includes("undo"))).toBe(false);
   });
 });
 

@@ -51,19 +51,65 @@ export type RevealMode = "hidden" | "team" | "role";
 export type WerewolfLogType =
   | "gameStarted"
   | "roleRevealDone"
+  | "roleAction"
   | "nightDeath"
   | "noNightDeath"
+  | "noDayElimination"
   | "dayElimination"
   | "hunterShot"
+  | "hunterSkipped"
   | "roleConverted"
   | "toughGuyWounded"
+  | "toughGuyDeath"
+  | "wolvesWeakened"
   | "specialWin"
   | "villagersWin"
   | "werewolvesWin";
 
+export type WerewolfLogPrivacy = "public" | "sensitive";
+
+export type WerewolfLogTeam = "good" | "evil";
+
+export type WerewolfLogResult =
+  | "selectedLovers"
+  | "selectedModel"
+  | "visited"
+  | "protected"
+  | "attacked"
+  | "skippedAttack"
+  | "keptKill"
+  | "alphaInfected"
+  | "inspectedRole"
+  | "checkedAura"
+  | "comparedTeams"
+  | "witchHealed"
+  | "witchPoisoned"
+  | "witchNoPotion"
+  | "cursedConverted"
+  | "wildChildConverted";
+
+export interface WerewolfPublicLogSummary {
+  type: WerewolfLogType;
+  actorRoleId?: RoleId;
+  targetCount?: number;
+  result?: WerewolfLogResult;
+}
+
 export interface WerewolfLogEntry {
   id: string;
   type: WerewolfLogType;
+  privacy?: WerewolfLogPrivacy;
+  round?: number;
+  stepId?: NightStepId;
+  actorRoleId?: RoleId;
+  actorIds?: string[];
+  targetIds?: string[];
+  targetRoleIds?: RoleId[];
+  result?: WerewolfLogResult;
+  resultRoleId?: RoleId;
+  resultTeam?: WerewolfLogTeam;
+  sameTeam?: boolean;
+  publicSummary?: WerewolfPublicLogSummary;
   playerName?: string;
 }
 

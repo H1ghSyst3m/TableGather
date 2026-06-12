@@ -1,7 +1,7 @@
-import { playerTeam } from "./alignment";
+import { effectiveRoleId, playerTeam, playerTeamInState } from "./alignment";
 import { roleOrder } from "./roles";
 import { autoFillVillagers, defaultWerewolfOptions, sanitizeRoleCount, validateRoleCounts } from "./setup";
-import { isValidTarget } from "./targets";
+import { getNightStepActors, isNightStepActive, isValidTarget } from "./targets";
 import {
   createDayTimer,
   ensureDayTimer,
@@ -15,6 +15,9 @@ import type {
   RoleCounts,
   RoleId,
   WerewolfLogEntry,
+  WerewolfLogPrivacy,
+  WerewolfLogResult,
+  WerewolfLogTeam,
   WerewolfOptions,
   WerewolfPlayer,
   WerewolfPublicEvent,
@@ -219,7 +222,7 @@ export function advanceNightStep(state: WerewolfState): WerewolfState {
   if (state.phase !== "night" || state.nightResolved) return state;
   const currentStep = state.nightSteps[state.nightStepIndex] ?? "dawn";
   const nextStep = state.nightSteps[state.nightStepIndex + 1];
-  let nextState = state;
+  let nextState = appendLogs(state, createNightStepLogs(state, currentStep));
 
   if (currentStep === "wolves") {
     nextState = advanceFromWolves(nextState);
@@ -237,7 +240,16 @@ export function advanceNightStep(state: WerewolfState): WerewolfState {
           ...nextState,
           toughGuyWoundedId: wounded.id,
           toughGuyWoundedTonightId: wounded.id,
-          log: [...nextState.log, createLog("toughGuyWounded", wounded.name)],
+          log: [
+            ...nextState.log,
+            createLog("toughGuyWounded", {
+              privacy: "sensitive",
+              round: nextState.round,
+              stepId: "toughGuyInfo",
+              targetIds: [wounded.id],
+              targetRoleIds: [wounded.roleId],
+            }),
+          ],
         },
         "toughGuyInfo",
       );
@@ -279,7 +291,7 @@ export function resolveNight(state: WerewolfState): WerewolfState {
   const beforeResolution = state.players;
   let players = state.players;
   const deaths = new Set<string>();
-  const conversionNames: string[] = [];
+  const conversionLogs: WerewolfLogEntry[] = [];
   let wolvesSkipNextNight = state.wolvesSkipNextNight;
   let alphaWolfUsed = state.alphaWolfUsed;
   let toughGuyWoundedId = state.toughGuyWoundedId;
@@ -311,12 +323,12 @@ export function resolveNight(state: WerewolfState): WerewolfState {
       mainVictimDies = false;
     } else if (wolfTarget.roleId === "cursed") {
       players = convertPlayerToWerewolf(players, wolfTarget.id);
-      conversionNames.push(wolfTarget.name);
+      conversionLogs.push(createConversionLog(state, wolfTarget, "cursedConverted", "werewolf"));
       mainVictimDies = false;
     } else if (alphaWolfTransformPreventsWolfKill({ ...state, players })) {
       if (!wolfTarget.alphaWolfInfected) {
         players = infectPlayerByAlphaWolf(players, wolfTarget.id);
-        conversionNames.push(wolfTarget.name);
+        conversionLogs.push(createConversionLog(state, wolfTarget, "alphaInfected", "alphaWolf"));
         alphaWolfUsed = true;
       }
       mainVictimDies = false;
@@ -349,7 +361,9 @@ export function resolveNight(state: WerewolfState): WerewolfState {
   }
 
   players = killPlayersWithLoverEffects(players, finalDeathIds);
+  const beforeWildChildConversion = players;
   players = convertWildChildIfModelDied(beforeResolution, players, state.wildChildModelId);
+  const wildChildConversionLog = createWildChildConversionLog(state, beforeWildChildConversion, players);
   toughGuyWoundedId = clearToughGuyWoundForDeadPlayer(players, toughGuyWoundedId);
 
   const lastNightDeaths = newlyDeadIds(beforeResolution, players);
@@ -364,8 +378,41 @@ export function resolveNight(state: WerewolfState): WerewolfState {
       });
   const nightLog =
     lastNightDeaths.length > 0
-      ? [createLog("nightDeath", namesForIds(beforeResolution, lastNightDeaths))]
-      : [createLog("noNightDeath")];
+      ? [
+          createLog("nightDeath", {
+            privacy: "sensitive",
+            round: state.round,
+            targetIds: lastNightDeaths,
+            targetRoleIds: roleIdsForIds(beforeResolution, lastNightDeaths),
+            publicSummary: { type: "nightDeath", targetCount: lastNightDeaths.length },
+          }),
+        ]
+      : [createLog("noNightDeath", { privacy: "public", round: state.round, publicSummary: { type: "noNightDeath" } })];
+  const delayedToughGuyDeathLog =
+    delayedToughGuyDeathId && finalDeathIds.has(delayedToughGuyDeathId)
+      ? [
+          createLog("toughGuyDeath", {
+            privacy: "sensitive",
+            round: state.round,
+            targetIds: [delayedToughGuyDeathId],
+            targetRoleIds: roleIdsForIds(beforeResolution, [delayedToughGuyDeathId]),
+          }),
+        ]
+      : [];
+  const wolvesWeakenedLog =
+    mainWolfKillId && finalDeathIds.has(mainWolfKillId) && findPlayer(beforeResolution, mainWolfKillId)?.roleId === "infected"
+      ? [
+          createLog("wolvesWeakened", {
+            privacy: "sensitive",
+            round: state.round,
+            stepId: "wolves",
+            actorRoleId: "werewolf",
+            actorIds: actorIdsForStep(state, "wolves"),
+            targetIds: [mainWolfKillId],
+            targetRoleIds: roleIdsForIds(beforeResolution, [mainWolfKillId]),
+          }),
+        ]
+      : [];
   const publicEvents = withWinnerPublicEvent(
     [
       ...(lastNightDeaths.length > 0
@@ -411,7 +458,10 @@ export function resolveNight(state: WerewolfState): WerewolfState {
     toughGuyWoundedTonightId,
     log: [
       ...state.log,
-      ...conversionNames.map((name) => createLog("roleConverted", name)),
+      ...conversionLogs,
+      ...(wildChildConversionLog ? [wildChildConversionLog] : []),
+      ...delayedToughGuyDeathLog,
+      ...wolvesWeakenedLog,
       ...nightLog,
       ...(winner ? [createWinnerLog(winner)] : []),
     ],
@@ -481,7 +531,9 @@ export function eliminateByVote(state: WerewolfState, playerId: string): Werewol
 
   const beforeVote = state.players;
   let players = killPlayersWithLoverEffects(state.players, new Set([playerId]));
+  const beforeWildChildConversion = players;
   players = convertWildChildIfModelDied(beforeVote, players, state.wildChildModelId);
+  const wildChildConversionLog = createWildChildConversionLog(state, beforeWildChildConversion, players);
   const toughGuyWoundedId = clearToughGuyWoundForDeadPlayer(players, state.toughGuyWoundedId);
   const toughGuyWoundedTonightId = clearToughGuyWoundForDeadPlayer(players, state.toughGuyWoundedTonightId);
   const lastDayDeaths = newlyDeadIds(beforeVote, players);
@@ -525,7 +577,18 @@ export function eliminateByVote(state: WerewolfState, playerId: string): Werewol
     toughGuyWoundedId,
     toughGuyWoundedTonightId,
     winner,
-    log: [...state.log, createLog("dayElimination", eliminated.name), ...(winner ? [createWinnerLog(winner)] : [])],
+    log: [
+      ...state.log,
+      createLog("dayElimination", {
+        privacy: "sensitive",
+        round: state.round,
+        targetIds: [eliminated.id],
+        targetRoleIds: [eliminated.roleId],
+        publicSummary: { type: "dayElimination", targetCount: 1 },
+      }),
+      ...(wildChildConversionLog ? [wildChildConversionLog] : []),
+      ...(winner ? [createWinnerLog(winner)] : []),
+    ],
   };
 }
 
@@ -539,10 +602,13 @@ export function resolveHunterShot(state: WerewolfState, targetId: string | null)
   const beforeShot = state.players;
   let players = state.players;
   const target = targetId ? players.find((player) => player.id === targetId && player.alive) : null;
+  let wildChildConversionLog: WerewolfLogEntry | null = null;
 
   if (target) {
     players = killPlayersWithLoverEffects(players, new Set([target.id]));
+    const beforeWildChildConversion = players;
     players = convertWildChildIfModelDied(beforeShot, players, state.wildChildModelId);
+    wildChildConversionLog = createWildChildConversionLog(state, beforeWildChildConversion, players);
   }
   const toughGuyWoundedId = clearToughGuyWoundForDeadPlayer(players, state.toughGuyWoundedId);
   const toughGuyWoundedTonightId = clearToughGuyWoundForDeadPlayer(players, state.toughGuyWoundedTonightId);
@@ -613,7 +679,28 @@ export function resolveHunterShot(state: WerewolfState, targetId: string | null)
     winner,
     log: [
       ...state.log,
-      ...(target ? [createLog("hunterShot", target.name)] : []),
+      ...(target
+        ? [
+            createLog("hunterShot", {
+              privacy: "sensitive",
+              round: state.round,
+              actorRoleId: "hunter",
+              actorIds: [state.pendingHunterId],
+              targetIds: [target.id],
+              targetRoleIds: roleIdsForIds(beforeShot, [target.id]),
+              publicSummary: { type: "hunterShot", targetCount: 1 },
+            }),
+          ]
+        : [
+            createLog("hunterSkipped", {
+              privacy: "public",
+              round: state.round,
+              actorRoleId: "hunter",
+              actorIds: [state.pendingHunterId],
+              publicSummary: { type: "hunterSkipped" },
+            }),
+          ]),
+      ...(wildChildConversionLog ? [wildChildConversionLog] : []),
       ...(winner ? [createWinnerLog(winner)] : []),
     ],
   };
@@ -642,6 +729,17 @@ export function startNextNight(state: WerewolfState): WerewolfState {
     auraResultRevealed: false,
     detectiveResultRevealed: false,
     toughGuyWoundedTonightId: null,
+    log:
+      state.lastDayDeaths.length === 0
+        ? [
+            ...state.log,
+            createLog("noDayElimination", {
+              privacy: "public",
+              round: state.round,
+              publicSummary: { type: "noDayElimination" },
+            }),
+          ]
+        : state.log,
   };
 }
 
@@ -862,7 +960,7 @@ function advanceFromAlphaWolf(state: WerewolfState): WerewolfState {
       ...state,
       players: infectPlayerByAlphaWolf(state.players, wolfTarget.id),
       alphaWolfUsed: true,
-      log: [...state.log, createLog("roleConverted", wolfTarget.name)],
+      log: [...state.log, createConversionLog(state, wolfTarget, "alphaInfected", "alphaWolf")],
     },
     "alphaWolfInfo",
   );
@@ -887,7 +985,7 @@ function advanceFromWolves(state: WerewolfState): WerewolfState {
       players: convertPlayerToWerewolf(state.players, converted.id),
       cursedConvertedTonightId: converted.id,
       alphaWolfTransform: null,
-      log: [...state.log, createLog("roleConverted", converted.name)],
+      log: [...state.log, createConversionLog(state, converted, "cursedConverted", "werewolf")],
     },
     "cursedInfo",
   );
@@ -994,11 +1092,177 @@ function canUseDayTimer(state: WerewolfState) {
   return state.phase === "day" && !state.pendingHunterId && state.lastDayDeaths.length === 0 && !hasPendingPublicEvent(state);
 }
 
-function namesForIds(players: WerewolfPlayer[], ids: string[]) {
+function appendLogs(state: WerewolfState, logs: WerewolfLogEntry[]): WerewolfState {
+  return logs.length > 0 ? { ...state, log: [...state.log, ...logs] } : state;
+}
+
+function createNightStepLogs(state: WerewolfState, stepId: NightStepId): WerewolfLogEntry[] {
+  if (!isNightStepActive(state, stepId)) return [];
+
+  const actorRoleId = actorRoleForStep(stepId);
+  const actorIds = actorIdsForStep(state, stepId);
+  const roleAction = (
+    result: WerewolfLogResult,
+    targetIds: string[],
+    details: Partial<WerewolfLogEntry> = {},
+  ): WerewolfLogEntry =>
+    createLog("roleAction", {
+      privacy: "sensitive",
+      round: state.round,
+      stepId,
+      actorRoleId,
+      actorIds,
+      targetIds,
+      targetRoleIds: effectiveRoleIdsForIds(state, targetIds),
+      result,
+      ...details,
+    });
+
+  if (stepId === "cupid" && state.cupidTargetIds.length === 2) {
+    return [
+      roleAction("selectedLovers", state.cupidTargetIds, {
+        publicSummary: { type: "roleAction", actorRoleId: "cupid", targetCount: 2, result: "selectedLovers" },
+      }),
+    ];
+  }
+  if (stepId === "wildChild" && state.wildChildModelId) return [roleAction("selectedModel", [state.wildChildModelId])];
+  if (stepId === "nightGuest" && state.nightGuestHostId) return [roleAction("visited", [state.nightGuestHostId])];
+  if (stepId === "protector" && state.protectedPlayerId) return [roleAction("protected", [state.protectedPlayerId])];
+  if (stepId === "wolves") {
+    if (state.wolvesSkipNextNight) {
+      return [
+        roleAction("skippedAttack", [], {
+          publicSummary: { type: "roleAction", actorRoleId: "werewolf", result: "skippedAttack" },
+        }),
+      ];
+    }
+    return state.wolfTargetId
+      ? [
+          roleAction("attacked", [state.wolfTargetId], {
+            publicSummary: { type: "roleAction", actorRoleId: "werewolf", targetCount: 1, result: "attacked" },
+          }),
+        ]
+      : [];
+  }
+  if (stepId === "alphaWolf") {
+    const wolfTarget = getWolfTarget(state);
+    if (!wolfTarget || !canAlphaWolfTransformTarget(state)) return [];
+    return [
+      roleAction(state.alphaWolfTransform ? "alphaInfected" : "keptKill", [wolfTarget.id], {
+        publicSummary: state.alphaWolfTransform
+          ? undefined
+          : { type: "roleAction", actorRoleId: "alphaWolf", targetCount: 1, result: "keptKill" },
+      }),
+    ];
+  }
+  if (stepId === "seer" && state.inspectedPlayerId) {
+    const inspected = findPlayer(state.players, state.inspectedPlayerId);
+    return inspected ? [roleAction("inspectedRole", [inspected.id], { resultRoleId: effectiveRoleId(state, inspected) })] : [];
+  }
+  if (stepId === "auraSeer" && state.auraTargetId) {
+    const target = findPlayer(state.players, state.auraTargetId);
+    return target ? [roleAction("checkedAura", [target.id], { resultTeam: logTeamForPlayer(state, target) })] : [];
+  }
+  if (stepId === "detective" && state.detectiveTargetIds.length === 2) {
+    const targets = state.detectiveTargetIds
+      .map((targetId) => findPlayer(state.players, targetId))
+      .filter((player): player is WerewolfPlayer => Boolean(player));
+    if (targets.length !== 2) return [];
+    const [first, second] = targets;
+    return [
+      roleAction("comparedTeams", state.detectiveTargetIds, {
+        sameTeam: playerTeamInState(state, first) === playerTeamInState(state, second),
+      }),
+    ];
+  }
+  if (stepId === "witch") {
+    const logs: WerewolfLogEntry[] = [];
+    const healTarget = state.witchHealTonight && canWitchHealWolfTarget(state) ? getWolfTarget(state) : null;
+    const poisonTarget =
+      state.witchPoisonTargetId && !state.witchPoisonUsed && isValidTarget(state, "witchPoison", state.witchPoisonTargetId)
+        ? findPlayer(state.players, state.witchPoisonTargetId)
+        : null;
+
+    if (healTarget) logs.push(roleAction("witchHealed", [healTarget.id]));
+    if (poisonTarget) logs.push(roleAction("witchPoisoned", [poisonTarget.id]));
+    return logs.length > 0 ? logs : [roleAction("witchNoPotion", [])];
+  }
+
+  return [];
+}
+
+function actorRoleForStep(stepId: NightStepId): RoleId | undefined {
+  const rolesByStep: Partial<Record<NightStepId, RoleId>> = {
+    cupid: "cupid",
+    wildChild: "wildChild",
+    nightGuest: "nightGuest",
+    protector: "protector",
+    wolves: "werewolf",
+    alphaWolf: "alphaWolf",
+    seer: "seer",
+    auraSeer: "auraSeer",
+    detective: "detective",
+    witch: "witch",
+  };
+  return rolesByStep[stepId];
+}
+
+function actorIdsForStep(state: WerewolfState, stepId: NightStepId) {
+  return getNightStepActors(state, stepId)
+    .filter((player) => player.alive)
+    .map((player) => player.id);
+}
+
+function effectiveRoleIdsForIds(state: WerewolfState, ids: string[]) {
   return ids
-    .map((id) => players.find((player) => player.id === id)?.name)
-    .filter(Boolean)
-    .join(", ");
+    .map((id) => {
+      const player = findPlayer(state.players, id);
+      return player ? effectiveRoleId(state, player) : null;
+    })
+    .filter((roleId): roleId is RoleId => Boolean(roleId));
+}
+
+function roleIdsForIds(players: WerewolfPlayer[], ids: string[]) {
+  return ids
+    .map((id) => findPlayer(players, id)?.roleId)
+    .filter((roleId): roleId is RoleId => Boolean(roleId));
+}
+
+function logTeamForPlayer(state: WerewolfState, player: WerewolfPlayer): WerewolfLogTeam {
+  return playerTeamInState(state, player) === "werewolves" ? "evil" : "good";
+}
+
+function createConversionLog(
+  state: WerewolfState,
+  target: WerewolfPlayer,
+  result: Extract<WerewolfLogResult, "cursedConverted" | "alphaInfected" | "wildChildConverted">,
+  actorRoleId: RoleId,
+): WerewolfLogEntry {
+  const stepId = result === "cursedConverted" ? "cursedInfo" : result === "alphaInfected" ? "alphaWolfInfo" : undefined;
+
+  return createLog("roleConverted", {
+    privacy: "sensitive",
+    round: state.round,
+    stepId,
+    actorRoleId,
+    actorIds: actorRoleId === "wildChild" ? [target.id] : actorIdsForStep(state, actorRoleId === "alphaWolf" ? "alphaWolf" : "wolves"),
+    targetIds: [target.id],
+    targetRoleIds: [result === "wildChildConverted" ? "wildChild" : target.roleId],
+    result,
+  });
+}
+
+function createWildChildConversionLog(
+  state: WerewolfState,
+  beforePlayers: WerewolfPlayer[],
+  players: WerewolfPlayer[],
+): WerewolfLogEntry | null {
+  const converted = players.find((player) => {
+    const before = beforePlayers.find((candidate) => candidate.id === player.id);
+    return before?.originalRoleId === "wildChild" && before.roleId !== "werewolf" && player.roleId === "werewolf";
+  });
+
+  return converted ? createConversionLog(state, converted, "wildChildConverted", "wildChild") : null;
 }
 
 function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extract<Winner, "fool" | "villageIdiot">): WerewolfState {
@@ -1018,8 +1282,20 @@ function finishSpecialWin(state: WerewolfState, playerId: string, winner: Extrac
     publicEventIndex: 0,
     log: [
       ...state.log,
-      createLog("dayElimination", eliminated?.name),
-      createLog("specialWin", eliminated?.name),
+      createLog("dayElimination", {
+        privacy: "sensitive",
+        round: state.round,
+        targetIds: [playerId],
+        targetRoleIds: roleIdsForIds(state.players, [playerId]),
+        publicSummary: { type: "dayElimination", targetCount: 1 },
+      }),
+      createLog("specialWin", {
+        privacy: "public",
+        round: state.round,
+        targetIds: [playerId],
+        targetRoleIds: roleIdsForIds(state.players, [playerId]),
+        playerName: eliminated?.name,
+      }),
       createWinnerLog(winner),
     ],
   };
@@ -1031,8 +1307,28 @@ function createWinnerLog(winner: Winner) {
   return createLog("specialWin");
 }
 
-function createLog(type: WerewolfLogEntry["type"], playerName?: string): WerewolfLogEntry {
-  return { id: createId(), type, playerName };
+function createLog(
+  type: WerewolfLogEntry["type"],
+  details: string | Partial<Omit<WerewolfLogEntry, "id" | "type">> = {},
+): WerewolfLogEntry {
+  const entryDetails = typeof details === "string" ? { playerName: details } : details;
+  return { id: createId(), type, privacy: entryDetails.privacy ?? defaultLogPrivacy(type), ...entryDetails };
+}
+
+function defaultLogPrivacy(type: WerewolfLogEntry["type"]): WerewolfLogPrivacy {
+  if (
+    type === "gameStarted" ||
+    type === "roleRevealDone" ||
+    type === "noNightDeath" ||
+    type === "noDayElimination" ||
+    type === "hunterSkipped" ||
+    type === "villagersWin" ||
+    type === "werewolvesWin" ||
+    type === "specialWin"
+  ) {
+    return "public";
+  }
+  return "sensitive";
 }
 
 function createId() {
