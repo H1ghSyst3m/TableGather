@@ -1239,6 +1239,15 @@ describe("werewolf domain", () => {
     };
 
     game = eliminateByVote(game, "lover");
+    const dayEliminationLog = game.log.find((entry) => entry.type === "dayElimination");
+    expect(game.lastDayDeaths).toEqual(["hunter", "lover"]);
+    expect(dayEliminationLog).toMatchObject({
+      privacy: "sensitive",
+      phase: "day",
+      targetIds: game.lastDayDeaths,
+      targetRoleIds: game.lastDayDeaths.map((id) => game.players.find((item) => item.id === id)?.roleId),
+      publicSummary: { type: "dayElimination", targetCount: game.lastDayDeaths.length },
+    });
     expect(game.publicEvents).toEqual([
       { type: "voteDeath", playerId: "lover", source: "day" },
       { type: "loverDeath", playerId: "hunter", source: "day" },
@@ -1458,6 +1467,9 @@ describe("werewolf domain", () => {
       targetRoleIds: ["infected"],
       publicSummary: { type: "nightDeath", targetCount: 1 },
     });
+    expect(game.log.find((entry) => entry.type === "nightDeath")?.targetRoleIds).toEqual(
+      game.lastNightDeaths.map((id) => game.players.find((item) => item.id === id)?.roleId),
+    );
   });
 
   it("logs no-vote night starts without adding an undo meta entry", () => {

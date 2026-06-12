@@ -3621,6 +3621,13 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
     height: 1.35rem;
   }
 
+  .game-theme-werewolf .game-log-step-icon,
+  .game-theme-werewolf .game-log-step-action-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 0.38rem;
+  }
+
   .game-log-entry {
     padding: 0.5rem;
   }
