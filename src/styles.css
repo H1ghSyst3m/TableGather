@@ -1659,6 +1659,12 @@ svg {
     box-shadow: 0 0 0 1px rgba(221, 216, 207, 0.65);
   }
 
+  .admin-screen {
+    max-width: 1200px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
   .hub-screen,
   .flow-screen {
     padding-left: 2rem;
