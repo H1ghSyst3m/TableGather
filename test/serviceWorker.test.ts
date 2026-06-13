@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import vm from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
@@ -42,6 +41,7 @@ describe("service worker", () => {
       const event = createFetchEvent(request(path));
       worker.fetch(event);
       expect(event.respondWith).not.toHaveBeenCalled();
+      expect(worker.fetchMock).not.toHaveBeenCalled();
     }
   });
 
@@ -102,7 +102,7 @@ function loadServiceWorker() {
     delete: vi.fn(async () => true),
     match: vi.fn((value: TestRequest | string) => cache.match(value)),
   };
-  const source = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
+  const source = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
 
   vm.runInNewContext(source, { self, caches, fetch: fetchMock, URL, Error, Promise }, { filename: "public/sw.js" });
 
