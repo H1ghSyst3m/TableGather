@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { requirePlayableGame, requireRoomAdapter } from "../src/games/registry";
 import type { GameCommand, GameRoomAdapter } from "../src/games/types";
 import type { GameId, HostRoomSnapshot, Locale, PlayerRoomSnapshot, RoomPlayerPublic, StageRoomSnapshot } from "../src/types";
@@ -472,7 +473,7 @@ function incrementCounts(counts: AdminGameCounts, flags: { active: boolean; prog
 
 function createToken(length = 18) {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return Array.from({ length }, () => alphabet[randomInt(alphabet.length)]).join("");
 }
 
 function normalizeRoomCode(code: string) {

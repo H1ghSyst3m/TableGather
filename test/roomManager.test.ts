@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { RoomManager } from "../server/roomManager";
 import { InMemoryRoomStore, type Room } from "../server/roomStore";
 import { createWerewolfGameFromAssignments } from "../src/games/werewolf/domain/engine";
@@ -35,6 +35,31 @@ describe("room manager", () => {
     manager.joinRoom(room.code, "Alex", "player-1");
 
     expect(manager.getRoom(room.code)?.players).toHaveLength(1);
+  });
+
+  it("creates room, player, and stage tokens without Math.random", () => {
+    const randomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+      throw new Error("Math.random should not generate room tokens.");
+    });
+
+    try {
+      const manager = new RoomManager(new InMemoryRoomStore());
+      const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+      const joined = manager.joinRoom(room.code, "Alex", "player-1");
+
+      manager.applyHostCommand(room.code, hostToken, { type: "createStageLink" });
+
+      const activeRoom = manager.getRoom(room.code);
+      const roomTokenPattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{18}$/;
+
+      expect(room.code).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/);
+      expect(hostToken).toMatch(roomTokenPattern);
+      expect(joined.clientToken).toMatch(roomTokenPattern);
+      expect(joined.player.id).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/);
+      expect(activeRoom?.stageToken).toMatch(roomTokenPattern);
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it("rejects duplicate player names while preserving token resume", () => {
