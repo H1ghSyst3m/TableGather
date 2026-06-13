@@ -3,7 +3,7 @@ export const adminEn = {
     "title": "Admin room overview",
     "description": "Live status for active rooms on this room server.",
     "tokenRequiredTitle": "Admin token missing",
-    "tokenRequiredDescription": "Enter the admin token or open this view with ?token=...",
+    "tokenRequiredDescription": "Enter the admin token or open this view with #token=...",
     "tokenFieldLabel": "Admin token",
     "tokenFieldPlaceholder": "Enter token",
     "tokenSubmit": "Open",

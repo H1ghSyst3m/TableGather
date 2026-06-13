@@ -40,10 +40,10 @@ export function AdminScreen() {
   const requestControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const queryToken = readUrlAdminToken();
-    if (!queryToken) return;
+    const urlToken = readUrlAdminToken();
+    if (!urlToken) return;
 
-    saveAdminToken(queryToken);
+    saveAdminToken(urlToken);
     clearUrlAdminToken();
   }, []);
 

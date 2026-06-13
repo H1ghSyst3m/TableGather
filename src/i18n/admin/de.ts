@@ -3,7 +3,7 @@ export const adminDe = {
     "title": "Admin-Raumübersicht",
     "description": "Live-Status der aktiven Räume auf diesem Raumserver.",
     "tokenRequiredTitle": "Admin-Token fehlt",
-    "tokenRequiredDescription": "Gib den Admin-Token ein oder öffne die Ansicht mit ?token=...",
+    "tokenRequiredDescription": "Gib den Admin-Token ein oder öffne die Ansicht mit #token=...",
     "tokenFieldLabel": "Admin-Token",
     "tokenFieldPlaceholder": "Token eingeben",
     "tokenSubmit": "Öffnen",

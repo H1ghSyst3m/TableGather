@@ -1,21 +1,30 @@
 export const ADMIN_TOKEN_STORAGE_KEY = "tablegather.adminToken";
 
+type AdminTokenWindow = {
+  location: { href: string; hash: string };
+  history: { replaceState: (state: unknown, title: string, url?: string | URL | null) => void };
+};
+
 export function readInitialAdminToken() {
   return readUrlAdminToken() ?? readStoredAdminToken();
 }
 
 export function readUrlAdminToken() {
-  if (typeof window === "undefined") return null;
-  const token = new URLSearchParams(window.location.search).get("token")?.trim();
+  const browserWindow = adminTokenWindow();
+  if (!browserWindow) return null;
+  const token = adminTokenHashParams(browserWindow.location.hash).get("token")?.trim();
   return token || null;
 }
 
 export function clearUrlAdminToken() {
-  if (typeof window === "undefined") return;
-  const url = new URL(window.location.href);
-  if (!url.searchParams.has("token")) return;
-  url.searchParams.delete("token");
-  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  const browserWindow = adminTokenWindow();
+  if (!browserWindow) return;
+  const url = new URL(browserWindow.location.href);
+  const params = adminTokenHashParams(url.hash);
+  if (!params.has("token")) return;
+  params.delete("token");
+  const nextHash = params.toString();
+  browserWindow.history.replaceState({}, "", `${url.pathname}${url.search}${nextHash ? `#${nextHash}` : ""}`);
 }
 
 export function readStoredAdminToken() {
@@ -57,4 +66,12 @@ export function submitAdminTokenInput(value: string, onTokenAccepted: (token: st
   saveAdminToken(token);
   onTokenAccepted(token);
   return true;
+}
+
+function adminTokenHashParams(hash: string) {
+  return new URLSearchParams(hash.replace(/^#/, ""));
+}
+
+function adminTokenWindow() {
+  return (globalThis as unknown as { window?: AdminTokenWindow }).window ?? null;
 }
