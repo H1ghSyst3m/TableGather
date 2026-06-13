@@ -117,7 +117,7 @@ function useRoute(): Route {
 
   return useMemo(() => {
     const { path } = location;
-    if (/^\/admin$/i.test(path)) return { name: "admin" };
+    if (/^\/admin\/?$/i.test(path)) return { name: "admin" };
 
     const playMatch = path.match(/^\/play\/([a-z0-9-]+)$/i);
     if (playMatch && isGameId(playMatch[1])) return { name: "localGame", gameId: playMatch[1] };

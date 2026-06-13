@@ -104,11 +104,22 @@ describe("room websocket server", () => {
 
   it("rejects admin room requests without a valid bearer token", async () => {
     const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token" });
-    const missing = await fetch(toAdminRoomsUrl(url));
-    const wrong = await fetch(toAdminRoomsUrl(url), { headers: { Authorization: "Bearer wrong-token" } });
+    const origin = "http://127.0.0.1:5173";
+    const missing = await fetch(toAdminRoomsUrl(url), { headers: { Origin: origin } });
+    const wrong = await fetch(toAdminRoomsUrl(url), { headers: { Authorization: "Bearer wrong-token", Origin: origin } });
 
     expect(missing.status).toBe(401);
     expect(wrong.status).toBe(401);
+    expect(missing.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(missing.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
+    expect(missing.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(missing.headers.get("cache-control")).toBe("no-store");
+    expect(missing.headers.get("vary")).toBe("Origin");
+    expect(wrong.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(wrong.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
+    expect(wrong.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(wrong.headers.get("cache-control")).toBe("no-store");
+    expect(wrong.headers.get("vary")).toBe("Origin");
     await expect(missing.json()).resolves.toEqual({ ok: false, error: "unauthorized" });
     await expect(wrong.json()).resolves.toEqual({ ok: false, error: "unauthorized" });
   });
@@ -171,6 +182,7 @@ describe("room websocket server", () => {
       method: "OPTIONS",
       headers: {
         Origin: "http://127.0.0.1:5173",
+        "Access-Control-Request-Method": "GET",
         "Access-Control-Request-Headers": "authorization",
       },
     });
@@ -179,6 +191,9 @@ describe("room websocket server", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
     expect(response.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
     expect(response.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(response.headers.get("access-control-max-age")).toBe("600");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("vary")).toBe("Origin");
   });
 
   it("reports room lookup status before players join", async () => {

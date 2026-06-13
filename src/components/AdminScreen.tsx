@@ -20,6 +20,7 @@ import type { GameId, RoomPhase } from "../types";
 import { HeaderBar } from "./HeaderBar";
 
 const ADMIN_REFRESH_INTERVAL_MS = 15_000;
+const ADMIN_FETCH_TIMEOUT_MS = 10_000;
 
 type AdminActivityFilter = "all" | "active" | "inactive";
 type AdminProgressFilter = "all" | AdminProgressStatus;
@@ -36,6 +37,7 @@ export function AdminScreen() {
   const [error, setError] = useState<AdminFetchErrorCode | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const requestIdRef = useRef(0);
+  const requestControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const queryToken = readUrlAdminToken();
@@ -46,15 +48,18 @@ export function AdminScreen() {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!token) return;
+    if (!token || requestControllerRef.current) return;
 
     const requestId = requestIdRef.current + 1;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), ADMIN_FETCH_TIMEOUT_MS);
     requestIdRef.current = requestId;
+    requestControllerRef.current = controller;
     setLoading(true);
     setError(null);
 
     try {
-      const nextSummary = await fetchAdminRooms(token);
+      const nextSummary = await fetchAdminRooms(token, controller.signal);
       if (requestIdRef.current !== requestId) return;
       setSummary(nextSummary);
       setLastLoadedAt(Date.now());
@@ -67,6 +72,8 @@ export function AdminScreen() {
         setToken(null);
       }
     } finally {
+      window.clearTimeout(timeoutId);
+      if (requestControllerRef.current === controller) requestControllerRef.current = null;
       if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token]);
@@ -421,12 +428,13 @@ function filterRooms(rooms: AdminRoomSummary[], activityFilter: AdminActivityFil
   });
 }
 
-async function fetchAdminRooms(token: string): Promise<AdminRoomsResponse> {
+async function fetchAdminRooms(token: string, signal?: AbortSignal): Promise<AdminRoomsResponse> {
   let response: Response;
   try {
     response = await fetch(resolveRoomServerHttpUrl("/admin/rooms"), {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
+      signal,
     });
   } catch {
     throw new AdminFetchError("connection");
