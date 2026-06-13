@@ -38,8 +38,8 @@ export const commonEn = {
   },
   "errors": {
     "roomConnection": "Could not connect to the room server.",
-    "roomProtocolMismatch": "The room server is still running an older version.",
-    "roomProtocolMismatchHint": "Restart the TableGather room server, then refresh this page.",
+    "roomProtocolMismatch": "This app and the room server use different versions.",
+    "roomProtocolMismatchHint": "Refresh this page to load the newest TableGather app version.",
     "roomNotFound": "Room not found.",
     "roomNotFoundClosed": "This room was not found or has already been closed.",
     "roomAlreadyStarted": "This round has already started. Ask the host for a new room.",
