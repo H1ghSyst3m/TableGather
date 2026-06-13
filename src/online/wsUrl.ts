@@ -7,3 +7,12 @@ export function resolveWsUrl() {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   return `${protocol}://${window.location.hostname}:8787/ws`;
 }
+
+export function resolveRoomServerHttpUrl(path: string) {
+  const url = new URL(resolveWsUrl(), window.location.href);
+  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  url.pathname = path;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}

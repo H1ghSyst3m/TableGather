@@ -1,6 +1,14 @@
 import { requirePlayableGame, requireRoomAdapter } from "../src/games/registry";
 import type { GameCommand, GameRoomAdapter } from "../src/games/types";
 import type { GameId, HostRoomSnapshot, Locale, PlayerRoomSnapshot, RoomPlayerPublic, StageRoomSnapshot } from "../src/types";
+import {
+  ADMIN_INACTIVE_ACTIVITY_MS,
+  adminGameIds,
+  adminRoomPhases,
+  type AdminGameCounts,
+  type AdminInactiveReason,
+  type AdminRoomsSummary,
+} from "../src/online/admin";
 import type { HostCommand, PlayerCommand } from "../src/online/messages";
 import { normalizePlayerName, playerNameKey } from "../src/playerNames";
 import { InMemoryRoomStore, type Room, type RoomPlayer, type RoomStore } from "./roomStore";
@@ -269,6 +277,48 @@ export class RoomManager {
     return this.store.list();
   }
 
+  adminRoomsSummary(): AdminRoomsSummary {
+    const serverTime = this.now();
+    this.pruneExpiredRooms();
+
+    const byGame = createGameCounts();
+    const byPhase = createPhaseCounts();
+    const totals = createEmptyCounts();
+    const rooms = this.store.list().map((room) => {
+      const started = room.phase !== "lobby";
+      const inactiveReasons = this.inactiveReasons(room, serverTime);
+      const inactive = inactiveReasons.length > 0;
+
+      incrementCounts(totals, { started, inactive });
+      incrementCounts(byGame[room.gameId], { started, inactive });
+      byPhase[room.phase] += 1;
+
+      return {
+        code: room.code,
+        gameId: room.gameId,
+        phase: room.phase,
+        playerCount: room.players.length,
+        connectedPlayerCount: room.players.filter((player) => player.connected).length,
+        hostConnected: Boolean(room.hostClientId),
+        createdAt: room.createdAt,
+        lastActivityAt: room.lastActivityAt,
+        expiresAt: this.expiresAt(room),
+        started,
+        inactive,
+        inactiveReasons,
+      };
+    });
+
+    return {
+      serverTime,
+      inactiveActivityMs: ADMIN_INACTIVE_ACTIVITY_MS,
+      totals,
+      byGame,
+      byPhase,
+      rooms: rooms.sort((first, second) => second.lastActivityAt - first.lastActivityAt),
+    };
+  }
+
   pruneExpiredRooms() {
     const expired: Room[] = [];
 
@@ -370,6 +420,13 @@ export class RoomManager {
     room.lastActivityAt = this.now();
   }
 
+  private inactiveReasons(room: Room, serverTime: number): AdminInactiveReason[] {
+    const reasons: AdminInactiveReason[] = [];
+    if (!room.hostClientId) reasons.push("hostOffline");
+    if (serverTime - room.lastActivityAt >= ADMIN_INACTIVE_ACTIVITY_MS) reasons.push("staleActivity");
+    return reasons;
+  }
+
   private expiresAt(room: Room) {
     return room.lastActivityAt + this.roomTtlMs;
   }
@@ -377,6 +434,24 @@ export class RoomManager {
   private isExpired(room: Room) {
     return this.expiresAt(room) <= this.now();
   }
+}
+
+function createEmptyCounts(): AdminGameCounts {
+  return { total: 0, started: 0, inactive: 0 };
+}
+
+function createGameCounts(): Record<GameId, AdminGameCounts> {
+  return Object.fromEntries(adminGameIds.map((gameId) => [gameId, createEmptyCounts()])) as Record<GameId, AdminGameCounts>;
+}
+
+function createPhaseCounts() {
+  return Object.fromEntries(adminRoomPhases.map((phase) => [phase, 0])) as Record<Room["phase"], number>;
+}
+
+function incrementCounts(counts: AdminGameCounts, flags: { started: boolean; inactive: boolean }) {
+  counts.total += 1;
+  if (flags.started) counts.started += 1;
+  if (flags.inactive) counts.inactive += 1;
 }
 
 function createToken(length = 18) {

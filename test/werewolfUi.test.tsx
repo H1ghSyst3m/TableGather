@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { createWerewolfGameFromAssignments, markRoleSeen } from "../src/games/werewolf/domain/engine";
 import type { WerewolfState } from "../src/games/werewolf/domain/types";
+import { AdminDashboardView, AdminStatePanel } from "../src/components/AdminScreen";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
@@ -16,6 +17,7 @@ import { GameLog, PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/
 import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { I18nContext } from "../src/i18n/context";
 import { translate } from "../src/i18n/translations";
+import type { AdminRoomsSummary } from "../src/online/admin";
 import { hasDuplicatePlayerName, normalizePlayerName } from "../src/playerNames";
 
 const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
@@ -844,6 +846,51 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "hub.sessionPlayerName", { name: "Alex" }));
   });
 
+  it("renders admin room overview counts, breakdowns, and detailed rows", () => {
+    const summary = createAdminSummary();
+    const html = renderWithI18n(<AdminDashboardView summary={summary} filter="all" onFilterChange={() => undefined} />);
+
+    expect(html).toContain(translate("de", "admin.totalRooms"));
+    expect(html).toContain(translate("de", "admin.startedRooms"));
+    expect(html).toContain(translate("de", "admin.inactiveRooms"));
+    expect(html).toContain(translate("de", "admin.gamesBreakdown"));
+    expect(html).toContain(translate("de", "admin.phasesBreakdown"));
+    expect(html).toContain("ABCD");
+    expect(html).toContain("WXYZ");
+    expect(html).toContain(translate("de", "admin.connectedPlayers", { connected: 3, total: 5 }));
+    expect(html).toContain(translate("de", "admin.hostOffline"));
+    expect(html).toContain(translate("de", "admin.reasonStaleActivity"));
+    expect(html).not.toContain("Alex");
+  });
+
+  it("filters admin rooms by inactive and started status", () => {
+    const summary = createAdminSummary();
+    const inactiveHtml = renderWithI18n(<AdminDashboardView summary={summary} filter="inactive" onFilterChange={() => undefined} />);
+    const startedHtml = renderWithI18n(<AdminDashboardView summary={summary} filter="started" onFilterChange={() => undefined} />);
+
+    expect(inactiveHtml).toContain("WXYZ");
+    expect(inactiveHtml).not.toContain("ABCD");
+    expect(startedHtml).toContain("ABCD");
+    expect(startedHtml).toContain("WXYZ");
+    expect(startedHtml).not.toContain("LOBB");
+  });
+
+  it("renders admin token, error, and empty states", () => {
+    const tokenHtml = renderWithI18n(
+      <AdminStatePanel icon={null} title={translate("de", "admin.tokenRequiredTitle")} description={translate("de", "admin.tokenRequiredDescription")} />,
+    );
+    const errorHtml = renderWithI18n(
+      <AdminStatePanel icon={null} title={translate("de", "admin.unavailableTitle")} description={translate("de", "admin.unauthorizedDescription")} />,
+    );
+    const emptyHtml = renderWithI18n(<AdminDashboardView summary={{ ...createAdminSummary(), totals: { total: 0, started: 0, inactive: 0 }, rooms: [] }} filter="all" onFilterChange={() => undefined} />);
+
+    expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredTitle"));
+    expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredDescription"));
+    expect(errorHtml).toContain(translate("de", "admin.unavailableTitle"));
+    expect(errorHtml).toContain(translate("de", "admin.unauthorizedDescription"));
+    expect(emptyHtml).toContain(translate("de", "admin.emptyDescription"));
+  });
+
   it("renders the shared room join screen with code and name fields", () => {
     const html = renderWithI18n(<WerewolfRoomPlayerScreen navigate={() => undefined} />);
 
@@ -1315,6 +1362,71 @@ function createNightResultGame() {
 
 function renderFooterHtml(html: string) {
   return html.slice(html.indexOf('class="werewolf-flow-footer"'));
+}
+
+function createAdminSummary(): AdminRoomsSummary {
+  const serverTime = 1_700_000_000_000;
+  return {
+    serverTime,
+    inactiveActivityMs: 30 * 60 * 1000,
+    totals: { total: 3, started: 2, inactive: 1 },
+    byGame: {
+      werewolf: { total: 3, started: 2, inactive: 1 },
+      imposter: { total: 0, started: 0, inactive: 0 },
+      undercover: { total: 0, started: 0, inactive: 0 },
+    },
+    byPhase: {
+      lobby: 1,
+      assignment: 0,
+      roleReveal: 1,
+      playing: 1,
+      ended: 0,
+    },
+    rooms: [
+      {
+        code: "ABCD",
+        gameId: "werewolf",
+        phase: "roleReveal",
+        playerCount: 5,
+        connectedPlayerCount: 5,
+        hostConnected: true,
+        createdAt: serverTime - 20 * 60 * 1000,
+        lastActivityAt: serverTime - 2 * 60 * 1000,
+        expiresAt: serverTime + 47 * 60 * 60 * 1000,
+        started: true,
+        inactive: false,
+        inactiveReasons: [],
+      },
+      {
+        code: "WXYZ",
+        gameId: "werewolf",
+        phase: "playing",
+        playerCount: 5,
+        connectedPlayerCount: 3,
+        hostConnected: false,
+        createdAt: serverTime - 3 * 60 * 60 * 1000,
+        lastActivityAt: serverTime - 45 * 60 * 1000,
+        expiresAt: serverTime + 45 * 60 * 60 * 1000,
+        started: true,
+        inactive: true,
+        inactiveReasons: ["hostOffline", "staleActivity"],
+      },
+      {
+        code: "LOBB",
+        gameId: "werewolf",
+        phase: "lobby",
+        playerCount: 2,
+        connectedPlayerCount: 2,
+        hostConnected: true,
+        createdAt: serverTime - 4 * 60 * 1000,
+        lastActivityAt: serverTime - 1 * 60 * 1000,
+        expiresAt: serverTime + 48 * 60 * 60 * 1000,
+        started: false,
+        inactive: false,
+        inactiveReasons: [],
+      },
+    ],
+  };
 }
 
 function buttonHtmlForClass(html: string, className: string) {
