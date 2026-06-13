@@ -41,56 +41,28 @@ Configuration:
 
 ## Production Deployment
 
-The recommended production setup is one Node/PM2 room server that also serves the built frontend, with Nginx only handling TLS and reverse proxying to that process.
+Production can run as a single Node room server that also serves the built frontend. The process manager and reverse proxy are deployment-specific; they only need to start the current server script and forward traffic to it.
 
-Example `.env.production.local`:
+Use `.env.example` as the reference for production values. The usual production environment is:
+
+- `NODE_ENV=production` so the room server serves the built `dist/` frontend by default.
+- `PORT` or `TABLEGATHER_PORT` for the room server listen port.
+- `TABLEGATHER_ADMIN_TOKEN` when the protected `/admin` dashboard should be enabled.
+- `TABLEGATHER_SERVE_STATIC=false` only for split deployments where another service serves `dist/`.
+
+Build and start with the repository scripts:
 
 ```bash
-NODE_ENV=production
-PORT=9097
-TABLEGATHER_ADMIN_TOKEN=replace-with-a-long-random-token
-```
-
-Build and reload:
-
-```bash
-cd /var/www/TableGather
-git pull --ff-only
 npm ci --include=dev
-npm run build -- --base=/
-pm2 startOrReload ecosystem.config.cjs --only tablegather-ws --update-env
-pm2 save
-pm2 status tablegather-ws
+npm run build
+npm run server:start
 ```
 
-The PM2 app should run `npm run server:start`; the private `.env.production.local` file provides the port and admin token at runtime.
+The current scripts build and start from TypeScript, so install the full dependency set needed by both build and runtime. Configure any process manager to run `npm run server:start` with the production environment available.
 
-Minimal Nginx shape:
+For same-origin production deployments, leave `VITE_WS_URL` empty. The built browser app connects to `/ws` on the current origin, and the room server exposes the matching WebSocket endpoint. In the single-process setup, route `/`, SPA routes, `/ws`, `/health`, and `/admin/rooms` to the same TableGather server. No separate static host or admin API location is required.
 
-```nginx
-map $http_upgrade $connection_upgrade {
-    default upgrade;
-    '' close;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name example.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:9097;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-With this setup, `/`, `/ws`, `/health`, and `/admin/rooms` all go to the same TableGather server, so no separate Nginx location for the admin API is needed.
+Set `VITE_WS_URL` only when the browser app and room server are intentionally split across different origins or path prefixes. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S).
 
 Main routes:
 
