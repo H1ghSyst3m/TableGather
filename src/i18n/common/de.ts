@@ -38,8 +38,8 @@ export const commonDe = {
   },
   "errors": {
     "roomConnection": "Verbindung zum Raumserver fehlgeschlagen.",
-    "roomProtocolMismatch": "Der Raumserver läuft noch mit einer alten Version.",
-    "roomProtocolMismatchHint": "Starte den TableGather-Raumserver neu und aktualisiere danach diese Seite.",
+    "roomProtocolMismatch": "Diese App und der Raumserver verwenden unterschiedliche Versionen.",
+    "roomProtocolMismatchHint": "Aktualisiere diese Seite, um die neueste TableGather-App-Version zu laden.",
     "roomNotFound": "Raum nicht gefunden.",
     "roomNotFoundClosed": "Dieser Raum wurde nicht gefunden oder ist bereits geschlossen.",
     "roomAlreadyStarted": "Diese Runde läuft bereits. Bitte frage die Spielleitung nach einem neuen Raum.",
