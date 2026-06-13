@@ -6,11 +6,15 @@ export const adminGameIds = ["werewolf", "imposter", "undercover"] as const sati
 export const adminRoomPhases = ["lobby", "assignment", "roleReveal", "playing", "ended"] as const satisfies readonly RoomPhase[];
 
 export type AdminInactiveReason = "hostOffline" | "staleActivity";
+export type AdminProgressStatus = "running" | "waiting" | "ended";
 
 export interface AdminGameCounts {
   total: number;
-  started: number;
+  active: number;
+  running: number;
+  waiting: number;
   inactive: number;
+  ended: number;
 }
 
 export interface AdminRoomSummary {
@@ -24,6 +28,10 @@ export interface AdminRoomSummary {
   lastActivityAt: number;
   expiresAt: number;
   started: boolean;
+  active: boolean;
+  running: boolean;
+  waiting: boolean;
+  progressStatus: AdminProgressStatus;
   inactive: boolean;
   inactiveReasons: AdminInactiveReason[];
 }

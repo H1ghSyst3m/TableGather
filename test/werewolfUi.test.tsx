@@ -848,10 +848,12 @@ describe("werewolf play surface", () => {
 
   it("renders admin room overview counts, breakdowns, and detailed rows", () => {
     const summary = createAdminSummary();
-    const html = renderWithI18n(<AdminDashboardView summary={summary} filter="all" onFilterChange={() => undefined} />);
+    const html = renderAdminDashboard(summary);
 
     expect(html).toContain(translate("de", "admin.totalRooms"));
-    expect(html).toContain(translate("de", "admin.startedRooms"));
+    expect(html).toContain(translate("de", "admin.activeRooms"));
+    expect(html).toContain(translate("de", "admin.runningRooms"));
+    expect(html).toContain(translate("de", "admin.waitingRooms"));
     expect(html).toContain(translate("de", "admin.inactiveRooms"));
     expect(html).toContain(translate("de", "admin.gamesBreakdown"));
     expect(html).toContain(translate("de", "admin.phasesBreakdown"));
@@ -860,19 +862,31 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "admin.connectedPlayers", { connected: 3, total: 5 }));
     expect(html).toContain(translate("de", "admin.hostOffline"));
     expect(html).toContain(translate("de", "admin.reasonStaleActivity"));
+    expect(html).toContain(translate("de", "admin.statusRunning"));
+    expect(html).toContain(translate("de", "admin.statusWaiting"));
+    expect(html).toContain(translate("de", "admin.statusInactive"));
     expect(html).not.toContain("Alex");
   });
 
-  it("filters admin rooms by inactive and started status", () => {
+  it("filters admin rooms by separate activity and progress status", () => {
     const summary = createAdminSummary();
-    const inactiveHtml = renderWithI18n(<AdminDashboardView summary={summary} filter="inactive" onFilterChange={() => undefined} />);
-    const startedHtml = renderWithI18n(<AdminDashboardView summary={summary} filter="started" onFilterChange={() => undefined} />);
+    const runningHtml = renderAdminDashboard(summary, "all", "running");
+    const activeRunningHtml = renderAdminDashboard(summary, "active", "running");
+    const inactiveRunningHtml = renderAdminDashboard(summary, "inactive", "running");
+    const activeLobbyHtml = renderAdminDashboard(summary, "active", "waiting");
 
-    expect(inactiveHtml).toContain("WXYZ");
-    expect(inactiveHtml).not.toContain("ABCD");
-    expect(startedHtml).toContain("ABCD");
-    expect(startedHtml).toContain("WXYZ");
-    expect(startedHtml).not.toContain("LOBB");
+    expect(runningHtml).toContain("ABCD");
+    expect(runningHtml).toContain("WXYZ");
+    expect(runningHtml).not.toContain("LOBB");
+    expect(activeRunningHtml).toContain("ABCD");
+    expect(activeRunningHtml).not.toContain("WXYZ");
+    expect(activeRunningHtml).not.toContain("LOBB");
+    expect(inactiveRunningHtml).toContain("WXYZ");
+    expect(inactiveRunningHtml).not.toContain("ABCD");
+    expect(inactiveRunningHtml).not.toContain("LOBB");
+    expect(activeLobbyHtml).toContain("LOBB");
+    expect(activeLobbyHtml).not.toContain("ABCD");
+    expect(activeLobbyHtml).not.toContain("WXYZ");
   });
 
   it("renders admin token, error, and empty states", () => {
@@ -882,7 +896,15 @@ describe("werewolf play surface", () => {
     const errorHtml = renderWithI18n(
       <AdminStatePanel icon={null} title={translate("de", "admin.unavailableTitle")} description={translate("de", "admin.unauthorizedDescription")} />,
     );
-    const emptyHtml = renderWithI18n(<AdminDashboardView summary={{ ...createAdminSummary(), totals: { total: 0, started: 0, inactive: 0 }, rooms: [] }} filter="all" onFilterChange={() => undefined} />);
+    const emptyHtml = renderWithI18n(
+      <AdminDashboardView
+        summary={{ ...createAdminSummary(), totals: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 }, rooms: [] }}
+        activityFilter="all"
+        progressFilter="all"
+        onActivityFilterChange={() => undefined}
+        onProgressFilterChange={() => undefined}
+      />,
+    );
 
     expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredTitle"));
     expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredDescription"));
@@ -1369,11 +1391,11 @@ function createAdminSummary(): AdminRoomsSummary {
   return {
     serverTime,
     inactiveActivityMs: 30 * 60 * 1000,
-    totals: { total: 3, started: 2, inactive: 1 },
+    totals: { total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 },
     byGame: {
-      werewolf: { total: 3, started: 2, inactive: 1 },
-      imposter: { total: 0, started: 0, inactive: 0 },
-      undercover: { total: 0, started: 0, inactive: 0 },
+      werewolf: { total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 },
+      imposter: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 },
+      undercover: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 },
     },
     byPhase: {
       lobby: 1,
@@ -1394,6 +1416,10 @@ function createAdminSummary(): AdminRoomsSummary {
         lastActivityAt: serverTime - 2 * 60 * 1000,
         expiresAt: serverTime + 47 * 60 * 60 * 1000,
         started: true,
+        active: true,
+        running: true,
+        waiting: false,
+        progressStatus: "running",
         inactive: false,
         inactiveReasons: [],
       },
@@ -1408,6 +1434,10 @@ function createAdminSummary(): AdminRoomsSummary {
         lastActivityAt: serverTime - 45 * 60 * 1000,
         expiresAt: serverTime + 45 * 60 * 60 * 1000,
         started: true,
+        active: false,
+        running: true,
+        waiting: false,
+        progressStatus: "running",
         inactive: true,
         inactiveReasons: ["hostOffline", "staleActivity"],
       },
@@ -1422,11 +1452,31 @@ function createAdminSummary(): AdminRoomsSummary {
         lastActivityAt: serverTime - 1 * 60 * 1000,
         expiresAt: serverTime + 48 * 60 * 60 * 1000,
         started: false,
+        active: true,
+        running: false,
+        waiting: true,
+        progressStatus: "waiting",
         inactive: false,
         inactiveReasons: [],
       },
     ],
   };
+}
+
+function renderAdminDashboard(
+  summary: AdminRoomsSummary,
+  activityFilter: "all" | "active" | "inactive" = "all",
+  progressFilter: "all" | "running" | "waiting" | "ended" = "all",
+) {
+  return renderWithI18n(
+    <AdminDashboardView
+      summary={summary}
+      activityFilter={activityFilter}
+      progressFilter={progressFilter}
+      onActivityFilterChange={() => undefined}
+      onProgressFilterChange={() => undefined}
+    />,
+  );
 }
 
 function buttonHtmlForClass(html: string, className: string) {

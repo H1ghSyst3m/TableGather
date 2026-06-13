@@ -4,7 +4,7 @@ import { games } from "../games/registry";
 import { gameThemeStyle, hubDefaultTheme } from "../games/theme";
 import { useI18n } from "../i18n/useI18n";
 import type { TranslationKey } from "../i18n/translations";
-import type { AdminInactiveReason, AdminRoomsSummary, AdminRoomSummary } from "../online/admin";
+import type { AdminInactiveReason, AdminProgressStatus, AdminRoomsSummary, AdminRoomSummary } from "../online/admin";
 import { adminGameIds, adminRoomPhases } from "../online/admin";
 import type { RoomServerInfo } from "../online/protocol";
 import { resolveRoomServerHttpUrl } from "../online/wsUrl";
@@ -14,7 +14,8 @@ import { HeaderBar } from "./HeaderBar";
 const ADMIN_TOKEN_STORAGE_KEY = "tablegather.adminToken";
 const ADMIN_REFRESH_INTERVAL_MS = 15_000;
 
-type AdminFilter = "all" | "inactive" | "started";
+type AdminActivityFilter = "all" | "active" | "inactive";
+type AdminProgressFilter = "all" | AdminProgressStatus;
 type AdminFetchErrorCode = "disabled" | "unauthorized" | "connection";
 type AdminRoomsResponse = { ok: true } & AdminRoomsSummary & RoomServerInfo;
 
@@ -22,7 +23,8 @@ export function AdminScreen() {
   const { locale, t } = useI18n();
   const [token, setToken] = useState(readInitialAdminToken);
   const [summary, setSummary] = useState<AdminRoomsSummary | null>(null);
-  const [filter, setFilter] = useState<AdminFilter>("all");
+  const [activityFilter, setActivityFilter] = useState<AdminActivityFilter>("all");
+  const [progressFilter, setProgressFilter] = useState<AdminProgressFilter>("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AdminFetchErrorCode | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
@@ -101,7 +103,13 @@ export function AdminScreen() {
       ) : error ? (
         <AdminStatePanel icon={<AlertTriangle />} title={t("admin.unavailableTitle")} description={adminErrorDescription(error, t)} />
       ) : summary ? (
-        <AdminDashboardView summary={summary} filter={filter} onFilterChange={setFilter} />
+        <AdminDashboardView
+          summary={summary}
+          activityFilter={activityFilter}
+          progressFilter={progressFilter}
+          onActivityFilterChange={setActivityFilter}
+          onProgressFilterChange={setProgressFilter}
+        />
       ) : (
         <AdminStatePanel icon={<RefreshCw />} title={t("admin.refreshing")} description={t("admin.description")} />
       )}
@@ -111,23 +119,29 @@ export function AdminScreen() {
 
 export function AdminDashboardView({
   summary,
-  filter,
-  onFilterChange,
+  activityFilter,
+  progressFilter,
+  onActivityFilterChange,
+  onProgressFilterChange,
 }: {
   summary: AdminRoomsSummary;
-  filter: AdminFilter;
-  onFilterChange: (filter: AdminFilter) => void;
+  activityFilter: AdminActivityFilter;
+  progressFilter: AdminProgressFilter;
+  onActivityFilterChange: (filter: AdminActivityFilter) => void;
+  onProgressFilterChange: (filter: AdminProgressFilter) => void;
 }) {
   const { locale, t } = useI18n();
-  const rooms = useMemo(() => filterRooms(summary.rooms, filter), [filter, summary.rooms]);
+  const rooms = useMemo(() => filterRooms(summary.rooms, activityFilter, progressFilter), [activityFilter, progressFilter, summary.rooms]);
 
   return (
     <>
       <section className="section-block admin-summary-section">
         <div className="admin-stat-grid">
           <AdminStat icon={<Users />} label={t("admin.totalRooms")} value={summary.totals.total} />
-          <AdminStat icon={<CheckCircle2 />} label={t("admin.startedRooms")} value={summary.totals.started} />
+          <AdminStat icon={<ShieldCheck />} label={t("admin.activeRooms")} value={summary.totals.active} />
           <AdminStat icon={<AlertTriangle />} label={t("admin.inactiveRooms")} value={summary.totals.inactive} tone={summary.totals.inactive > 0 ? "warning" : "default"} />
+          <AdminStat icon={<Gamepad2 />} label={t("admin.runningRooms")} value={summary.totals.running} />
+          <AdminStat icon={<Clock3 />} label={t("admin.waitingRooms")} value={summary.totals.waiting} />
         </div>
 
         <div className="admin-breakdown-grid">
@@ -158,21 +172,30 @@ export function AdminDashboardView({
         <div className="admin-table-heading">
           <div>
             <p className="section-label">{t("admin.roomsTable")}</p>
-            <h3>{tableFilterTitle(filter, t)}</h3>
+            <h3>{tableFilterTitle(activityFilter, progressFilter, t)}</h3>
           </div>
-          <div className="admin-filter-tabs" role="tablist" aria-label={t("admin.roomsTable")}>
-            {(["all", "inactive", "started"] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                role="tab"
-                aria-selected={filter === item}
-                className={filter === item ? "active" : ""}
-                onClick={() => onFilterChange(item)}
-              >
-                {filterLabel(item, summary, t)}
-              </button>
-            ))}
+          <div className="admin-filter-groups">
+            <AdminFilterGroup
+              label={t("admin.activityFilters")}
+              options={[
+                { value: "all", label: filterCountLabel(t("admin.filterAll"), summary.totals.total) },
+                { value: "active", label: filterCountLabel(t("admin.filterActive"), summary.totals.active) },
+                { value: "inactive", label: filterCountLabel(t("admin.filterInactive"), summary.totals.inactive) },
+              ]}
+              selected={activityFilter}
+              onChange={onActivityFilterChange}
+            />
+            <AdminFilterGroup
+              label={t("admin.progressFilters")}
+              options={[
+                { value: "all", label: filterCountLabel(t("admin.filterAll"), summary.totals.total) },
+                { value: "running", label: filterCountLabel(t("admin.filterRunning"), summary.totals.running) },
+                { value: "waiting", label: filterCountLabel(t("admin.filterWaiting"), summary.totals.waiting) },
+                { value: "ended", label: filterCountLabel(t("admin.filterEnded"), summary.totals.ended) },
+              ]}
+              selected={progressFilter}
+              onChange={onProgressFilterChange}
+            />
           </div>
         </div>
 
@@ -218,10 +241,16 @@ export function AdminDashboardView({
                   </td>
                   <td>{formatDateTime(room.expiresAt, locale)}</td>
                   <td>
-                    <span className={`admin-status-chip ${room.inactive ? "warning" : "ok"}`}>
-                      {room.inactive ? <AlertTriangle /> : <CheckCircle2 />}
-                      {room.inactive ? t("admin.inactive") : t("admin.active")}
-                    </span>
+                    <div className="admin-status-stack">
+                      <span className={`admin-status-chip ${progressStatusTone(room.progressStatus)}`}>
+                        {progressStatusIcon(room.progressStatus)}
+                        {progressStatusLabel(room.progressStatus, t)}
+                      </span>
+                      <span className={`admin-status-chip ${room.inactive ? "warning" : "ok"}`}>
+                        {room.inactive ? <AlertTriangle /> : <CheckCircle2 />}
+                        {t(room.inactive ? "admin.inactive" : "admin.active")}
+                      </span>
+                    </div>
                     {room.inactiveReasons.length > 0 && <span className="admin-table-subtext">{inactiveReasonText(room.inactiveReasons, t)}</span>}
                   </td>
                 </tr>
@@ -294,10 +323,45 @@ function AdminBreakdown({
   );
 }
 
-function filterRooms(rooms: AdminRoomSummary[], filter: AdminFilter) {
-  if (filter === "inactive") return rooms.filter((room) => room.inactive);
-  if (filter === "started") return rooms.filter((room) => room.started);
-  return rooms;
+function AdminFilterGroup<TFilter extends string>({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  options: Array<{ value: TFilter; label: string }>;
+  selected: TFilter;
+  onChange: (filter: TFilter) => void;
+}) {
+  return (
+    <div className="admin-filter-group">
+      <span className="admin-filter-group-label">{label}</span>
+      <div className="admin-filter-tabs" role="tablist" aria-label={label}>
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="tab"
+            aria-selected={selected === option.value}
+            className={selected === option.value ? "active" : ""}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function filterRooms(rooms: AdminRoomSummary[], activityFilter: AdminActivityFilter, progressFilter: AdminProgressFilter) {
+  return rooms.filter((room) => {
+    const activityMatches =
+      activityFilter === "all" || (activityFilter === "active" && room.active) || (activityFilter === "inactive" && room.inactive);
+    const progressMatches = progressFilter === "all" || room.progressStatus === progressFilter;
+    return activityMatches && progressMatches;
+  });
 }
 
 async function fetchAdminRooms(token: string): Promise<AdminRoomsResponse> {
@@ -375,16 +439,48 @@ function adminErrorDescription(error: AdminFetchErrorCode, t: ReturnType<typeof 
   return t("admin.connectionDescription");
 }
 
-function filterLabel(filter: AdminFilter, summary: AdminRoomsSummary, t: ReturnType<typeof useI18n>["t"]) {
-  const count = filter === "inactive" ? summary.totals.inactive : filter === "started" ? summary.totals.started : summary.totals.total;
-  const key = filter === "inactive" ? "admin.filterInactive" : filter === "started" ? "admin.filterStarted" : "admin.filterAll";
-  return `${t(key)} (${count})`;
+function filterCountLabel(label: string, count: number) {
+  return `${label} (${count})`;
 }
 
-function tableFilterTitle(filter: AdminFilter, t: ReturnType<typeof useI18n>["t"]) {
-  if (filter === "inactive") return t("admin.filterInactive");
-  if (filter === "started") return t("admin.filterStarted");
-  return t("admin.filterAll");
+function tableFilterTitle(activityFilter: AdminActivityFilter, progressFilter: AdminProgressFilter, t: ReturnType<typeof useI18n>["t"]) {
+  const labels = [];
+  if (activityFilter !== "all") labels.push(t(activityFilter === "active" ? "admin.filterActive" : "admin.filterInactive"));
+  if (progressFilter !== "all") labels.push(t(progressFilterKey(progressFilter)));
+  return labels.length > 0 ? labels.join(" / ") : t("admin.filterAll");
+}
+
+function progressFilterKey(filter: Exclude<AdminProgressFilter, "all">): TranslationKey {
+  switch (filter) {
+    case "running":
+      return "admin.filterRunning";
+    case "waiting":
+      return "admin.filterWaiting";
+    case "ended":
+      return "admin.filterEnded";
+  }
+}
+
+function progressStatusLabel(status: AdminProgressStatus, t: ReturnType<typeof useI18n>["t"]) {
+  switch (status) {
+    case "running":
+      return t("admin.statusRunning");
+    case "waiting":
+      return t("admin.statusWaiting");
+    default:
+      return t("admin.statusEnded");
+  }
+}
+
+function progressStatusTone(status: AdminProgressStatus) {
+  if (status === "running") return "ok";
+  return "neutral";
+}
+
+function progressStatusIcon(status: AdminProgressStatus) {
+  if (status === "running") return <Gamepad2 />;
+  if (status === "waiting") return <Clock3 />;
+  return <CheckCircle2 />;
 }
 
 function gameLabel(gameId: GameId, t: ReturnType<typeof useI18n>["t"]) {

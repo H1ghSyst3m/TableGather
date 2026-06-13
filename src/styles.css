@@ -645,7 +645,7 @@ svg {
 }
 
 .admin-stat-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
 }
 
 .admin-breakdown-grid {
@@ -782,6 +782,26 @@ svg {
   background: #fff;
 }
 
+.admin-filter-groups {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem 0.75rem;
+}
+
+.admin-filter-group {
+  display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+}
+
+.admin-filter-group-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
 .admin-filter-tabs button {
   min-height: 2.35rem;
   border: 0;
@@ -870,9 +890,20 @@ svg {
   background: var(--accent-soft);
 }
 
+.admin-status-chip.neutral {
+  color: #536270;
+  background: #f3efea;
+}
+
 .admin-status-chip.warning {
   color: #8d5c08;
   background: #fff0c7;
+}
+
+.admin-status-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .admin-empty-row {
@@ -893,6 +924,12 @@ svg {
   color: var(--text);
 }
 
+@media (max-width: 980px) {
+  .admin-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .admin-heading,
   .admin-table-heading {
@@ -900,7 +937,7 @@ svg {
   }
 
   .admin-heading .secondary-button,
-  .admin-filter-tabs {
+  .admin-filter-groups {
     justify-self: start;
   }
 
@@ -912,6 +949,15 @@ svg {
   .admin-filter-tabs {
     width: 100%;
     overflow-x: auto;
+  }
+
+  .admin-filter-groups,
+  .admin-filter-group {
+    width: 100%;
+  }
+
+  .admin-filter-group {
+    justify-items: start;
   }
 
   .admin-filter-tabs button {

@@ -7,6 +7,7 @@ import {
   adminRoomPhases,
   type AdminGameCounts,
   type AdminInactiveReason,
+  type AdminProgressStatus,
   type AdminRoomsSummary,
 } from "../src/online/admin";
 import type { HostCommand, PlayerCommand } from "../src/online/messages";
@@ -288,9 +289,13 @@ export class RoomManager {
       const started = room.phase !== "lobby";
       const inactiveReasons = this.inactiveReasons(room, serverTime);
       const inactive = inactiveReasons.length > 0;
+      const active = !inactive;
+      const progressStatus = progressStatusForRoom(room);
+      const running = progressStatus === "running";
+      const waiting = progressStatus === "waiting";
 
-      incrementCounts(totals, { started, inactive });
-      incrementCounts(byGame[room.gameId], { started, inactive });
+      incrementCounts(totals, { active, progressStatus });
+      incrementCounts(byGame[room.gameId], { active, progressStatus });
       byPhase[room.phase] += 1;
 
       return {
@@ -304,6 +309,10 @@ export class RoomManager {
         lastActivityAt: room.lastActivityAt,
         expiresAt: this.expiresAt(room),
         started,
+        active,
+        running,
+        waiting,
+        progressStatus,
         inactive,
         inactiveReasons,
       };
@@ -437,7 +446,7 @@ export class RoomManager {
 }
 
 function createEmptyCounts(): AdminGameCounts {
-  return { total: 0, started: 0, inactive: 0 };
+  return { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 };
 }
 
 function createGameCounts(): Record<GameId, AdminGameCounts> {
@@ -448,10 +457,17 @@ function createPhaseCounts() {
   return Object.fromEntries(adminRoomPhases.map((phase) => [phase, 0])) as Record<Room["phase"], number>;
 }
 
-function incrementCounts(counts: AdminGameCounts, flags: { started: boolean; inactive: boolean }) {
+function progressStatusForRoom(room: Room): AdminProgressStatus {
+  if (room.phase === "ended") return "ended";
+  if (room.phase === "lobby") return "waiting";
+  return "running";
+}
+
+function incrementCounts(counts: AdminGameCounts, flags: { active: boolean; progressStatus: AdminProgressStatus }) {
   counts.total += 1;
-  if (flags.started) counts.started += 1;
-  if (flags.inactive) counts.inactive += 1;
+  if (flags.active) counts.active += 1;
+  else counts.inactive += 1;
+  counts[flags.progressStatus] += 1;
 }
 
 function createToken(length = 18) {

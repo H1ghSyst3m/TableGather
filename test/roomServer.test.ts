@@ -138,8 +138,8 @@ describe("room websocket server", () => {
       ok: true,
       protocolVersion: ROOM_PROTOCOL_VERSION,
       features: ROOM_PROTOCOL_FEATURES,
-      totals: { total: 1, started: 1, inactive: 0 },
-      byGame: { werewolf: { total: 1, started: 1, inactive: 0 } },
+      totals: { total: 1, active: 1, running: 1, waiting: 0, inactive: 0, ended: 0 },
+      byGame: { werewolf: { total: 1, active: 1, running: 1, waiting: 0, inactive: 0, ended: 0 } },
       byPhase: { assignment: 1 },
       rooms: [
         {
@@ -150,6 +150,10 @@ describe("room websocket server", () => {
           connectedPlayerCount: 1,
           hostConnected: true,
           started: true,
+          active: true,
+          running: true,
+          waiting: false,
+          progressStatus: "running",
           inactive: false,
           inactiveReasons: [],
         },

@@ -872,16 +872,21 @@ describe("room manager", () => {
     expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_050);
   });
 
-  it("summarizes admin room counts by game, phase, started state, and inactivity", () => {
+  it("summarizes admin room counts by game, phase, live status, and inactivity", () => {
     let now = 10_000_000;
     const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 10 * ADMIN_INACTIVE_ACTIVITY_MS });
     const lobby = manager.createRoom("host-lobby", "werewolf").room;
+    const running = manager.createRoom("host-running", "werewolf").room;
     const stale = manager.createRoom("host-stale", "werewolf").room;
     const offline = manager.createRoom("host-offline", "werewolf").room;
+    const ended = manager.createRoom("host-ended", "werewolf").room;
 
     manager.joinRoom(lobby.code, "Alex", "player-lobby");
+    manager.joinRoom(running.code, "Robin", "player-running");
     manager.joinRoom(stale.code, "Sam", "player-stale");
     manager.joinRoom(offline.code, "Jordan", "player-offline");
+
+    running.phase = "roleReveal";
 
     stale.gameId = "imposter";
     stale.phase = "playing";
@@ -891,34 +896,70 @@ describe("room manager", () => {
     offline.hostClientId = null;
     offline.lastActivityAt = now - 1_000;
 
+    ended.gameId = "undercover";
+    ended.phase = "ended";
+
     now += 1_000;
     const summary = manager.adminRoomsSummary();
 
-    expect(summary.totals).toEqual({ total: 3, started: 2, inactive: 2 });
-    expect(summary.byGame.werewolf).toEqual({ total: 2, started: 1, inactive: 1 });
-    expect(summary.byGame.imposter).toEqual({ total: 1, started: 1, inactive: 1 });
-    expect(summary.byGame.undercover).toEqual({ total: 0, started: 0, inactive: 0 });
-    expect(summary.byPhase).toMatchObject({ lobby: 1, playing: 1, roleReveal: 1, assignment: 0, ended: 0 });
+    expect(summary.totals).toEqual({ total: 5, active: 3, running: 3, waiting: 1, inactive: 2, ended: 1 });
+    expect(summary.byGame.werewolf).toEqual({ total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 });
+    expect(summary.byGame.imposter).toEqual({ total: 1, active: 0, running: 1, waiting: 0, inactive: 1, ended: 0 });
+    expect(summary.byGame.undercover).toEqual({ total: 1, active: 1, running: 0, waiting: 0, inactive: 0, ended: 1 });
+    expect(summary.byPhase).toMatchObject({ lobby: 1, playing: 1, roleReveal: 2, assignment: 0, ended: 1 });
+    expect(summary.rooms.every((room) => room.active === !room.inactive)).toBe(true);
 
     expect(summary.rooms.find((room) => room.code === lobby.code)).toMatchObject({
       started: false,
+      active: true,
+      running: false,
+      waiting: true,
+      progressStatus: "waiting",
       inactive: false,
       inactiveReasons: [],
       playerCount: 1,
       connectedPlayerCount: 1,
       hostConnected: true,
     });
+    expect(summary.rooms.find((room) => room.code === running.code)).toMatchObject({
+      started: true,
+      active: true,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
+      inactive: false,
+      inactiveReasons: [],
+      hostConnected: true,
+    });
     expect(summary.rooms.find((room) => room.code === stale.code)).toMatchObject({
       started: true,
+      active: false,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
       inactive: true,
       inactiveReasons: ["staleActivity"],
       hostConnected: true,
     });
     expect(summary.rooms.find((room) => room.code === offline.code)).toMatchObject({
       started: true,
+      active: false,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
       inactive: true,
       inactiveReasons: ["hostOffline"],
       hostConnected: false,
+    });
+    expect(summary.rooms.find((room) => room.code === ended.code)).toMatchObject({
+      started: true,
+      active: true,
+      running: false,
+      waiting: false,
+      progressStatus: "ended",
+      inactive: false,
+      inactiveReasons: [],
+      hostConnected: true,
     });
   });
 
@@ -947,6 +988,10 @@ describe("room manager", () => {
     const serializedSummary = JSON.stringify(summary);
 
     expect(adminRoom).toMatchObject({
+      active: false,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
       inactive: true,
       inactiveReasons: ["hostOffline", "staleActivity"],
       playerCount: 1,
