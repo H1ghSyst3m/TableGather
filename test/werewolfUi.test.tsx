@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWerewolfGameFromAssignments, markRoleSeen } from "../src/games/werewolf/domain/engine";
 import type { WerewolfState } from "../src/games/werewolf/domain/types";
-import { AdminDashboardView, AdminStatePanel, AdminTokenForm } from "../src/components/AdminScreen";
+import { AdminDashboardView, AdminScreen, AdminStatePanel, AdminTokenForm } from "../src/components/AdminScreen";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
@@ -901,6 +901,7 @@ describe("werewolf play surface", () => {
   });
 
   it("renders admin token, error, and empty states", () => {
+    const screenHtml = renderWithI18n(<AdminScreen />);
     const tokenHtml = renderWithI18n(
       <AdminStatePanel icon={null} title={translate("de", "admin.tokenRequiredTitle")} description={translate("de", "admin.tokenRequiredDescription")}>
         <AdminTokenForm value="" onChange={() => undefined} onSubmit={() => undefined} />
@@ -921,6 +922,7 @@ describe("werewolf play surface", () => {
       />,
     );
 
+    expect(screenHtml).toContain(`<p class="section-label">${translate("de", "admin.sectionLabel")}</p>`);
     expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredTitle"));
     expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredDescription"));
     expect(tokenHtml).toContain(translate("de", "admin.tokenFieldLabel"));

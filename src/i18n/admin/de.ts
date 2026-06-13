@@ -1,5 +1,6 @@
 export const adminDe = {
   "admin": {
+    "sectionLabel": "Admin",
     "title": "Admin-Raumübersicht",
     "description": "Live-Status der aktiven Räume auf diesem Raumserver.",
     "tokenRequiredTitle": "Admin-Token fehlt",

@@ -1,5 +1,6 @@
 export const adminEn = {
   "admin": {
+    "sectionLabel": "Admin",
     "title": "Admin room overview",
     "description": "Live status for active rooms on this room server.",
     "tokenRequiredTitle": "Admin token missing",

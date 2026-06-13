@@ -40,6 +40,13 @@ export function AdminScreen() {
   const requestControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    return () => {
+      requestControllerRef.current?.abort();
+      requestControllerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     const urlToken = readUrlAdminToken();
     if (!urlToken) return;
 
@@ -113,7 +120,7 @@ export function AdminScreen() {
       <section className="section-block admin-heading-section">
         <div className="admin-heading">
           <div>
-            <p className="section-label">Admin</p>
+            <p className="section-label">{t("admin.sectionLabel")}</p>
             <h2>{t("admin.title")}</h2>
             <p>{t("admin.description")}</p>
             {lastLoadedAt && <p className="admin-updated">{t("admin.lastUpdated", { time: formatTime(lastLoadedAt, locale) })}</p>}
