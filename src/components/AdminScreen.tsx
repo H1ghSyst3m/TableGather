@@ -1,16 +1,24 @@
-import { AlertTriangle, CheckCircle2, Clock3, Gamepad2, RefreshCw, ShieldAlert, ShieldCheck, Users } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertTriangle, CheckCircle2, Clock3, Gamepad2, KeyRound, RefreshCw, ShieldAlert, ShieldCheck, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { games } from "../games/registry";
 import { gameThemeStyle, hubDefaultTheme } from "../games/theme";
 import { useI18n } from "../i18n/useI18n";
 import type { TranslationKey } from "../i18n/translations";
 import type { AdminInactiveReason, AdminProgressStatus, AdminRoomsResponse, AdminRoomsSummary, AdminRoomSummary } from "../online/admin";
 import { adminGameIds, adminRoomPhases, isAdminRoomsResponse } from "../online/admin";
+import {
+  clearUrlAdminToken,
+  forgetAdminToken,
+  normalizeAdminTokenInput,
+  readInitialAdminToken,
+  readUrlAdminToken,
+  saveAdminToken,
+  submitAdminTokenInput,
+} from "../online/adminToken";
 import { resolveRoomServerHttpUrl } from "../online/wsUrl";
 import type { GameId, RoomPhase } from "../types";
 import { HeaderBar } from "./HeaderBar";
 
-const ADMIN_TOKEN_STORAGE_KEY = "tablegather.adminToken";
 const ADMIN_REFRESH_INTERVAL_MS = 15_000;
 
 type AdminActivityFilter = "all" | "active" | "inactive";
@@ -23,6 +31,7 @@ export function AdminScreen() {
   const [summary, setSummary] = useState<AdminRoomsSummary | null>(null);
   const [activityFilter, setActivityFilter] = useState<AdminActivityFilter>("all");
   const [progressFilter, setProgressFilter] = useState<AdminProgressFilter>("all");
+  const [adminTokenInput, setAdminTokenInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AdminFetchErrorCode | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
@@ -62,6 +71,20 @@ export function AdminScreen() {
     }
   }, [token]);
 
+  const handleTokenSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      submitAdminTokenInput(adminTokenInput, (nextToken) => {
+        setToken(nextToken);
+        setError(null);
+        setSummary(null);
+        setLastLoadedAt(null);
+        setAdminTokenInput("");
+      });
+    },
+    [adminTokenInput],
+  );
+
   useEffect(() => {
     if (!token) return;
     const timer = window.setTimeout(refresh, 0);
@@ -97,9 +120,13 @@ export function AdminScreen() {
       </section>
 
       {!token && !error && !summary ? (
-        <AdminStatePanel icon={<ShieldAlert />} title={t("admin.tokenRequiredTitle")} description={t("admin.tokenRequiredDescription")} />
+        <AdminStatePanel icon={<ShieldAlert />} title={t("admin.tokenRequiredTitle")} description={t("admin.tokenRequiredDescription")}>
+          <AdminTokenForm value={adminTokenInput} onChange={setAdminTokenInput} onSubmit={handleTokenSubmit} />
+        </AdminStatePanel>
       ) : error ? (
-        <AdminStatePanel icon={<AlertTriangle />} title={t("admin.unavailableTitle")} description={adminErrorDescription(error, t)} />
+        <AdminStatePanel icon={<AlertTriangle />} title={t("admin.unavailableTitle")} description={adminErrorDescription(error, t)}>
+          {error === "unauthorized" && <AdminTokenForm value={adminTokenInput} onChange={setAdminTokenInput} onSubmit={handleTokenSubmit} />}
+        </AdminStatePanel>
       ) : summary ? (
         <AdminDashboardView
           summary={summary}
@@ -268,17 +295,49 @@ export function AdminDashboardView({
   );
 }
 
-export function AdminStatePanel({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
+export function AdminStatePanel({ icon, title, description, children }: { icon: ReactNode; title: string; description: string; children?: ReactNode }) {
   return (
     <section className="section-block">
       <div className="panel admin-state-panel">
         <span className="admin-state-icon">{icon}</span>
-        <div>
+        <div className="admin-state-content">
           <h3>{title}</h3>
           <p>{description}</p>
+          {children}
         </div>
       </div>
     </section>
+  );
+}
+
+export function AdminTokenForm({
+  value,
+  onChange,
+  onSubmit,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const { t } = useI18n();
+  const canSubmit = Boolean(normalizeAdminTokenInput(value));
+
+  return (
+    <form className="admin-token-form" onSubmit={onSubmit}>
+      <label>
+        <span>{t("admin.tokenFieldLabel")}</span>
+        <input
+          type="password"
+          value={value}
+          placeholder={t("admin.tokenFieldPlaceholder")}
+          autoComplete="current-password"
+          onChange={(event) => onChange(event.currentTarget.value)}
+        />
+      </label>
+      <button className="secondary-button compact" type="submit" disabled={!canSubmit}>
+        <KeyRound /> {t("admin.tokenSubmit")}
+      </button>
+    </form>
   );
 }
 
@@ -397,51 +456,6 @@ class AdminFetchError extends Error {
     message: string = code,
   ) {
     super(message);
-  }
-}
-
-function readInitialAdminToken() {
-  return readUrlAdminToken() ?? readStoredAdminToken();
-}
-
-function readUrlAdminToken() {
-  if (typeof window === "undefined") return null;
-  const token = new URLSearchParams(window.location.search).get("token")?.trim();
-  return token || null;
-}
-
-function clearUrlAdminToken() {
-  if (typeof window === "undefined") return;
-  const url = new URL(window.location.href);
-  if (!url.searchParams.has("token")) return;
-  url.searchParams.delete("token");
-  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-}
-
-function readStoredAdminToken() {
-  if (typeof sessionStorage === "undefined") return null;
-  try {
-    return sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function saveAdminToken(token: string) {
-  if (typeof sessionStorage === "undefined") return;
-  try {
-    sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-  } catch {
-    // Session storage is only a convenience for the admin view.
-  }
-}
-
-function forgetAdminToken() {
-  if (typeof sessionStorage === "undefined") return;
-  try {
-    sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-  } catch {
-    // Session storage is only a convenience for the admin view.
   }
 }
 

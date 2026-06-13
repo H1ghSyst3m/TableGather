@@ -1,9 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWerewolfGameFromAssignments, markRoleSeen } from "../src/games/werewolf/domain/engine";
 import type { WerewolfState } from "../src/games/werewolf/domain/types";
-import { AdminDashboardView, AdminStatePanel } from "../src/components/AdminScreen";
+import { AdminDashboardView, AdminStatePanel, AdminTokenForm } from "../src/components/AdminScreen";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
@@ -18,7 +18,10 @@ import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes"
 import { I18nContext } from "../src/i18n/context";
 import { translate } from "../src/i18n/translations";
 import type { AdminRoomsSummary } from "../src/online/admin";
+import { submitAdminTokenInput } from "../src/online/adminToken";
 import { hasDuplicatePlayerName, normalizePlayerName } from "../src/playerNames";
+
+const previousSessionStorage = globalThis.sessionStorage;
 
 const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   setProtectedPlayer: () => undefined,
@@ -47,6 +50,14 @@ const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   undoStep: () => undefined,
   reset: () => undefined,
 };
+
+afterEach(() => {
+  Object.defineProperty(globalThis, "sessionStorage", {
+    configurable: true,
+    value: previousSessionStorage,
+  });
+  vi.restoreAllMocks();
+});
 
 describe("werewolf play surface", () => {
   it("renders inactive Night Guest and Detective notes with separated title and hint", () => {
@@ -891,10 +902,14 @@ describe("werewolf play surface", () => {
 
   it("renders admin token, error, and empty states", () => {
     const tokenHtml = renderWithI18n(
-      <AdminStatePanel icon={null} title={translate("de", "admin.tokenRequiredTitle")} description={translate("de", "admin.tokenRequiredDescription")} />,
+      <AdminStatePanel icon={null} title={translate("de", "admin.tokenRequiredTitle")} description={translate("de", "admin.tokenRequiredDescription")}>
+        <AdminTokenForm value="" onChange={() => undefined} onSubmit={() => undefined} />
+      </AdminStatePanel>,
     );
     const errorHtml = renderWithI18n(
-      <AdminStatePanel icon={null} title={translate("de", "admin.unavailableTitle")} description={translate("de", "admin.unauthorizedDescription")} />,
+      <AdminStatePanel icon={null} title={translate("de", "admin.unavailableTitle")} description={translate("de", "admin.unauthorizedDescription")}>
+        <AdminTokenForm value="bad-token" onChange={() => undefined} onSubmit={() => undefined} />
+      </AdminStatePanel>,
     );
     const emptyHtml = renderWithI18n(
       <AdminDashboardView
@@ -908,11 +923,28 @@ describe("werewolf play surface", () => {
 
     expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredTitle"));
     expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredDescription"));
+    expect(tokenHtml).toContain(translate("de", "admin.tokenFieldLabel"));
+    expect(tokenHtml).toContain("type=\"password\"");
+    expect(tokenHtml).toContain("disabled=\"\"");
     expect(errorHtml).toContain(translate("de", "admin.unavailableTitle"));
     expect(errorHtml).toContain(translate("de", "admin.unauthorizedDescription"));
+    expect(errorHtml).toContain(translate("de", "admin.tokenSubmit"));
     expect(emptyHtml).toContain(translate("de", "admin.emptyDescription"));
     expect(emptyHtml).toContain("Werwolf<strong>0</strong>");
     expect(emptyHtml).toContain("Lobby<strong>0</strong>");
+  });
+
+  it("stores trimmed admin token submissions and rejects empty values", () => {
+    const storage = createMemoryStorage();
+    const onTokenAccepted = vi.fn();
+    useSessionStorage(storage);
+
+    expect(submitAdminTokenInput("  admin-test-token  ", onTokenAccepted)).toBe(true);
+    expect(storage.getItem("tablegather.adminToken")).toBe("admin-test-token");
+    expect(onTokenAccepted).toHaveBeenCalledWith("admin-test-token");
+
+    expect(submitAdminTokenInput("   ", onTokenAccepted)).toBe(false);
+    expect(onTokenAccepted).toHaveBeenCalledTimes(1);
   });
 
   it("renders the shared room join screen with code and name fields", () => {
@@ -1527,6 +1559,28 @@ function renderWithI18n(node: ReactNode, locale: "de" | "en" = "de") {
       {node}
     </I18nContext.Provider>,
   );
+}
+
+function useSessionStorage(storage: Storage) {
+  Object.defineProperty(globalThis, "sessionStorage", {
+    configurable: true,
+    value: storage,
+  });
+}
+
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
+  };
 }
 
 function renderStage(overrides: Partial<WerewolfStageRoomSnapshot>, locale: "de" | "en" = "de") {
