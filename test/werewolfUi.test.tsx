@@ -898,7 +898,7 @@ describe("werewolf play surface", () => {
     );
     const emptyHtml = renderWithI18n(
       <AdminDashboardView
-        summary={{ ...createAdminSummary(), totals: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 }, rooms: [] }}
+        summary={createEmptyAdminSummary()}
         activityFilter="all"
         progressFilter="all"
         onActivityFilterChange={() => undefined}
@@ -911,6 +911,8 @@ describe("werewolf play surface", () => {
     expect(errorHtml).toContain(translate("de", "admin.unavailableTitle"));
     expect(errorHtml).toContain(translate("de", "admin.unauthorizedDescription"));
     expect(emptyHtml).toContain(translate("de", "admin.emptyDescription"));
+    expect(emptyHtml).toContain("Werwolf<strong>0</strong>");
+    expect(emptyHtml).toContain("Lobby<strong>0</strong>");
   });
 
   it("renders the shared room join screen with code and name fields", () => {
@@ -1461,6 +1463,32 @@ function createAdminSummary(): AdminRoomsSummary {
       },
     ],
   };
+}
+
+function createEmptyAdminSummary(): AdminRoomsSummary {
+  const emptyCounts = createAdminCounts();
+
+  return {
+    ...createAdminSummary(),
+    totals: emptyCounts,
+    byGame: {
+      werewolf: createAdminCounts(),
+      imposter: createAdminCounts(),
+      undercover: createAdminCounts(),
+    },
+    byPhase: {
+      lobby: 0,
+      assignment: 0,
+      roleReveal: 0,
+      playing: 0,
+      ended: 0,
+    },
+    rooms: [],
+  };
+}
+
+function createAdminCounts() {
+  return { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 };
 }
 
 function renderAdminDashboard(

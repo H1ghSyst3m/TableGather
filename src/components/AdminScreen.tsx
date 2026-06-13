@@ -4,9 +4,8 @@ import { games } from "../games/registry";
 import { gameThemeStyle, hubDefaultTheme } from "../games/theme";
 import { useI18n } from "../i18n/useI18n";
 import type { TranslationKey } from "../i18n/translations";
-import type { AdminInactiveReason, AdminProgressStatus, AdminRoomsSummary, AdminRoomSummary } from "../online/admin";
-import { adminGameIds, adminRoomPhases } from "../online/admin";
-import type { RoomServerInfo } from "../online/protocol";
+import type { AdminInactiveReason, AdminProgressStatus, AdminRoomsResponse, AdminRoomsSummary, AdminRoomSummary } from "../online/admin";
+import { adminGameIds, adminRoomPhases, isAdminRoomsResponse } from "../online/admin";
 import { resolveRoomServerHttpUrl } from "../online/wsUrl";
 import type { GameId, RoomPhase } from "../types";
 import { HeaderBar } from "./HeaderBar";
@@ -16,8 +15,7 @@ const ADMIN_REFRESH_INTERVAL_MS = 15_000;
 
 type AdminActivityFilter = "all" | "active" | "inactive";
 type AdminProgressFilter = "all" | AdminProgressStatus;
-type AdminFetchErrorCode = "disabled" | "unauthorized" | "connection";
-type AdminRoomsResponse = { ok: true } & AdminRoomsSummary & RoomServerInfo;
+type AdminFetchErrorCode = "disabled" | "unauthorized" | "connection" | "malformed";
 
 export function AdminScreen() {
   const { locale, t } = useI18n();
@@ -379,12 +377,26 @@ async function fetchAdminRooms(token: string): Promise<AdminRoomsResponse> {
   if (response.status === 404) throw new AdminFetchError("disabled");
   if (!response.ok) throw new AdminFetchError("connection");
 
-  return (await response.json()) as AdminRoomsResponse;
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new AdminFetchError("malformed", "Admin room response is not valid JSON.");
+  }
+
+  if (!isAdminRoomsResponse(body)) {
+    throw new AdminFetchError("malformed", "Admin room response does not match the expected shape.");
+  }
+
+  return body;
 }
 
 class AdminFetchError extends Error {
-  constructor(readonly code: AdminFetchErrorCode) {
-    super(code);
+  constructor(
+    readonly code: AdminFetchErrorCode,
+    message: string = code,
+  ) {
+    super(message);
   }
 }
 
@@ -436,6 +448,7 @@ function forgetAdminToken() {
 function adminErrorDescription(error: AdminFetchErrorCode, t: ReturnType<typeof useI18n>["t"]) {
   if (error === "disabled") return t("admin.disabledDescription");
   if (error === "unauthorized") return t("admin.unauthorizedDescription");
+  if (error === "malformed") return t("admin.malformedDescription");
   return t("admin.connectionDescription");
 }
 

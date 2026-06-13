@@ -8,6 +8,7 @@ export const adminDe = {
     "disabledDescription": "Der Raumserver hat keinen Admin-Token konfiguriert.",
     "unauthorizedDescription": "Der Admin-Token wurde nicht akzeptiert.",
     "connectionDescription": "Die Admin-Daten konnten nicht vom Raumserver geladen werden.",
+    "malformedDescription": "Die Admin-Daten hatten ein unerwartetes Format.",
     "emptyTitle": "Keine aktiven Räume",
     "emptyDescription": "Sobald Räume erstellt werden, erscheinen sie hier.",
     "refresh": "Aktualisieren",
