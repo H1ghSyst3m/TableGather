@@ -1,11 +1,16 @@
 export function resolveWsUrl() {
   const configured = import.meta.env.VITE_WS_URL as string | undefined;
-  if (configured) {
-    return configured.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+  const configuredUrl = configured?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
   }
 
   const location = browserLocation();
   const protocol = location.protocol === "https:" ? "wss" : "ws";
+  if (import.meta.env.PROD) {
+    return `${protocol}://${location.host}/ws`;
+  }
+
   return `${protocol}://${location.hostname}:8787/ws`;
 }
 
@@ -27,5 +32,5 @@ function resolveRoomServerHttpPath(wsPath: string, path: string) {
 }
 
 function browserLocation() {
-  return (globalThis as unknown as { window: { location: { protocol: string; hostname: string; href: string } } }).window.location;
+  return (globalThis as unknown as { window: { location: { protocol: string; hostname: string; host: string; href: string } } }).window.location;
 }

@@ -24,7 +24,7 @@ const ADMIN_FETCH_TIMEOUT_MS = 10_000;
 
 type AdminActivityFilter = "all" | "active" | "inactive";
 type AdminProgressFilter = "all" | AdminProgressStatus;
-type AdminFetchErrorCode = "disabled" | "unauthorized" | "connection" | "malformed";
+type AdminFetchErrorCode = "disabled" | "unauthorized" | "connection" | "malformed" | "proxy";
 
 export function AdminScreen() {
   const { locale, t } = useI18n();
@@ -450,6 +450,9 @@ async function fetchAdminRooms(token: string, signal?: AbortSignal): Promise<Adm
   if (response.status === 401) throw new AdminFetchError("unauthorized");
   if (response.status === 404) throw new AdminFetchError("disabled");
   if (!response.ok) throw new AdminFetchError("connection");
+  if (response.headers.get("content-type")?.toLowerCase().includes("text/html")) {
+    throw new AdminFetchError("proxy", "Admin room endpoint returned HTML instead of JSON.");
+  }
 
   let body: unknown;
   try {
@@ -477,6 +480,7 @@ class AdminFetchError extends Error {
 function adminErrorDescription(error: AdminFetchErrorCode, t: ReturnType<typeof useI18n>["t"]) {
   if (error === "disabled") return t("admin.disabledDescription");
   if (error === "unauthorized") return t("admin.unauthorizedDescription");
+  if (error === "proxy") return t("admin.proxyDescription");
   if (error === "malformed") return t("admin.malformedDescription");
   return t("admin.connectionDescription");
 }

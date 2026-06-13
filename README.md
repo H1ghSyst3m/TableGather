@@ -32,10 +32,65 @@ Room mode needs the WebSocket server. By default, the server listens on port `87
 
 Configuration:
 
+- Copy `.env.example` to `.env` for local defaults or `.env.production.local` for production secrets. `npm run server:start` loads `.env`, `.env.local`, `.env.production`, and `.env.production.local` in that order.
 - `PORT` or `TABLEGATHER_PORT` changes the room server port.
 - `TABLEGATHER_ADMIN_TOKEN` enables the protected admin room overview API and `/admin` dashboard. Open `/admin#token=<token>` only as a transient way to load the token; the client immediately stores it in `sessionStorage` and removes it from the fragment so it is not kept in the address bar. Subsequent admin visits should use `/admin` without the token.
-- `VITE_WS_URL` overrides the browser WebSocket URL. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S).
+- `TABLEGATHER_SERVE_STATIC` controls whether the room server serves the built `dist/` frontend. It defaults to enabled when `NODE_ENV=production` and disabled otherwise.
+- `VITE_WS_URL` overrides the browser WebSocket URL. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S). In production, leave it empty for a same-origin `/ws` endpoint behind your reverse proxy.
 - For phone/tablet testing on the same local network, run `npm run dev:all`, open the Vite URL from the host machine's LAN address, and make sure the room server port is reachable from the other devices.
+
+## Production Deployment
+
+The recommended production setup is one Node/PM2 room server that also serves the built frontend, with Nginx only handling TLS and reverse proxying to that process.
+
+Example `.env.production.local`:
+
+```bash
+NODE_ENV=production
+PORT=9097
+TABLEGATHER_ADMIN_TOKEN=replace-with-a-long-random-token
+```
+
+Build and reload:
+
+```bash
+cd /var/www/TableGather
+git pull --ff-only
+npm ci --include=dev
+npm run build -- --base=/
+pm2 startOrReload ecosystem.config.cjs --only tablegather-ws --update-env
+pm2 save
+pm2 status tablegather-ws
+```
+
+The PM2 app should run `npm run server:start`; the private `.env.production.local` file provides the port and admin token at runtime.
+
+Minimal Nginx shape:
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:9097;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+With this setup, `/`, `/ws`, `/health`, and `/admin/rooms` all go to the same TableGather server, so no separate Nginx location for the admin API is needed.
 
 Main routes:
 

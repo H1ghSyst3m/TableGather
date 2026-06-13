@@ -1,4 +1,7 @@
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createRoomServer } from "../server/index";
@@ -92,6 +95,59 @@ describe("room websocket server", () => {
       protocolVersion: ROOM_PROTOCOL_VERSION,
       features: ROOM_PROTOCOL_FEATURES,
     });
+  });
+
+  it("does not serve static app files by default in tests", async () => {
+    const staticDir = await createStaticFixture();
+    try {
+      const url = await startServer(new RoomManager(), { staticDir });
+      const response = await fetch(toServerUrl(url, "/admin"));
+
+      expect(response.status).toBe(404);
+      await expect(response.text()).resolves.toBe("Not found");
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
+  });
+
+  it("serves the production app shell and static assets when enabled", async () => {
+    const staticDir = await createStaticFixture();
+    try {
+      const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token", serveStatic: true, staticDir });
+      const adminRoute = await fetch(toServerUrl(url, "/admin"));
+      const nestedRoute = await fetch(toServerUrl(url, "/room/ABCD"));
+      const asset = await fetch(toServerUrl(url, "/assets/app.js"));
+      const serviceWorker = await fetch(toServerUrl(url, "/sw.js"));
+      const manifest = await fetch(toServerUrl(url, "/manifest.webmanifest"));
+      const protectedAdminEndpoint = await fetch(toServerUrl(url, "/admin/rooms"));
+
+      expect(adminRoute.status).toBe(200);
+      expect(adminRoute.headers.get("content-type")).toContain("text/html");
+      expect(adminRoute.headers.get("cache-control")).toBe("no-cache");
+      await expect(adminRoute.text()).resolves.toContain("TableGather fixture");
+
+      expect(nestedRoute.status).toBe(200);
+      await expect(nestedRoute.text()).resolves.toContain("TableGather fixture");
+
+      expect(asset.status).toBe(200);
+      expect(asset.headers.get("content-type")).toContain("application/javascript");
+      expect(asset.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+      await expect(asset.text()).resolves.toContain("fixture asset");
+
+      expect(serviceWorker.status).toBe(200);
+      expect(serviceWorker.headers.get("cache-control")).toBe("no-store, no-cache, must-revalidate, proxy-revalidate");
+      expect(serviceWorker.headers.get("pragma")).toBe("no-cache");
+      expect(serviceWorker.headers.get("expires")).toBe("0");
+
+      expect(manifest.status).toBe(200);
+      expect(manifest.headers.get("content-type")).toContain("application/manifest+json");
+      expect(manifest.headers.get("cache-control")).toBe("no-cache");
+
+      expect(protectedAdminEndpoint.status).toBe(401);
+      await expect(protectedAdminEndpoint.json()).resolves.toEqual({ ok: false, error: "unauthorized" });
+    } finally {
+      await rm(staticDir, { recursive: true, force: true });
+    }
   });
 
   it("hides the admin room endpoint when no admin token is configured", async () => {
@@ -647,6 +703,23 @@ function toAdminRoomsUrl(wsUrl: string) {
   url.protocol = "http:";
   url.pathname = "/admin/rooms";
   return url;
+}
+
+function toServerUrl(wsUrl: string, path: string) {
+  const url = new URL(wsUrl);
+  url.protocol = "http:";
+  url.pathname = path;
+  return url;
+}
+
+async function createStaticFixture() {
+  const staticDir = await mkdtemp(join(tmpdir(), "tablegather-static-"));
+  await mkdir(join(staticDir, "assets"));
+  await writeFile(join(staticDir, "index.html"), "<!doctype html><title>TableGather fixture</title>");
+  await writeFile(join(staticDir, "assets", "app.js"), "console.log('fixture asset');");
+  await writeFile(join(staticDir, "sw.js"), "self.addEventListener('install', () => undefined);");
+  await writeFile(join(staticDir, "manifest.webmanifest"), JSON.stringify({ name: "TableGather fixture" }));
+  return staticDir;
 }
 
 async function joinPlayer(url: string, roomCode: string, name: string) {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveRoomServerHttpUrl } from "../src/online/wsUrl";
+import { resolveRoomServerHttpUrl, resolveWsUrl } from "../src/online/wsUrl";
 
 const previousWindow = (globalThis as { window?: unknown }).window;
 
@@ -23,6 +23,15 @@ describe("websocket URL helpers", () => {
     expect(resolveRoomServerHttpUrl("/admin/rooms")).toBe("http://127.0.0.1:8787/admin/rooms");
   });
 
+  it("uses a same-origin websocket endpoint by default in production", () => {
+    vi.stubEnv("VITE_WS_URL", "");
+    vi.stubEnv("PROD", true);
+    useWindowLocation("https://tablegather.app/admin");
+
+    expect(resolveWsUrl()).toBe("wss://tablegather.app/ws");
+    expect(resolveRoomServerHttpUrl("/admin/rooms")).toBe("https://tablegather.app/admin/rooms");
+  });
+
   it("preserves a websocket parent path prefix for admin endpoints", () => {
     vi.stubEnv("VITE_WS_URL", "wss://example.test/tablegather/ws?stale=query#hash");
     useWindowLocation("https://example.test/tablegather/admin");
@@ -39,6 +48,7 @@ function useWindowLocation(href: string) {
       location: {
         protocol: url.protocol,
         hostname: url.hostname,
+        host: url.host,
         href: url.href,
       },
     },

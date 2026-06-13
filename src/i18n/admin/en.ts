@@ -13,6 +13,7 @@ export const adminEn = {
     "unauthorizedDescription": "The admin token was not accepted.",
     "connectionDescription": "Admin data could not be loaded from the room server.",
     "malformedDescription": "Admin data had an unexpected format.",
+    "proxyDescription": "The admin endpoint returned HTML instead of JSON. Check that /admin/rooms is proxied to the room server.",
     "emptyTitle": "No active rooms",
     "emptyDescription": "Rooms appear here once they are created.",
     "refresh": "Refresh",

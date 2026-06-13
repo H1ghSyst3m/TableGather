@@ -1,4 +1,6 @@
 import http from "node:http";
+import { createReadStream, statSync } from "node:fs";
+import { extname, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { WebSocketServer, type WebSocket } from "ws";
 import { parseClientMessage, type ServerMessage } from "../src/online/messages";
@@ -14,6 +16,8 @@ const ROOM_EXPIRY_SWEEP_INTERVAL_MS = 60_000;
 
 interface RoomServerOptions {
   adminToken?: string | null;
+  serveStatic?: boolean | null;
+  staticDir?: string;
 }
 
 export function createRoomServer(manager = new RoomManager(), options: RoomServerOptions = {}) {
@@ -21,6 +25,8 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
   const clientSessions = new Map<string, { roomCode: string; token: string; role: "host" | "player" | "stage" }>();
   const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
   const adminToken = readAdminToken(options.adminToken);
+  const serveStatic = readServeStatic(options.serveStatic);
+  const staticDir = resolve(options.staticDir ?? "dist");
 
   const server = http.createServer((request, response) => {
     const requestUrl = new URL(request.url ?? "/", "http://localhost");
@@ -36,6 +42,8 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
       handleAdminRoomsRequest(request, response, adminToken);
       return;
     }
+
+    if (serveStatic && serveStaticRequest(request, response, staticDir)) return;
 
     response.writeHead(404);
     response.end("Not found");
@@ -375,6 +383,13 @@ function readAdminToken(configuredToken: string | null | undefined) {
   return process.env.TABLEGATHER_ADMIN_TOKEN?.trim() ?? "";
 }
 
+function readServeStatic(configured: boolean | null | undefined) {
+  if (configured !== undefined && configured !== null) return configured;
+  const value = process.env.TABLEGATHER_SERVE_STATIC?.trim().toLowerCase();
+  if (value) return ["1", "true", "yes", "on"].includes(value);
+  return process.env.NODE_ENV === "production";
+}
+
 function bearerToken(header: string | undefined) {
   if (!header) return null;
   const match = header.match(/^Bearer\s+(.+)$/i);
@@ -395,6 +410,122 @@ function adminResponseHeaders(request: http.IncomingMessage): http.OutgoingHttpH
 
 function createClientId() {
   return Math.random().toString(36).slice(2, 12);
+}
+
+function serveStaticRequest(request: http.IncomingMessage, response: http.ServerResponse, staticDir: string) {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+
+  const requestUrl = new URL(request.url ?? "/", "http://localhost");
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(requestUrl.pathname);
+  } catch {
+    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Bad request");
+    return true;
+  }
+
+  const filePath = resolveStaticFilePath(staticDir, pathname);
+  if (!filePath) {
+    response.writeHead(404);
+    response.end("Not found");
+    return true;
+  }
+
+  const headers = staticHeaders(filePath, pathname);
+  response.writeHead(200, headers);
+  if (request.method === "HEAD") {
+    response.end();
+    return true;
+  }
+
+  createReadStream(filePath).pipe(response);
+  return true;
+}
+
+function resolveStaticFilePath(staticDir: string, pathname: string) {
+  const normalizedPath = pathname === "/" ? "/index.html" : pathname;
+  const requestedPath = resolve(staticDir, `.${normalizedPath}`);
+  if (!isInsideDirectory(staticDir, requestedPath)) return null;
+
+  const requestedFile = existingFilePath(requestedPath);
+  if (requestedFile) return requestedFile;
+
+  if (extname(normalizedPath)) return null;
+  return existingFilePath(resolve(staticDir, "index.html"));
+}
+
+function existingFilePath(filePath: string) {
+  try {
+    const stats = statSync(filePath);
+    return stats.isFile() ? filePath : null;
+  } catch {
+    return null;
+  }
+}
+
+function isInsideDirectory(parent: string, child: string) {
+  const normalizedParent = parent.endsWith(sep) ? parent : `${parent}${sep}`;
+  return child === parent || child.startsWith(normalizedParent);
+}
+
+function staticHeaders(filePath: string, pathname: string): http.OutgoingHttpHeaders {
+  const contentType = contentTypeForPath(filePath);
+  const headers: http.OutgoingHttpHeaders = { "Content-Type": contentType };
+
+  if (pathname === "/sw.js") {
+    headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate";
+    headers.Pragma = "no-cache";
+    headers.Expires = "0";
+    return headers;
+  }
+
+  if (pathname === "/" || filePath.endsWith(`${sep}index.html`)) {
+    headers["Cache-Control"] = "no-cache";
+    return headers;
+  }
+
+  if (pathname === "/manifest.webmanifest") {
+    headers["Cache-Control"] = "no-cache";
+    return headers;
+  }
+
+  headers["Cache-Control"] = pathname.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "public, max-age=3600";
+  return headers;
+}
+
+function contentTypeForPath(filePath: string) {
+  switch (extname(filePath).toLowerCase()) {
+    case ".html":
+      return "text/html; charset=utf-8";
+    case ".js":
+      return "application/javascript; charset=utf-8";
+    case ".css":
+      return "text/css; charset=utf-8";
+    case ".json":
+      return "application/json; charset=utf-8";
+    case ".webmanifest":
+      return "application/manifest+json; charset=utf-8";
+    case ".svg":
+      return "image/svg+xml";
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".webp":
+      return "image/webp";
+    case ".ico":
+      return "image/x-icon";
+    case ".txt":
+      return "text/plain; charset=utf-8";
+    case ".woff":
+      return "font/woff";
+    case ".woff2":
+      return "font/woff2";
+    default:
+      return "application/octet-stream";
+  }
 }
 
 function isMainModule() {

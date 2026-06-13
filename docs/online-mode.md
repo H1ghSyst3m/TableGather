@@ -26,7 +26,13 @@ The WebSocket server is generic. Werewolf-specific behavior enters through `were
 
 The room server uses `InMemoryRoomStore`. Rooms expire after 48 hours of inactivity, and a server restart clears active in-memory room state. Reconnect tokens, stage tokens, and browser/localStorage session tokens can remain on the client until explicitly invalidated by the server or user, but those tokens may no longer map to an active server-side room after expiry or restart.
 
-The `/admin` browser route reads the admin token from `#token=...`, stores it in `sessionStorage`, removes it from the URL fragment, and fetches `/admin/rooms` with a bearer token. The admin summary treats a room as started when it is no longer in `lobby`, and inactive when the host is offline or the room has had no activity for at least 30 minutes.
+The `/admin` browser route reads the admin token from `#token=...`, stores it in `sessionStorage`, removes it from the URL fragment, and fetches `/admin/rooms` with a bearer token. The admin summary flags inactive rooms when the host is offline or the room has had no activity for at least 30 minutes, and separates active lobby rooms from currently running rooms.
+
+## Production Runtime
+
+`npm run server:start` loads `.env`, `.env.local`, `.env.production`, and `.env.production.local` before starting the room server. Use `.env` for local defaults and `.env.production.local` for private production values such as `TABLEGATHER_ADMIN_TOKEN`.
+
+When `NODE_ENV=production`, the room server serves the built `dist/` frontend by default. This lets a production reverse proxy forward every request to the same Node process: `/` and SPA routes serve the app shell, `/ws` handles WebSocket upgrades, `/health` returns health JSON, and `/admin/rooms` stays the protected admin API. `TABLEGATHER_SERVE_STATIC=false` disables this static serving for split deployments.
 
 ## Room Lifecycle
 

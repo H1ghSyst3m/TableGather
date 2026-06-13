@@ -11,7 +11,7 @@
     "dev": "vite --host 0.0.0.0",
     "dev:all": "concurrently -k -n web,server -c cyan,magenta \"npm run dev\" \"npm run server:dev\"",
     "server:dev": "tsx watch server/index.ts",
-    "server:start": "tsx server/index.ts",
+    "server:start": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --env-file-if-exists=.env.production --env-file-if-exists=.env.production.local --import tsx server/index.ts",
     "test": "vitest run",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

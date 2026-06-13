@@ -13,6 +13,7 @@ export const adminDe = {
     "unauthorizedDescription": "Der Admin-Token wurde nicht akzeptiert.",
     "connectionDescription": "Die Admin-Daten konnten nicht vom Raumserver geladen werden.",
     "malformedDescription": "Die Admin-Daten hatten ein unerwartetes Format.",
+    "proxyDescription": "Der Admin-Endpunkt liefert HTML statt JSON. Prüfe, ob /admin/rooms zum Raumserver weitergeleitet wird.",
     "emptyTitle": "Keine aktiven Räume",
     "emptyDescription": "Sobald Räume erstellt werden, erscheinen sie hier.",
     "refresh": "Aktualisieren",
