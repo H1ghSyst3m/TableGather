@@ -21,9 +21,12 @@ The WebSocket server is generic. Werewolf-specific behavior enters through `were
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /health` | Health check, expired-room cleanup, room count, and room protocol information. |
+| `GET /admin/rooms` | Protected admin room overview when `TABLEGATHER_ADMIN_TOKEN` is configured. Requires `Authorization: Bearer <token>`, returns all current rooms with inactive rooms flagged, and omits room tokens, player names, role assignments, and game state. |
 | `WS /ws` | Room creation, joining, reconnecting, host commands, player commands, snapshots, and close/kick/transfer events. |
 
 The room server uses `InMemoryRoomStore`. Rooms expire after 48 hours of inactivity, and a server restart clears active in-memory room state. Reconnect tokens, stage tokens, and browser/localStorage session tokens can remain on the client until explicitly invalidated by the server or user, but those tokens may no longer map to an active server-side room after expiry or restart.
+
+The `/admin` browser route reads the admin token from `#token=...`, stores it in `sessionStorage`, removes it from the URL fragment, and fetches `/admin/rooms` with a bearer token. The admin summary treats a room as started when it is no longer in `lobby`, and inactive when the host is offline or the room has had no activity for at least 30 minutes.
 
 ## Room Lifecycle
 

@@ -4,6 +4,7 @@ import { InMemoryRoomStore, type Room } from "../server/roomStore";
 import { createWerewolfGameFromAssignments } from "../src/games/werewolf/domain/engine";
 import type { RoleCounts, WerewolfState } from "../src/games/werewolf/domain/types";
 import type { WerewolfHostRoomSnapshot, WerewolfPlayerRoomSnapshot, WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
+import { ADMIN_INACTIVE_ACTIVITY_MS } from "../src/online/admin";
 import type { HostCommand } from "../src/online/messages";
 
 const counts: RoleCounts = { werewolf: 1, seer: 1, protector: 1, hunter: 0, villager: 2 };
@@ -869,6 +870,139 @@ describe("room manager", () => {
     now = 1_050;
     manager.applyPlayerCommand(room.code, joined[0].clientToken, { type: "markRoleSeen" });
     expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_050);
+  });
+
+  it("summarizes admin room counts by game, phase, live status, and inactivity", () => {
+    let now = 10_000_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 10 * ADMIN_INACTIVE_ACTIVITY_MS });
+    const lobby = manager.createRoom("host-lobby", "werewolf").room;
+    const running = manager.createRoom("host-running", "werewolf").room;
+    const stale = manager.createRoom("host-stale", "werewolf").room;
+    const offline = manager.createRoom("host-offline", "werewolf").room;
+    const ended = manager.createRoom("host-ended", "werewolf").room;
+
+    manager.joinRoom(lobby.code, "Alex", "player-lobby");
+    manager.joinRoom(running.code, "Robin", "player-running");
+    manager.joinRoom(stale.code, "Sam", "player-stale");
+    manager.joinRoom(offline.code, "Jordan", "player-offline");
+
+    running.phase = "roleReveal";
+
+    stale.gameId = "imposter";
+    stale.phase = "playing";
+    stale.lastActivityAt = now - ADMIN_INACTIVE_ACTIVITY_MS;
+
+    offline.phase = "roleReveal";
+    offline.hostClientId = null;
+    offline.lastActivityAt = now - 1_000;
+
+    ended.gameId = "undercover";
+    ended.phase = "ended";
+
+    now += 1_000;
+    const summary = manager.adminRoomsSummary();
+
+    expect(summary.totals).toEqual({ total: 5, active: 3, running: 3, waiting: 1, inactive: 2, ended: 1 });
+    expect(summary.byGame.werewolf).toEqual({ total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 });
+    expect(summary.byGame.imposter).toEqual({ total: 1, active: 0, running: 1, waiting: 0, inactive: 1, ended: 0 });
+    expect(summary.byGame.undercover).toEqual({ total: 1, active: 1, running: 0, waiting: 0, inactive: 0, ended: 1 });
+    expect(summary.byPhase).toMatchObject({ lobby: 1, playing: 1, roleReveal: 2, assignment: 0, ended: 1 });
+    expect(summary.rooms.every((room) => room.active === !room.inactive)).toBe(true);
+
+    expect(summary.rooms.find((room) => room.code === lobby.code)).toMatchObject({
+      started: false,
+      active: true,
+      running: false,
+      waiting: true,
+      progressStatus: "waiting",
+      inactive: false,
+      inactiveReasons: [],
+      playerCount: 1,
+      connectedPlayerCount: 1,
+      hostConnected: true,
+    });
+    expect(summary.rooms.find((room) => room.code === running.code)).toMatchObject({
+      started: true,
+      active: true,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
+      inactive: false,
+      inactiveReasons: [],
+      hostConnected: true,
+    });
+    expect(summary.rooms.find((room) => room.code === stale.code)).toMatchObject({
+      started: true,
+      active: false,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
+      inactive: true,
+      inactiveReasons: ["staleActivity"],
+      hostConnected: true,
+    });
+    expect(summary.rooms.find((room) => room.code === offline.code)).toMatchObject({
+      started: true,
+      active: false,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
+      inactive: true,
+      inactiveReasons: ["hostOffline"],
+      hostConnected: false,
+    });
+    expect(summary.rooms.find((room) => room.code === ended.code)).toMatchObject({
+      started: true,
+      active: true,
+      running: false,
+      waiting: false,
+      progressStatus: "ended",
+      inactive: false,
+      inactiveReasons: [],
+      hostConnected: true,
+    });
+  });
+
+  it("marks admin rooms inactive with both reasons and omits sensitive room data", () => {
+    let now = 10_000_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 10 * ADMIN_INACTIVE_ACTIVITY_MS });
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    const { clientToken: playerToken } = manager.joinRoom(room.code, "Alex", "player-1");
+    room.phase = "playing";
+    room.hostClientId = null;
+    room.lastActivityAt = now - ADMIN_INACTIVE_ACTIVITY_MS;
+    room.gameState = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "alex", name: "Alex", roleId: "villager" },
+        { id: "sam", name: "Sam", roleId: "villager" },
+        { id: "jordan", name: "Jordan", roleId: "villager" },
+        { id: "taylor", name: "Taylor", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    now += 1_000;
+    const summary = manager.adminRoomsSummary();
+    const adminRoom = summary.rooms.find((item) => item.code === room.code);
+    const serializedSummary = JSON.stringify(summary);
+
+    expect(adminRoom).toMatchObject({
+      active: false,
+      running: true,
+      waiting: false,
+      progressStatus: "running",
+      inactive: true,
+      inactiveReasons: ["hostOffline", "staleActivity"],
+      playerCount: 1,
+      connectedPlayerCount: 1,
+    });
+    expect(serializedSummary).not.toContain(hostToken);
+    expect(serializedSummary).not.toContain(playerToken);
+    expect(serializedSummary).not.toContain("Alex");
+    expect(serializedSummary).not.toContain("hostToken");
+    expect(serializedSummary).not.toContain("gameState");
+    expect(serializedSummary).not.toContain("\"assignment\":[");
   });
 
   it("prunes expired rooms and treats expired sessions as invalid", () => {

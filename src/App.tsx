@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { I18nProvider } from "./i18n/I18nProvider";
+import { AdminScreen } from "./components/AdminScreen";
 import { HubScreen } from "./components/HubScreen";
 import { LocalWerewolfApp } from "./games/werewolf/components/LocalWerewolfApp";
 import { WerewolfRoomHostScreen } from "./games/werewolf/components/WerewolfRoomHostScreen";
@@ -19,6 +20,7 @@ export function App() {
     <I18nProvider>
       <AppErrorBoundary resetKey={routeKey(route)}>
         {route.name === "home" && <HubScreen navigate={navigate} />}
+        {route.name === "admin" && <AdminScreen />}
         {route.name === "localGame" && <LocalGameRoute gameId={route.gameId} navigate={navigate} />}
         {route.name === "createRoom" && <CreateRoomRoute gameId={route.gameId} navigate={navigate} />}
         {route.name === "joinRoomCode" && <JoinRoomCodeRoute navigate={navigate} />}
@@ -97,6 +99,7 @@ function navigate(path: string) {
 
 type Route =
   | { name: "home" }
+  | { name: "admin" }
   | { name: "localGame"; gameId: GameId }
   | { name: "createRoom"; gameId: GameId }
   | { name: "joinRoomCode" }
@@ -114,6 +117,8 @@ function useRoute(): Route {
 
   return useMemo(() => {
     const { path } = location;
+    if (/^\/admin\/?$/i.test(path)) return { name: "admin" };
+
     const playMatch = path.match(/^\/play\/([a-z0-9-]+)$/i);
     if (playMatch && isGameId(playMatch[1])) return { name: "localGame", gameId: playMatch[1] };
     const createRoomMatch = path.match(/^\/room\/create(?:\/([a-z0-9-]+))?$/i);

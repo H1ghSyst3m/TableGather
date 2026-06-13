@@ -12,16 +12,28 @@ const roomServerInfo = {
 
 const ROOM_EXPIRY_SWEEP_INTERVAL_MS = 60_000;
 
-export function createRoomServer(manager = new RoomManager()) {
+interface RoomServerOptions {
+  adminToken?: string | null;
+}
+
+export function createRoomServer(manager = new RoomManager(), options: RoomServerOptions = {}) {
   const clients = new Map<string, WebSocket>();
   const clientSessions = new Map<string, { roomCode: string; token: string; role: "host" | "player" | "stage" }>();
   const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
+  const adminToken = readAdminToken(options.adminToken);
 
   const server = http.createServer((request, response) => {
-    if (request.url === "/health") {
+    const requestUrl = new URL(request.url ?? "/", "http://localhost");
+
+    if (requestUrl.pathname === "/health") {
       closeExpiredRooms();
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({ ok: true, rooms: manager.listRooms().length, ...roomServerInfo }));
+      return;
+    }
+
+    if (requestUrl.pathname === "/admin/rooms") {
+      handleAdminRoomsRequest(request, response, adminToken);
       return;
     }
 
@@ -211,6 +223,36 @@ export function createRoomServer(manager = new RoomManager()) {
     }
   }
 
+  function handleAdminRoomsRequest(request: http.IncomingMessage, response: http.ServerResponse, token: string) {
+    if (!token) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+
+    if (request.method === "OPTIONS") {
+      response.writeHead(204, adminResponseHeaders(request));
+      response.end();
+      return;
+    }
+
+    if (request.method !== "GET") {
+      response.writeHead(405, { ...adminResponseHeaders(request), Allow: "GET, OPTIONS" });
+      response.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
+      return;
+    }
+
+    if (bearerToken(request.headers.authorization) !== token) {
+      response.writeHead(401, adminResponseHeaders(request));
+      response.end(JSON.stringify({ ok: false, error: "unauthorized" }));
+      return;
+    }
+
+    closeExpiredRooms();
+    response.writeHead(200, adminResponseHeaders(request));
+    response.end(JSON.stringify({ ok: true, ...manager.adminRoomsSummary(), ...roomServerInfo }));
+  }
+
   function assertTransferTargetOnline(roomCode: string, hostToken: string, playerId: string) {
     const room = manager.getRoom(roomCode);
     if (!room || room.hostToken !== hostToken) return;
@@ -326,6 +368,29 @@ function safeJson(raw: string) {
 function readPort(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function readAdminToken(configuredToken: string | null | undefined) {
+  if (configuredToken !== undefined) return configuredToken?.trim() ?? "";
+  return process.env.TABLEGATHER_ADMIN_TOKEN?.trim() ?? "";
+}
+
+function bearerToken(header: string | undefined) {
+  if (!header) return null;
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() ?? null;
+}
+
+function adminResponseHeaders(request: http.IncomingMessage): http.OutgoingHttpHeaders {
+  return {
+    "Access-Control-Allow-Origin": request.headers.origin ?? "*",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Max-Age": "600",
+    "Cache-Control": "no-store",
+    "Content-Type": "application/json",
+    Vary: "Origin",
+  };
 }
 
 function createClientId() {

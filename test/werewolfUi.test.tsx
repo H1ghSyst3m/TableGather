@@ -1,8 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWerewolfGameFromAssignments, markRoleSeen } from "../src/games/werewolf/domain/engine";
 import type { WerewolfState } from "../src/games/werewolf/domain/types";
+import { AdminDashboardView, AdminScreen, AdminStatePanel, AdminTokenForm } from "../src/components/AdminScreen";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
@@ -16,7 +17,11 @@ import { GameLog, PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/
 import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { I18nContext } from "../src/i18n/context";
 import { translate } from "../src/i18n/translations";
+import type { AdminRoomsSummary } from "../src/online/admin";
+import { submitAdminTokenInput } from "../src/online/adminToken";
 import { hasDuplicatePlayerName, normalizePlayerName } from "../src/playerNames";
+
+const previousSessionStorage = globalThis.sessionStorage;
 
 const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   setProtectedPlayer: () => undefined,
@@ -45,6 +50,14 @@ const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   undoStep: () => undefined,
   reset: () => undefined,
 };
+
+afterEach(() => {
+  Object.defineProperty(globalThis, "sessionStorage", {
+    configurable: true,
+    value: previousSessionStorage,
+  });
+  vi.restoreAllMocks();
+});
 
 describe("werewolf play surface", () => {
   it("renders inactive Night Guest and Detective notes with separated title and hint", () => {
@@ -844,6 +857,98 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "hub.sessionPlayerName", { name: "Alex" }));
   });
 
+  it("renders admin room overview counts, breakdowns, and detailed rows", () => {
+    const summary = createAdminSummary();
+    const html = renderAdminDashboard(summary);
+
+    expect(html).toContain(translate("de", "admin.totalRooms"));
+    expect(html).toContain(translate("de", "admin.activeRooms"));
+    expect(html).toContain(translate("de", "admin.runningRooms"));
+    expect(html).toContain(translate("de", "admin.waitingRooms"));
+    expect(html).toContain(translate("de", "admin.inactiveRooms"));
+    expect(html).toContain(translate("de", "admin.gamesBreakdown"));
+    expect(html).toContain(translate("de", "admin.phasesBreakdown"));
+    expect(html).toContain("ABCD");
+    expect(html).toContain("WXYZ");
+    expect(html).toContain(translate("de", "admin.connectedPlayers", { connected: 3, total: 5 }));
+    expect(html).toContain(translate("de", "admin.hostOffline"));
+    expect(html).toContain(translate("de", "admin.reasonStaleActivity"));
+    expect(html).toContain(translate("de", "admin.statusRunning"));
+    expect(html).toContain(translate("de", "admin.statusWaiting"));
+    expect(html).toContain(translate("de", "admin.statusInactive"));
+    expect(html).not.toContain("Alex");
+  });
+
+  it("filters admin rooms by separate activity and progress status", () => {
+    const summary = createAdminSummary();
+    const runningHtml = renderAdminDashboard(summary, "all", "running");
+    const activeRunningHtml = renderAdminDashboard(summary, "active", "running");
+    const inactiveRunningHtml = renderAdminDashboard(summary, "inactive", "running");
+    const activeLobbyHtml = renderAdminDashboard(summary, "active", "waiting");
+
+    expect(runningHtml).toContain("ABCD");
+    expect(runningHtml).toContain("WXYZ");
+    expect(runningHtml).not.toContain("LOBB");
+    expect(activeRunningHtml).toContain("ABCD");
+    expect(activeRunningHtml).not.toContain("WXYZ");
+    expect(activeRunningHtml).not.toContain("LOBB");
+    expect(inactiveRunningHtml).toContain("WXYZ");
+    expect(inactiveRunningHtml).not.toContain("ABCD");
+    expect(inactiveRunningHtml).not.toContain("LOBB");
+    expect(activeLobbyHtml).toContain("LOBB");
+    expect(activeLobbyHtml).not.toContain("ABCD");
+    expect(activeLobbyHtml).not.toContain("WXYZ");
+  });
+
+  it("renders admin token, error, and empty states", () => {
+    const screenHtml = renderWithI18n(<AdminScreen />);
+    const tokenHtml = renderWithI18n(
+      <AdminStatePanel icon={null} title={translate("de", "admin.tokenRequiredTitle")} description={translate("de", "admin.tokenRequiredDescription")}>
+        <AdminTokenForm value="" onChange={() => undefined} onSubmit={() => undefined} />
+      </AdminStatePanel>,
+    );
+    const errorHtml = renderWithI18n(
+      <AdminStatePanel icon={null} title={translate("de", "admin.unavailableTitle")} description={translate("de", "admin.unauthorizedDescription")}>
+        <AdminTokenForm value="bad-token" onChange={() => undefined} onSubmit={() => undefined} />
+      </AdminStatePanel>,
+    );
+    const emptyHtml = renderWithI18n(
+      <AdminDashboardView
+        summary={createEmptyAdminSummary()}
+        activityFilter="all"
+        progressFilter="all"
+        onActivityFilterChange={() => undefined}
+        onProgressFilterChange={() => undefined}
+      />,
+    );
+
+    expect(screenHtml).toContain(`<p class="section-label">${translate("de", "admin.sectionLabel")}</p>`);
+    expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredTitle"));
+    expect(tokenHtml).toContain(translate("de", "admin.tokenRequiredDescription"));
+    expect(tokenHtml).toContain(translate("de", "admin.tokenFieldLabel"));
+    expect(tokenHtml).toContain("type=\"password\"");
+    expect(tokenHtml).toContain("disabled=\"\"");
+    expect(errorHtml).toContain(translate("de", "admin.unavailableTitle"));
+    expect(errorHtml).toContain(translate("de", "admin.unauthorizedDescription"));
+    expect(errorHtml).toContain(translate("de", "admin.tokenSubmit"));
+    expect(emptyHtml).toContain(translate("de", "admin.emptyDescription"));
+    expect(emptyHtml).toContain("Werwolf<strong>0</strong>");
+    expect(emptyHtml).toContain("Lobby<strong>0</strong>");
+  });
+
+  it("stores trimmed admin token submissions and rejects empty values", () => {
+    const storage = createMemoryStorage();
+    const onTokenAccepted = vi.fn();
+    useSessionStorage(storage);
+
+    expect(submitAdminTokenInput("  admin-test-token  ", onTokenAccepted)).toBe(true);
+    expect(storage.getItem("tablegather.adminToken")).toBe("admin-test-token");
+    expect(onTokenAccepted).toHaveBeenCalledWith("admin-test-token");
+
+    expect(submitAdminTokenInput("   ", onTokenAccepted)).toBe(false);
+    expect(onTokenAccepted).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the shared room join screen with code and name fields", () => {
     const html = renderWithI18n(<WerewolfRoomPlayerScreen navigate={() => undefined} />);
 
@@ -1317,6 +1422,125 @@ function renderFooterHtml(html: string) {
   return html.slice(html.indexOf('class="werewolf-flow-footer"'));
 }
 
+function createAdminSummary(): AdminRoomsSummary {
+  const serverTime = 1_700_000_000_000;
+  return {
+    serverTime,
+    inactiveActivityMs: 30 * 60 * 1000,
+    totals: { total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 },
+    byGame: {
+      werewolf: { total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 },
+      imposter: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 },
+      undercover: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 },
+    },
+    byPhase: {
+      lobby: 1,
+      assignment: 0,
+      roleReveal: 1,
+      playing: 1,
+      ended: 0,
+    },
+    rooms: [
+      {
+        code: "ABCD",
+        gameId: "werewolf",
+        phase: "roleReveal",
+        playerCount: 5,
+        connectedPlayerCount: 5,
+        hostConnected: true,
+        createdAt: serverTime - 20 * 60 * 1000,
+        lastActivityAt: serverTime - 2 * 60 * 1000,
+        expiresAt: serverTime + 47 * 60 * 60 * 1000,
+        started: true,
+        active: true,
+        running: true,
+        waiting: false,
+        progressStatus: "running",
+        inactive: false,
+        inactiveReasons: [],
+      },
+      {
+        code: "WXYZ",
+        gameId: "werewolf",
+        phase: "playing",
+        playerCount: 5,
+        connectedPlayerCount: 3,
+        hostConnected: false,
+        createdAt: serverTime - 3 * 60 * 60 * 1000,
+        lastActivityAt: serverTime - 45 * 60 * 1000,
+        expiresAt: serverTime + 45 * 60 * 60 * 1000,
+        started: true,
+        active: false,
+        running: true,
+        waiting: false,
+        progressStatus: "running",
+        inactive: true,
+        inactiveReasons: ["hostOffline", "staleActivity"],
+      },
+      {
+        code: "LOBB",
+        gameId: "werewolf",
+        phase: "lobby",
+        playerCount: 2,
+        connectedPlayerCount: 2,
+        hostConnected: true,
+        createdAt: serverTime - 4 * 60 * 1000,
+        lastActivityAt: serverTime - 1 * 60 * 1000,
+        expiresAt: serverTime + 48 * 60 * 60 * 1000,
+        started: false,
+        active: true,
+        running: false,
+        waiting: true,
+        progressStatus: "waiting",
+        inactive: false,
+        inactiveReasons: [],
+      },
+    ],
+  };
+}
+
+function createEmptyAdminSummary(): AdminRoomsSummary {
+  const emptyCounts = createAdminCounts();
+
+  return {
+    ...createAdminSummary(),
+    totals: emptyCounts,
+    byGame: {
+      werewolf: createAdminCounts(),
+      imposter: createAdminCounts(),
+      undercover: createAdminCounts(),
+    },
+    byPhase: {
+      lobby: 0,
+      assignment: 0,
+      roleReveal: 0,
+      playing: 0,
+      ended: 0,
+    },
+    rooms: [],
+  };
+}
+
+function createAdminCounts() {
+  return { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 };
+}
+
+function renderAdminDashboard(
+  summary: AdminRoomsSummary,
+  activityFilter: "all" | "active" | "inactive" = "all",
+  progressFilter: "all" | "running" | "waiting" | "ended" = "all",
+) {
+  return renderWithI18n(
+    <AdminDashboardView
+      summary={summary}
+      activityFilter={activityFilter}
+      progressFilter={progressFilter}
+      onActivityFilterChange={() => undefined}
+      onProgressFilterChange={() => undefined}
+    />,
+  );
+}
+
 function buttonHtmlForClass(html: string, className: string) {
   const classIndex = html.indexOf(className);
   if (classIndex === -1) return "";
@@ -1337,6 +1561,28 @@ function renderWithI18n(node: ReactNode, locale: "de" | "en" = "de") {
       {node}
     </I18nContext.Provider>,
   );
+}
+
+function useSessionStorage(storage: Storage) {
+  Object.defineProperty(globalThis, "sessionStorage", {
+    configurable: true,
+    value: storage,
+  });
+}
+
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
+  };
 }
 
 function renderStage(overrides: Partial<WerewolfStageRoomSnapshot>, locale: "de" | "en" = "de") {

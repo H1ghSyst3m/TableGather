@@ -33,6 +33,7 @@ Room mode needs the WebSocket server. By default, the server listens on port `87
 Configuration:
 
 - `PORT` or `TABLEGATHER_PORT` changes the room server port.
+- `TABLEGATHER_ADMIN_TOKEN` enables the protected admin room overview API and `/admin` dashboard. Open `/admin#token=<token>` only as a transient way to load the token; the client immediately stores it in `sessionStorage` and removes it from the fragment so it is not kept in the address bar. Subsequent admin visits should use `/admin` without the token.
 - `VITE_WS_URL` overrides the browser WebSocket URL. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S).
 - For phone/tablet testing on the same local network, run `npm run dev:all`, open the Vite URL from the host machine's LAN address, and make sure the room server port is reachable from the other devices.
 
@@ -43,6 +44,7 @@ Main routes:
 - `/room/create/werewolf` - create a Werewolf room as host.
 - `/room/<CODE>` - join or resume a room. A stored host token opens the host view; otherwise the player view opens.
 - `/stage/<CODE>/<TOKEN>` - open a Werewolf stage screen from a host-created stage link.
+- `/admin` - protected room overview dashboard when `TABLEGATHER_ADMIN_TOKEN` is configured on the room server.
 
 ## V1 Scope
 

@@ -1,5 +1,7 @@
 import { games } from "../games/registry";
 import type { Locale } from "../types";
+import { adminDe } from "./admin/de";
+import { adminEn } from "./admin/en";
 import { commonDe } from "./common/de";
 import { commonEn } from "./common/en";
 import { hubDe } from "./hub/de";
@@ -13,11 +15,13 @@ export const translations: Record<Locale, TranslationTree> = {
   en: mergeTranslationBundles(
     commonEn,
     hubEn,
+    adminEn,
     ...games.flatMap((game) => (game.i18n.en ? [game.i18n.en] : [])),
   ),
   de: mergeTranslationBundles(
     commonDe,
     hubDe,
+    adminDe,
     ...games.flatMap((game) => (game.i18n.de ? [game.i18n.de] : [])),
   ),
 };

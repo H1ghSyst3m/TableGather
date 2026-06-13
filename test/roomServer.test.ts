@@ -94,6 +94,108 @@ describe("room websocket server", () => {
     });
   });
 
+  it("hides the admin room endpoint when no admin token is configured", async () => {
+    const url = await startServer(new RoomManager(), { adminToken: null });
+    const response = await fetch(toAdminRoomsUrl(url));
+
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe("Not found");
+  });
+
+  it("rejects admin room requests without a valid bearer token", async () => {
+    const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token" });
+    const origin = "http://127.0.0.1:5173";
+    const missing = await fetch(toAdminRoomsUrl(url), { headers: { Origin: origin } });
+    const wrong = await fetch(toAdminRoomsUrl(url), { headers: { Authorization: "Bearer wrong-token", Origin: origin } });
+
+    expect(missing.status).toBe(401);
+    expect(wrong.status).toBe(401);
+    expect(missing.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(missing.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
+    expect(missing.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(missing.headers.get("cache-control")).toBe("no-store");
+    expect(missing.headers.get("vary")).toBe("Origin");
+    expect(wrong.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(wrong.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
+    expect(wrong.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(wrong.headers.get("cache-control")).toBe("no-store");
+    expect(wrong.headers.get("vary")).toBe("Origin");
+    await expect(missing.json()).resolves.toEqual({ ok: false, error: "unauthorized" });
+    await expect(wrong.json()).resolves.toEqual({ ok: false, error: "unauthorized" });
+  });
+
+  it("serves protected admin room summaries without sensitive room data", async () => {
+    let now = 10_000_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now });
+    const created = manager.createRoom("host-1", "werewolf");
+    manager.joinRoom(created.room.code, "Alex", "player-1");
+    created.room.phase = "assignment";
+
+    const url = await startServer(manager, { adminToken: "secret-admin-token" });
+    now += 1_000;
+    const response = await fetch(toAdminRoomsUrl(url), {
+      headers: {
+        Authorization: "Bearer secret-admin-token",
+        Origin: "http://127.0.0.1:5173",
+      },
+    });
+    const body = await response.json();
+    const serializedBody = JSON.stringify(body);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
+    expect(body).toMatchObject({
+      ok: true,
+      protocolVersion: ROOM_PROTOCOL_VERSION,
+      features: ROOM_PROTOCOL_FEATURES,
+      totals: { total: 1, active: 1, running: 1, waiting: 0, inactive: 0, ended: 0 },
+      byGame: { werewolf: { total: 1, active: 1, running: 1, waiting: 0, inactive: 0, ended: 0 } },
+      byPhase: { assignment: 1 },
+      rooms: [
+        {
+          code: created.room.code,
+          gameId: "werewolf",
+          phase: "assignment",
+          playerCount: 1,
+          connectedPlayerCount: 1,
+          hostConnected: true,
+          started: true,
+          active: true,
+          running: true,
+          waiting: false,
+          progressStatus: "running",
+          inactive: false,
+          inactiveReasons: [],
+        },
+      ],
+    });
+    expect(serializedBody).not.toContain(created.clientToken);
+    expect(serializedBody).not.toContain("Alex");
+    expect(serializedBody).not.toContain("gameState");
+    expect(serializedBody).not.toContain("\"assignment\":[");
+  });
+
+  it("supports CORS preflight for admin room summaries", async () => {
+    const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token" });
+    const response = await fetch(toAdminRoomsUrl(url), {
+      method: "OPTIONS",
+      headers: {
+        Origin: "http://127.0.0.1:5173",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "authorization",
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
+    expect(response.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
+    expect(response.headers.get("access-control-allow-headers")).toContain("Authorization");
+    expect(response.headers.get("access-control-max-age")).toBe("600");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("vary")).toBe("Origin");
+  });
+
   it("reports room lookup status before players join", async () => {
     const url = await startServer();
     const host = await openSocket(url);
@@ -500,8 +602,8 @@ describe("room websocket server", () => {
   });
 });
 
-async function startServer(manager = new RoomManager()) {
-  const { server, wss } = createRoomServer(manager);
+async function startServer(manager = new RoomManager(), options?: Parameters<typeof createRoomServer>[1]) {
+  const { server, wss } = createRoomServer(manager, options);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as AddressInfo;
   closeServer = async () => {
@@ -537,6 +639,13 @@ function toHealthUrl(wsUrl: string) {
   const url = new URL(wsUrl);
   url.protocol = "http:";
   url.pathname = "/health";
+  return url;
+}
+
+function toAdminRoomsUrl(wsUrl: string) {
+  const url = new URL(wsUrl);
+  url.protocol = "http:";
+  url.pathname = "/admin/rooms";
   return url;
 }
 
