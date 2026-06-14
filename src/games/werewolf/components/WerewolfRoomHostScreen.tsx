@@ -83,7 +83,7 @@ export function WerewolfRoomHostScreen({
     if (message.type === "snapshot" && (message.snapshot as WerewolfHostRoomSnapshot).audience === "host") {
       const nextSnapshot = message.snapshot as WerewolfHostRoomSnapshot;
       setSnapshot(nextSnapshot);
-      if (nextSnapshot.phase === "setup" || nextSnapshot.phase === "assignment") {
+      if (nextSnapshot.phase === "lobby" || nextSnapshot.phase === "setup" || nextSnapshot.phase === "assignment") {
         setupDraftRef.current = { roleCounts: nextSnapshot.roleCounts, options: nextSnapshot.options };
         setCounts(nextSnapshot.roleCounts);
         setOptions(nextSnapshot.options);
