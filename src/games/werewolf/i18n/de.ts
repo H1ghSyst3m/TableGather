@@ -2,7 +2,7 @@ export const werewolfDe = {
   "werewolf": {
     "setupTitle": "Werwolf vorbereiten",
     "setupSubtitle": "Spieler hinzufügen, Rollen einstellen und Rollen geheim aufdecken.",
-    "playerLobbyTitle": "Player Lobby",
+    "playerLobbyTitle": "Spieler-Lobby",
     "playerLobbySubtitle": "Versammelt den Tisch, teilt den Raumcode und wartet, bis alle dabei sind.",
     "gameSettingsTitle": "Spieleinstellungen",
     "gameSettingsSubtitle": "Wähle Rollenmix und Tischregeln, bevor die geheimen Rollen verteilt werden.",

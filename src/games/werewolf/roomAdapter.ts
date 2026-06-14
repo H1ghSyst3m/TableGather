@@ -63,6 +63,9 @@ export const werewolfRoomAdapter = {
       case "beginSetup": {
         if (room.phase !== "lobby") throw new Error("Room is not in the player lobby.");
         const roleCounts = normalizeRoomRoleCounts(room.players.length, command.roleCounts ?? readSetup(room).roleCounts);
+        const validation = validateRoleCounts(room.players.length, roleCounts);
+        if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
+
         const options = { ...(command.options ?? readSetup(room).options), roleReveal: true };
 
         writeSetup(room, roleCounts, options, null);

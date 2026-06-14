@@ -53,6 +53,7 @@ export function WerewolfRoomHostScreen({
   const [closeOpen, setCloseOpen] = useState(false);
   const [counts, setCounts] = useState<RoleCounts>(() => createDefaultRoleCounts(5));
   const [options, setOptions] = useState<WerewolfOptions>(() => ({ ...loadWerewolfHostOptions(), roleReveal: true }));
+  const setupDraftRef = useRef<{ roleCounts: RoleCounts; options: WerewolfOptions }>({ roleCounts: counts, options });
   const joinLink = snapshot ? `${window.location.origin}/room/${snapshot.code}` : "";
   const stageLink = snapshot?.stageToken ? `${window.location.origin}/stage/${snapshot.code}/${snapshot.stageToken}` : "";
   const stageLocale = snapshot?.stageLocale ?? locale;
@@ -83,6 +84,7 @@ export function WerewolfRoomHostScreen({
       const nextSnapshot = message.snapshot as WerewolfHostRoomSnapshot;
       setSnapshot(nextSnapshot);
       if (nextSnapshot.phase === "setup" || nextSnapshot.phase === "assignment") {
+        setupDraftRef.current = { roleCounts: nextSnapshot.roleCounts, options: nextSnapshot.options };
         setCounts(nextSnapshot.roleCounts);
         setOptions(nextSnapshot.options);
       }
@@ -159,17 +161,22 @@ export function WerewolfRoomHostScreen({
   const rulesOptions =
     (snapshot?.gameState as WerewolfState | null)?.options ?? (snapshot?.phase === "lobby" ? options : snapshot?.options ?? options);
   const updateCounts = (nextCounts: RoleCounts) => {
+    const roleCounts = autoFillVillagers(nextCounts, playerCount);
+    const draft = { roleCounts, options: setupDraftRef.current.options };
+    setupDraftRef.current = draft;
     setCounts(nextCounts);
     if (snapshot?.phase === "setup") {
-      hostCommand({ type: "updateSetup", roleCounts: autoFillVillagers(nextCounts, playerCount), options: { ...options, roleReveal: true } });
+      hostCommand({ type: "updateSetup", roleCounts: draft.roleCounts, options: draft.options });
     }
   };
   const updateOptions = (nextOptions: WerewolfOptions) => {
     const roomOptions = { ...nextOptions, roleReveal: true };
+    const draft = { roleCounts: setupDraftRef.current.roleCounts, options: roomOptions };
+    setupDraftRef.current = draft;
     setOptions(roomOptions);
     saveWerewolfHostOptionsPatch({ winMode: roomOptions.winMode, revealMode: roomOptions.revealMode });
     if (snapshot?.phase === "setup") {
-      hostCommand({ type: "updateSetup", roleCounts: visibleCounts, options: roomOptions });
+      hostCommand({ type: "updateSetup", roleCounts: draft.roleCounts, options: draft.options });
     }
   };
   const createStageLink = () => hostCommand({ type: "createStageLink", stageLocale });

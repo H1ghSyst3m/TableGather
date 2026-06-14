@@ -151,6 +151,12 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
     setManualAssign({});
     setRandomPreview(null);
   };
+  const resetAssignmentState = () => {
+    setCounts(autoFillVillagers(counts, players.length));
+    setAssignMode(null);
+    setManualAssign({});
+    setRandomPreview(null);
+  };
   const settingsActions = (
     <>
       <GameRulesButton options={state?.options ?? options} />
@@ -287,10 +293,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
             className="primary-action"
             type="button"
             onClick={() => {
-              setCounts(autoFillVillagers(counts, players.length));
-              setAssignMode(null);
-              setManualAssign({});
-              setRandomPreview(null);
+              resetAssignmentState();
               setSetupStep(2);
             }}
             disabled={!validation.valid}
@@ -302,10 +305,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
             className="primary-action"
             type="button"
             onClick={() => {
-              setCounts(autoFillVillagers(counts, players.length));
-              setAssignMode(null);
-              setManualAssign({});
-              setRandomPreview(null);
+              resetAssignmentState();
               setSetupStep(3);
             }}
             disabled={!validation.valid}

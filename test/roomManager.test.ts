@@ -145,6 +145,22 @@ describe("room manager", () => {
     expect(hostSnapshot.gameState).toBeTruthy();
   });
 
+  it("rejects invalid game settings before leaving the player lobby", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+
+    ["Alex", "Sam", "Jordan", "Taylor", "Morgan"].forEach((name, index) => manager.joinRoom(room.code, name, `player-${index}`));
+
+    expect(() =>
+      manager.applyHostCommand(room.code, hostToken, {
+        type: "beginSetup",
+        roleCounts: { werewolf: 6 },
+      }),
+    ).toThrow("Invalid role counts: sum");
+    expect(manager.getRoom(room.code)?.phase).toBe("lobby");
+    expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: true, phase: "lobby" });
+  });
+
   it("locks joins during game settings and reopens them in the player lobby", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
