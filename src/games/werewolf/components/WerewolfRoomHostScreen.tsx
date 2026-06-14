@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import { Ban, Copy, Dice5, Monitor, QrCode, RotateCcw, Shuffle, Users, X } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   autoFillVillagers,
@@ -13,7 +13,7 @@ import { roleDefinitions, roleOrder } from "../domain/roles";
 import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "../domain/types";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
-import { useRoomSocket } from "../../../online/useRoomSocket";
+import { useRoomSocket, type RoomSocketControls } from "../../../online/useRoomSocket";
 import type { HostCommand } from "../../../online/messages";
 import {
   getStoredHostRoomToken,
@@ -57,6 +57,20 @@ export function WerewolfRoomHostScreen({
   const stageLink = snapshot?.stageToken ? `${window.location.origin}/stage/${snapshot.code}/${snapshot.stageToken}` : "";
   const stageLocale = snapshot?.stageLocale ?? locale;
 
+  const openHostSession = useCallback(
+    (sendMessage: RoomSocketControls["send"]) => {
+      const storedToken = code ? getStoredHostRoomToken(code) : null;
+      if (code) {
+        if (storedToken) sendMessage({ type: "resumeRoom", roomCode: code, clientToken: storedToken });
+        else navigate(`/room/${code}`);
+        return;
+      }
+
+      sendMessage({ type: "createRoom", payload: { gameId } });
+    },
+    [code, gameId, navigate],
+  );
+
   const { connect, send, connected, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "connected" && message.role === "host") {
       setToken(message.clientToken);
@@ -91,24 +105,12 @@ export function WerewolfRoomHostScreen({
         navigate(`/room/${code}`);
       }
     }
-  });
+  }, { autoReconnect: true, onOpen: ({ send: sendMessage }) => openHostSession(sendMessage) });
 
   useEffect(() => {
     const socket = connect();
-    socket.addEventListener(
-      "open",
-      () => {
-        const storedToken = code ? getStoredHostRoomToken(code) : null;
-        if (code) {
-          if (storedToken) send({ type: "resumeRoom", roomCode: code, clientToken: storedToken });
-          else navigate(`/room/${code}`);
-          return;
-        }
-        send({ type: "createRoom", payload: { gameId } });
-      },
-      { once: true },
-    );
-  }, [code, connect, gameId, navigate, send]);
+    if (socket.readyState === WebSocket.OPEN) openHostSession(send);
+  }, [connect, openHostSession, send]);
 
   useEffect(() => {
     if (!joinLink) return;

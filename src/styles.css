@@ -75,7 +75,24 @@ svg {
 }
 
 .hub-screen {
+  height: 100dvh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
   padding-bottom: 0;
+}
+
+.hub-screen-body {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 1rem;
+}
+
+.hub-game-sections {
+  display: grid;
+  align-content: start;
 }
 
 .flow-screen {
@@ -1063,6 +1080,19 @@ svg {
   padding: 1rem;
 }
 
+.hub-action-footer {
+  border-top: 1px solid rgba(221, 216, 207, 0.78);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -10px 28px rgba(10, 28, 35, 0.07);
+  padding: 0.85rem 1rem max(0.85rem, env(safe-area-inset-bottom, 0px));
+}
+
+.hub-action-footer-content,
+.hub-action-footer-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .sticky-action p {
   margin: 0.65rem 0 0;
   color: var(--muted);
@@ -1801,6 +1831,40 @@ svg {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .hub-screen-body {
+    padding-bottom: 1.25rem;
+  }
+
+  .hub-action-footer {
+    margin-right: -2rem;
+    margin-left: -2rem;
+    padding-right: 2rem;
+    padding-left: 2rem;
+  }
+
+  .hub-action-footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hub-action-footer-actions {
+    display: flex;
+    justify-content: center;
+    width: min(100%, 36rem);
+  }
+
+  .hub-action-footer-actions .primary-action {
+    flex: 1 1 18rem;
+    width: auto;
+    min-width: 0;
+  }
+
+  .hub-action-footer-actions .secondary-button.full {
+    width: auto;
+    min-width: 12.5rem;
+  }
+
   .player-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1817,5 +1881,74 @@ svg {
 
   .game-surface h2 {
     font-size: 1.8rem;
+  }
+}
+
+@media (min-width: 760px) and (max-height: 760px) {
+  .hub-screen .header-bar {
+    padding-top: 0.7rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .hub-screen .segmented-tabs {
+    margin-top: 0.75rem;
+  }
+
+  .hub-screen .segmented-tab {
+    min-height: 2.85rem;
+  }
+
+  .hub-screen .section-block {
+    padding-top: 0.7rem;
+  }
+
+  .hub-screen .section-label {
+    margin-bottom: 0.45rem;
+  }
+
+  .hub-screen .current-game {
+    padding-bottom: 0.75rem;
+  }
+
+  .hub-screen .current-game-layout {
+    gap: 0.75rem;
+  }
+
+  .hub-screen .game-icon-large {
+    flex-basis: 4.75rem;
+    width: 4.75rem;
+    height: 4.75rem;
+    min-width: 4.75rem;
+    min-height: 4.75rem;
+  }
+
+  .hub-screen .game-facts {
+    margin-top: 0.6rem;
+  }
+
+  .hub-screen .game-row {
+    min-height: 4rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .hub-screen .mode-button {
+    min-height: 4.15rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .hub-screen-body {
+    padding-bottom: 0.8rem;
+  }
+
+  .hub-action-footer {
+    padding-top: 0.65rem;
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .hub-action-footer .primary-action,
+  .hub-action-footer .secondary-button {
+    min-height: 3.25rem;
   }
 }

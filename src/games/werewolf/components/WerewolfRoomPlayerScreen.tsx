@@ -1,10 +1,10 @@
 import { Eye, QrCode } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { roleDefinitions } from "../domain/roles";
 import type { RoleId } from "../domain/types";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
-import { useRoomSocket } from "../../../online/useRoomSocket";
+import { useRoomSocket, type RoomSocketControls } from "../../../online/useRoomSocket";
 import {
   getStoredPlayerRoomToken,
   removePlayerRoomSession,
@@ -38,6 +38,16 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
   const [staleInspectKey, setStaleInspectKey] = useState(0);
   const [roleCardOpen, setRoleCardOpen] = useState(false);
   const roomCode = normalizeRoomCode(roomCodeInput);
+
+  const inspectOrResumeRoom = useCallback(
+    (sendMessage: RoomSocketControls["send"]) => {
+      if (roomCode.length !== 4) return;
+      const storedToken = getStoredPlayerRoomToken(roomCode);
+      if (storedToken) sendMessage({ type: "resumeRoom", roomCode, clientToken: storedToken });
+      else sendMessage({ type: "inspectRoom", roomCode });
+    },
+    [roomCode],
+  );
 
   const { connect, send, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "roomStatus" && message.roomCode === pendingCode) {
@@ -88,7 +98,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
         }
       }
     }
-  });
+  }, { autoReconnect: true, onOpen: ({ send: sendMessage }) => inspectOrResumeRoom(sendMessage) });
 
   useEffect(() => {
     if (staleInspectKey === 0) return;
@@ -100,20 +110,8 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
     if (roomCode.length !== 4) return;
 
     const socket = connect();
-    const storedToken = getStoredPlayerRoomToken(roomCode);
-    const inspectOrResume = () => {
-      if (storedToken) send({ type: "resumeRoom", roomCode, clientToken: storedToken });
-      else send({ type: "inspectRoom", roomCode });
-    };
-
-    if (socket.readyState === WebSocket.OPEN) {
-      inspectOrResume();
-      return;
-    }
-
-    socket.addEventListener("open", inspectOrResume, { once: true });
-    return () => socket.removeEventListener("open", inspectOrResume);
-  }, [connect, roomCode, send]);
+    if (socket.readyState === WebSocket.OPEN) inspectOrResumeRoom(send);
+  }, [connect, inspectOrResumeRoom, roomCode, send]);
 
   const join = () => {
     const trimmedName = normalizePlayerName(name);

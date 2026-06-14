@@ -1,13 +1,13 @@
 import QRCode from "qrcode";
 import { Ban, Clock, HeartCrack, Moon, Skull, Sun, Target, Trophy, Users } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Locale } from "../../../types";
 import { I18nContext } from "../../../i18n/context";
 import { translate } from "../../../i18n/translations";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
-import { useRoomSocket } from "../../../online/useRoomSocket";
+import { useRoomSocket, type RoomSocketControls } from "../../../online/useRoomSocket";
 import { roleDefinitions } from "../domain/roles";
 import { formatDayTimer } from "../domain/timer";
 import type { RoleId, Winner } from "../domain/types";
@@ -24,7 +24,14 @@ export function WerewolfStageScreen({ code, token, navigate }: { code: string; t
   const [joinQr, setJoinQr] = useState<string | null>(null);
   const joinLink = `${window.location.origin}/room/${code}`;
 
-  const { connect, send, connected, error } = useRoomSocket((message: ServerMessage) => {
+  const joinStageSession = useCallback(
+    (sendMessage: RoomSocketControls["send"]) => {
+      sendMessage({ type: "joinStage", roomCode: code, stageToken: token });
+    },
+    [code, token],
+  );
+
+  const { connect, send, connected, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "connected" && message.role === "stage") {
       setServerError(null);
       if (window.location.pathname !== `/stage/${message.roomCode}/${token}`) navigate(`/stage/${message.roomCode}/${token}`);
@@ -35,22 +42,18 @@ export function WerewolfStageScreen({ code, token, navigate }: { code: string; t
     if (message.type === "roomClosed") {
       setSnapshot(null);
       setServerError(t("werewolf.stageClosed"));
+      socket.disconnect();
     }
-    if (message.type === "error") setServerError(message.message);
-  });
+    if (message.type === "error") {
+      setServerError(message.message);
+      if (message.message === "Stage link is not valid.") socket.disconnect();
+    }
+  }, { autoReconnect: true, onOpen: ({ send: sendMessage }) => joinStageSession(sendMessage) });
 
   useEffect(() => {
     const socket = connect();
-    const join = () => send({ type: "joinStage", roomCode: code, stageToken: token });
-
-    if (socket.readyState === WebSocket.OPEN) {
-      join();
-      return;
-    }
-
-    socket.addEventListener("open", join, { once: true });
-    return () => socket.removeEventListener("open", join);
-  }, [code, connect, send, token]);
+    if (socket.readyState === WebSocket.OPEN) joinStageSession(send);
+  }, [connect, joinStageSession, send]);
 
   useEffect(() => {
     QRCode.toDataURL(joinLink, { margin: 2, width: 360 }).then(setJoinQr).catch(() => setJoinQr(null));

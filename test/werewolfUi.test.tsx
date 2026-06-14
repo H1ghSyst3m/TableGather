@@ -800,9 +800,13 @@ describe("werewolf play surface", () => {
     const html = renderWithI18n(<HubScreen navigate={() => undefined} />);
 
     expect(html).toContain("--app-bg:rgba(255, 255, 255, 0.96)");
+    expect(html).toContain("hub-screen-body");
+    expect(html).toContain("hub-action-footer");
+    expect(html).toContain("hub-action-footer-actions");
     expect(html).toContain("game-icon game-icon-werewolf game-icon-large");
     expect(html).toContain("werewolf-mark.png");
     expect(html).toContain(translate("de", "hub.joinRoomByCode"));
+    expect(html).not.toContain("sticky-action");
     expect(html).not.toContain('class="current-game-logo"');
   });
 
@@ -812,6 +816,7 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "hub.sessionTitle"));
     expect(html).toContain(translate("de", "hub.sessionEmptyTitle"));
     expect(html).toContain(translate("de", "hub.sessionRefresh"));
+    expect(html).not.toContain("hub-action-footer");
     expect(html).not.toContain(translate("de", "hub.startGame", { game: translate("de", "games.werewolf") }));
   });
 

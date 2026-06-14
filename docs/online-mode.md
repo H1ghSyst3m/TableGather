@@ -117,6 +117,7 @@ Room sessions are token-based:
 - each active stage link has a stage token;
 - host and player browser clients store their tokens in `localStorage`;
 - reconnect uses `resumeRoom` with the stored token;
+- mounted host/player/stage clients automatically retry dropped WebSocket connections and resend their `resumeRoom` or `joinStage` handshake while the screen stays open;
 - disconnecting marks clients as disconnected but keeps the room/player while the server process lives.
 
 Browser storage keys are implementation details centralized in `src/online/roomSessionStorage.ts`, including:
