@@ -39,6 +39,13 @@ describe("i18n", () => {
     expect(translate("de", "missing.translation.key")).toBe("missing.translation.key");
   });
 
+  it("covers the three-step werewolf preparation labels", () => {
+    expect(translate("en", "werewolf.playerLobbyTitle")).toBe("Player Lobby");
+    expect(translate("de", "werewolf.gameSettingsTitle")).toBe("Spieleinstellungen");
+    expect(translate("en", "hub.sessionPhaseSetup")).toBe("Game settings");
+    expect(translate("de", "werewolf.roomLocked")).toBe("Der Raum wird vorbereitet.");
+  });
+
   it("keeps German locale keys aligned with English", () => {
     expect(translationKeys(translations.de)).toEqual(translationKeys(translations.en));
     expect(translationKeys(commonDe)).toEqual(translationKeys(commonEn));

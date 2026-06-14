@@ -2,6 +2,10 @@ import type { NightStepId, RoleCounts, RoleId, WerewolfDayTimerDurationSeconds, 
 import type { WerewolfRoomAssignMode } from "./roomTypes";
 
 export type WerewolfHostCommand =
+  | { type: "beginSetup"; roleCounts?: RoleCounts; options?: WerewolfOptions }
+  | { type: "updateSetup"; roleCounts: RoleCounts; options?: WerewolfOptions }
+  | { type: "returnToPlayerLobby" }
+  | { type: "returnToGameSettings" }
   | { type: "prepareAssignment"; roleCounts: RoleCounts; options?: WerewolfOptions }
   | { type: "setAssignMode"; assignMode: WerewolfRoomAssignMode }
   | { type: "shuffleRoles" }
@@ -35,6 +39,10 @@ export type WerewolfHostCommand =
 export type WerewolfPlayerCommand = { type: "markRoleSeen" };
 
 export const werewolfHostCommandTypes = [
+  "beginSetup",
+  "updateSetup",
+  "returnToPlayerLobby",
+  "returnToGameSettings",
   "prepareAssignment",
   "setAssignMode",
   "shuffleRoles",

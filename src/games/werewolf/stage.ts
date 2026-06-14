@@ -40,6 +40,7 @@ function stageScene(
   activeEvent: WerewolfPublicEvent | null,
 ): WerewolfStageScene {
   if (room.phase === "lobby") return "lobby";
+  if (room.phase === "setup") return "setup";
   if (room.phase === "assignment") return "assignment";
   if (room.phase === "roleReveal") return "roleReveal";
   if (!gameState) return "lobby";

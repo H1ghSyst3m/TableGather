@@ -46,6 +46,7 @@ export interface WerewolfPlayerRoomSnapshot extends PlayerRoomSnapshot {
 
 export type WerewolfStageScene =
   | "lobby"
+  | "setup"
   | "assignment"
   | "roleReveal"
   | "night"

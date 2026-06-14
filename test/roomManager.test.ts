@@ -145,6 +145,51 @@ describe("room manager", () => {
     expect(hostSnapshot.gameState).toBeTruthy();
   });
 
+  it("locks joins during game settings and reopens them in the player lobby", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+
+    ["Alex", "Sam", "Jordan", "Taylor", "Morgan"].forEach((name, index) => manager.joinRoom(room.code, name, `player-${index}`));
+
+    manager.applyHostCommand(room.code, hostToken, {
+      type: "beginSetup",
+      roleCounts: { werewolf: 1, villager: 4 },
+      options: { winMode: "standard", revealMode: "team", roleReveal: true },
+    });
+
+    const setupRoom = asWerewolfRoom(manager.getRoom(room.code));
+    expect(setupRoom.phase).toBe("setup");
+    expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: false, phase: "setup" });
+    expect(() => manager.joinRoom(room.code, "Late", "late-player")).toThrow("The room is already in game.");
+
+    manager.applyHostCommand(room.code, hostToken, {
+      type: "updateSetup",
+      roleCounts: { werewolf: 1, seer: 1, villager: 3 },
+      options: { winMode: "extended", revealMode: "hidden", roleReveal: false },
+    });
+    expect(werewolfHostSnapshot(manager, setupRoom)).toMatchObject({
+      roleCounts: { werewolf: 1, seer: 1, villager: 3 },
+      options: { winMode: "extended", revealMode: "hidden", roleReveal: true },
+    });
+
+    manager.applyHostCommand(room.code, hostToken, { type: "returnToPlayerLobby" });
+    expect(manager.getRoom(room.code)?.phase).toBe("lobby");
+    expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: true, phase: "lobby" });
+    expect(manager.joinRoom(room.code, "Late", "late-player").player.name).toBe("Late");
+
+    manager.applyHostCommand(room.code, hostToken, { type: "beginSetup", roleCounts: { werewolf: 1, seer: 1, villager: 4 } });
+    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment", roleCounts: { werewolf: 1, seer: 1, villager: 4 } });
+    manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "random" });
+    expect(asWerewolfRoom(manager.getRoom(room.code)).assignment).toHaveLength(6);
+
+    manager.applyHostCommand(room.code, hostToken, { type: "returnToGameSettings" });
+    const returnedRoom = asWerewolfRoom(manager.getRoom(room.code));
+    expect(returnedRoom.phase).toBe("setup");
+    expect(returnedRoom.assignment).toEqual([]);
+    expect(werewolfHostSnapshot(manager, returnedRoom).assignMode).toBeNull();
+    expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: false, phase: "setup" });
+  });
+
   it("creates, rotates, and disables stage links", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
@@ -927,11 +972,11 @@ describe("room manager", () => {
     now += 1_000;
     const summary = manager.adminRoomsSummary();
 
-    expect(summary.totals).toEqual({ total: 5, active: 3, running: 3, waiting: 1, inactive: 2, ended: 1 });
-    expect(summary.byGame.werewolf).toEqual({ total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 });
+    expect(summary.totals).toEqual({ total: 5, active: 3, running: 1, waiting: 3, inactive: 2, ended: 1 });
+    expect(summary.byGame.werewolf).toEqual({ total: 3, active: 2, running: 0, waiting: 3, inactive: 1, ended: 0 });
     expect(summary.byGame.imposter).toEqual({ total: 1, active: 0, running: 1, waiting: 0, inactive: 1, ended: 0 });
     expect(summary.byGame.undercover).toEqual({ total: 1, active: 1, running: 0, waiting: 0, inactive: 0, ended: 1 });
-    expect(summary.byPhase).toMatchObject({ lobby: 1, playing: 1, roleReveal: 2, assignment: 0, ended: 1 });
+    expect(summary.byPhase).toMatchObject({ lobby: 1, setup: 0, playing: 1, roleReveal: 2, assignment: 0, ended: 1 });
     expect(summary.rooms.every((room) => room.active === !room.inactive)).toBe(true);
 
     expect(summary.rooms.find((room) => room.code === lobby.code)).toMatchObject({
@@ -947,11 +992,11 @@ describe("room manager", () => {
       hostConnected: true,
     });
     expect(summary.rooms.find((room) => room.code === running.code)).toMatchObject({
-      started: true,
+      started: false,
       active: true,
-      running: true,
-      waiting: false,
-      progressStatus: "running",
+      running: false,
+      waiting: true,
+      progressStatus: "waiting",
       inactive: false,
       inactiveReasons: [],
       hostConnected: true,
@@ -967,11 +1012,11 @@ describe("room manager", () => {
       hostConnected: true,
     });
     expect(summary.rooms.find((room) => room.code === offline.code)).toMatchObject({
-      started: true,
+      started: false,
       active: false,
-      running: true,
-      waiting: false,
-      progressStatus: "running",
+      running: false,
+      waiting: true,
+      progressStatus: "waiting",
       inactive: true,
       inactiveReasons: ["hostOffline"],
       hostConnected: false,

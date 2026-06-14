@@ -14,7 +14,7 @@ export interface RoomPlayerPublic {
   alive?: boolean;
 }
 
-export type RoomPhase = "lobby" | "assignment" | "roleReveal" | "playing" | "ended";
+export type RoomPhase = "lobby" | "setup" | "assignment" | "roleReveal" | "playing" | "ended";
 export type RoomAudience = "host" | "player" | "stage";
 
 export interface RoomAssignmentEntry<TRoleId extends string = string> {

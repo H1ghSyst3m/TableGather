@@ -4,7 +4,7 @@ import type { RoomServerInfo } from "./protocol";
 export const ADMIN_INACTIVE_ACTIVITY_MS = 30 * 60 * 1000;
 
 export const adminGameIds = ["werewolf", "imposter", "undercover"] as const satisfies readonly GameId[];
-export const adminRoomPhases = ["lobby", "assignment", "roleReveal", "playing", "ended"] as const satisfies readonly RoomPhase[];
+export const adminRoomPhases = ["lobby", "setup", "assignment", "roleReveal", "playing", "ended"] as const satisfies readonly RoomPhase[];
 
 export type AdminInactiveReason = "hostOffline" | "staleActivity";
 export type AdminProgressStatus = "running" | "waiting" | "ended";
