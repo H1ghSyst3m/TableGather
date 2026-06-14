@@ -56,19 +56,6 @@ export function useRoomSocket(
     }
     if (socketRef.current === socket) socketRef.current = null;
 
-    if (socket.readyState === WebSocket.CONNECTING) {
-      socket.addEventListener(
-        "open",
-        () => {
-          if (socketRef.current === socket) socketRef.current = null;
-          socket.close();
-        },
-        { once: true },
-      );
-      setConnected(false);
-      return;
-    }
-
     socket.close();
     setConnected(false);
   }, [clearReconnectTimer]);
