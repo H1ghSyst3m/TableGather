@@ -2,7 +2,7 @@ import { Clock, HeartCrack, LockKeyhole, Moon, Pause, Play, RotateCcw, ScrollTex
 import type { ReactNode } from "react";
 import { Children, Fragment, isValidElement, useState } from "react";
 import { effectiveRoleId as getEffectiveRoleId, playerTeamInState } from "../domain/alignment";
-import { activePublicEvent, canAlphaWolfTransformTarget, canWitchHealWolfTarget } from "../domain/engine";
+import { activePublicEvent, canAlphaWolfTransformTarget, canDoctorHealWolfTarget, canWitchHealWolfTarget } from "../domain/engine";
 import { roleDefinitions } from "../domain/roles";
 import { dayTimerDurations, dayTimerRemainingSeconds, ensureDayTimer, formatDayTimer } from "../domain/timer";
 import { getNightStepActors, getValidTargets, isNightStepActive } from "../domain/targets";
@@ -27,6 +27,7 @@ interface WerewolfActions {
   revealNightResult: (step: "seer" | "auraSeer" | "detective") => void;
   setWolfTarget: (playerId: string | null) => void;
   setAlphaWolfTransform: (value: boolean | null) => void;
+  setDoctorHealTonight: (value: boolean) => void;
   setWitchHealTonight: (value: boolean) => void;
   setWitchPoisonTarget: (playerId: string | null) => void;
   advanceNightStep: () => void;
@@ -317,6 +318,7 @@ function NightSurface({ state, actions, renderShell }: { state: WerewolfState; a
           />
         </>
       )}
+      {stepActive && currentStep === "doctor" && <DoctorPanel state={state} actions={actions} />}
       {stepActive && currentStep === "witch" && <WitchPanel state={state} actions={actions} />}
       {stepActive && currentStep === "toughGuyInfo" && <GmOnlyInfo text={t("werewolf.toughGuyInfoText", { name: namesForIds(state, [state.toughGuyWoundedTonightId ?? ""]) || t("roles.toughGuy.name") })} />}
     </section>
@@ -926,6 +928,42 @@ function AlphaWolfPanel({ state, onChange }: { state: WerewolfState; onChange: (
   );
 }
 
+function DoctorPanel({ state, actions }: { state: WerewolfState; actions: WerewolfActions }) {
+  const { t } = useI18n();
+  const victim = state.wolfTargetId ? (state.players ?? []).find((player) => player.id === state.wolfTargetId) : null;
+  const canHealVictim = canDoctorHealWolfTarget(state);
+
+  return (
+    <div className="night-action-stack doctor-panel">
+      <div className="panel-heading">
+        <h3>{t("werewolf.doctorTreatment")}</h3>
+      </div>
+      {!state.doctorHealUsed && victim && canHealVictim && (
+        <div className="night-action-block doctor-heal-action">
+          <div className="night-action-heading">
+            <ActionIconChip icon="heal" />
+            <div>
+              <strong>{t("werewolf.doctorTreatment")}</strong>
+              <span>{t("werewolf.wolfVictimAttacked", { name: victim.name })}</span>
+            </div>
+          </div>
+          <button
+            className={`night-action-button ${state.doctorHealTonight ? "selected" : ""}`}
+            type="button"
+            onClick={() => actions.setDoctorHealTonight(!state.doctorHealTonight)}
+          >
+            {state.doctorHealTonight ? t("werewolf.doctorHealUsed") : t("werewolf.healAction")}
+          </button>
+        </div>
+      )}
+      {!state.doctorHealUsed && victim && !canHealVictim && (
+        <ActionNotice icon="protect" title={t("werewolf.doctorTreatment")} text={t("werewolf.doctorNoHealTarget")} />
+      )}
+      {state.doctorHealUsed && <ActionNotice icon="heal" title={t("werewolf.doctorTreatment")} text={t("werewolf.doctorHealAlreadyUsed")} />}
+    </div>
+  );
+}
+
 function WitchPanel({ state, actions }: { state: WerewolfState; actions: WerewolfActions }) {
   const { t } = useI18n();
   const poisonTargets = getValidTargets(state, "witchPoison");
@@ -1435,6 +1473,7 @@ function logGroupTitle(group: GameLogGroupView, t: ReturnType<typeof useI18n>["t
   if (group.kind === "seer") return t("roles.seer.name");
   if (group.kind === "auraSeer") return t("roles.auraSeer.name");
   if (group.kind === "detective") return t("roles.detective.name");
+  if (group.kind === "doctor") return t("roles.doctor.name");
   if (group.kind === "witch") return t("roles.witch.name");
   if (group.kind === "toughGuyInfo") return t("log.groupToughGuyInfo");
   return nightStepText(group.kind, t);
@@ -1497,6 +1536,8 @@ function roleActionTitle(entry: WerewolfLogEntry, t: ReturnType<typeof useI18n>[
   if (entry.result === "witchHealed") return t("log.titleWitchHealed");
   if (entry.result === "witchPoisoned") return t("log.titleWitchPoisoned");
   if (entry.result === "witchNoPotion") return t("log.titleWitchNoPotion");
+  if (entry.result === "doctorHealed") return t("log.titleDoctorHealed");
+  if (entry.result === "doctorNoHeal") return t("log.titleDoctorNoHeal");
   return t("log.titleRoleAction");
 }
 
@@ -1568,6 +1609,7 @@ function nightStepDescriptionText(step: NightStepId, t: ReturnType<typeof useI18
     seer: "werewolf.stepSeerDescription",
     auraSeer: "werewolf.stepAuraSeerDescription",
     detective: "werewolf.stepDetectiveDescription",
+    doctor: "werewolf.stepDoctorDescription",
     witch: "werewolf.stepWitchDescription",
     toughGuyInfo: "werewolf.stepToughGuyInfoDescription",
     dawn: "werewolf.stepDawnDescription",
@@ -1590,6 +1632,7 @@ function nightStepText(step: NightStepId, t: ReturnType<typeof useI18n>["t"]) {
     seer: "werewolf.stepSeer",
     auraSeer: "werewolf.stepAuraSeer",
     detective: "werewolf.stepDetective",
+    doctor: "werewolf.stepDoctor",
     witch: "werewolf.stepWitch",
     toughGuyInfo: "werewolf.stepToughGuyInfo",
     dawn: "werewolf.stepDawn",
@@ -1649,6 +1692,8 @@ function roleActionLogText(entry: WerewolfLogEntry, state: WerewolfState, t: Ret
   if (entry.result === "witchHealed") return t("log.roleActionWitchHealed", { actor, target });
   if (entry.result === "witchPoisoned") return t("log.roleActionWitchPoisoned", { actor, target });
   if (entry.result === "witchNoPotion") return t("log.roleActionWitchNoPotion", { actor });
+  if (entry.result === "doctorHealed") return t("log.roleActionDoctorHealed", { actor, target });
+  if (entry.result === "doctorNoHeal") return t("log.roleActionDoctorNoHeal", { actor });
 
   return t("log.roleAction", { actor, targets: target });
 }

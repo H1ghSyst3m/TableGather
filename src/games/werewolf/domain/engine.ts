@@ -103,6 +103,7 @@ export function buildNightSteps(players: WerewolfPlayer[], round = 1): NightStep
   if (presentRoles.has("seer")) steps.push("seer");
   if (presentRoles.has("auraSeer")) steps.push("auraSeer");
   if (presentRoles.has("detective")) steps.push("detective");
+  if (presentRoles.has("doctor")) steps.push("doctor");
   if (presentRoles.has("witch")) steps.push("witch");
   return [...steps, "dawn"];
 }
@@ -148,12 +149,12 @@ export function advanceRoleReveal(state: WerewolfState): WerewolfState {
 
 export function setProtectedPlayer(state: WerewolfState, playerId: string | null): WerewolfState {
   if (!isValidTarget(state, "protector", playerId)) return state;
-  return withValidWitchPoisonTarget({ ...state, protectedPlayerId: playerId });
+  return withValidNightChoices({ ...state, protectedPlayerId: playerId });
 }
 
 export function setNightGuestHost(state: WerewolfState, playerId: string | null): WerewolfState {
   if (!isValidTarget(state, "nightGuest", playerId)) return state;
-  return withValidWitchPoisonTarget({ ...state, nightGuestHostId: playerId });
+  return withValidNightChoices({ ...state, nightGuestHostId: playerId });
 }
 
 export function setWildChildModel(state: WerewolfState, playerId: string | null): WerewolfState {
@@ -193,17 +194,22 @@ export function setDetectiveTargets(state: WerewolfState, playerIds: string[]): 
 
 export function setWolfTarget(state: WerewolfState, playerId: string | null): WerewolfState {
   if (!isValidTarget(state, "wolves", playerId)) return state;
-  return withValidWitchPoisonTarget({ ...state, wolfTargetId: playerId, alphaWolfTransform: null, witchHealTonight: false });
+  return withValidNightChoices({ ...state, wolfTargetId: playerId, alphaWolfTransform: null, doctorHealTonight: false, witchHealTonight: false });
 }
 
 export function setAlphaWolfTransform(state: WerewolfState, value: boolean | null): WerewolfState {
   if (value && !canAlphaWolfTransformTarget(state)) return state;
-  return withValidWitchPoisonTarget({ ...state, alphaWolfTransform: value });
+  return withValidNightChoices({ ...state, alphaWolfTransform: value });
+}
+
+export function setDoctorHealTonight(state: WerewolfState, value: boolean): WerewolfState {
+  if (value && !canDoctorHealWolfTarget(state)) return state;
+  return withValidNightChoices({ ...state, doctorHealTonight: value });
 }
 
 export function setWitchHealTonight(state: WerewolfState, value: boolean): WerewolfState {
   if (value && !canWitchHealWolfTarget(state)) return state;
-  return { ...state, witchHealTonight: value };
+  return withValidNightChoices({ ...state, witchHealTonight: value });
 }
 
 export function setWitchPoisonTarget(state: WerewolfState, playerId: string | null): WerewolfState {
@@ -267,10 +273,20 @@ export function advanceNightStep(state: WerewolfState): WerewolfState {
   };
 }
 
+export function canDoctorHealWolfTarget(state: WerewolfState): boolean {
+  if (state.doctorHealUsed) return false;
+  return canHealWolfTarget(state);
+}
+
 export function canWitchHealWolfTarget(state: WerewolfState): boolean {
+  if (state.witchHealUsed) return false;
+  if (doctorHealApplies(state)) return false;
+  return canHealWolfTarget(state);
+}
+
+function canHealWolfTarget(state: WerewolfState): boolean {
   const wolfTarget = getWolfTarget(state);
   if (!wolfTarget || state.wolvesSkipNextNight) return false;
-  if (state.witchHealUsed) return false;
   if (!wolfAttackReachesTarget(state)) return false;
   if (state.cursedConvertedTonightId === wolfTarget.id || wolfTarget.roleId === "cursed") return false;
   if (alphaWolfTransformPreventsWolfKill(state)) return false;
@@ -299,7 +315,10 @@ export function resolveNight(state: WerewolfState): WerewolfState {
   let toughGuyWoundedId = state.toughGuyWoundedId;
   let toughGuyWoundedTonightId: string | null = null;
   let mainWolfKillId: string | null = null;
-  const witchHealApplies = state.witchHealTonight && canWitchHealWolfTarget(state);
+  const doctorHealUsed = state.doctorHealUsed;
+  const doctorHealAppliesTonight = doctorHealApplies(state);
+  const witchHealApplies = witchHealAppliesTonight(state);
+  const wolfHealApplies = doctorHealAppliesTonight || witchHealApplies;
   const delayedToughGuyDeathId =
     toughGuyWoundedId && toughGuyWoundedId !== state.toughGuyWoundedTonightId ? toughGuyWoundedId : null;
 
@@ -336,7 +355,7 @@ export function resolveNight(state: WerewolfState): WerewolfState {
       mainVictimDies = false;
     } else if (wolfTarget.roleId === "toughGuy" && state.toughGuyWoundedTonightId === wolfTarget.id) {
       mainVictimDies = false;
-    } else if (wolfTarget.roleId === "toughGuy" && toughGuyWoundedId !== wolfTarget.id && !witchHealApplies) {
+    } else if (wolfTarget.roleId === "toughGuy" && toughGuyWoundedId !== wolfTarget.id && !wolfHealApplies) {
       toughGuyWoundedId = wolfTarget.id;
       toughGuyWoundedTonightId = wolfTarget.id;
       mainVictimDies = false;
@@ -344,7 +363,7 @@ export function resolveNight(state: WerewolfState): WerewolfState {
 
     if (mainVictimDies) {
       deaths.add(wolfTarget.id);
-      if (!witchHealApplies) mainWolfKillId = wolfTarget.id;
+      if (!wolfHealApplies) mainWolfKillId = wolfTarget.id;
     }
     if (collateralNightGuest) deaths.add(collateralNightGuest.id);
   }
@@ -354,7 +373,7 @@ export function resolveNight(state: WerewolfState): WerewolfState {
       ? state.witchPoisonTargetId
       : null;
 
-  if (witchHealApplies && wolfTargetId && wolfTargetId !== delayedToughGuyDeathId) deaths.delete(wolfTargetId);
+  if (wolfHealApplies && wolfTargetId && wolfTargetId !== delayedToughGuyDeathId) deaths.delete(wolfTargetId);
   if (witchPoisonTargetId) deaths.add(witchPoisonTargetId);
 
   const finalDeathIds = new Set([...deaths].filter((id) => players.some((player) => player.id === id && player.alive)));
@@ -372,9 +391,10 @@ export function resolveNight(state: WerewolfState): WerewolfState {
   const pendingHunterIds = findNewlyDeadRoleIds(beforeResolution, players, "hunter");
   const pendingHunterId = pendingHunterIds[0] ?? null;
   const winner = pendingHunterId
-      ? null
-      : checkWin(players, {
+    ? null
+    : checkWin(players, {
         winMode: state.options.winMode,
+        doctorHealUsed: doctorHealUsed || doctorHealAppliesTonight,
         witchHealUsed: state.witchHealUsed || witchHealApplies,
         witchPoisonUsed: state.witchPoisonUsed || Boolean(witchPoisonTargetId),
       });
@@ -461,6 +481,8 @@ export function resolveNight(state: WerewolfState): WerewolfState {
     cursedConvertedTonightId: null,
     alphaWolfTransform: null,
     alphaWolfUsed,
+    doctorHealUsed: doctorHealUsed || doctorHealAppliesTonight,
+    doctorHealTonight: false,
     witchHealUsed: state.witchHealUsed || witchHealApplies,
     witchPoisonUsed: state.witchPoisonUsed || Boolean(witchPoisonTargetId),
     witchHealTonight: false,
@@ -555,6 +577,7 @@ export function eliminateByVote(state: WerewolfState, playerId: string): Werewol
     ? null
     : checkWin(players, {
         winMode: state.options.winMode,
+        doctorHealUsed: state.doctorHealUsed,
         witchHealUsed: state.witchHealUsed,
         witchPoisonUsed: state.witchPoisonUsed,
       });
@@ -640,6 +663,7 @@ export function resolveHunterShot(state: WerewolfState, targetId: string | null)
     ? null
     : checkWin(players, {
         winMode: state.options.winMode,
+        doctorHealUsed: state.doctorHealUsed,
         witchHealUsed: state.witchHealUsed,
         witchPoisonUsed: state.witchPoisonUsed,
       });
@@ -778,7 +802,7 @@ export function resetSeenRoles(state: WerewolfState): WerewolfState {
 
 export function checkWin(
   players: WerewolfPlayer[],
-  options: { winMode?: "standard" | "extended"; witchHealUsed?: boolean; witchPoisonUsed?: boolean } = {},
+  options: { winMode?: "standard" | "extended"; doctorHealUsed?: boolean; witchHealUsed?: boolean; witchPoisonUsed?: boolean } = {},
 ): Winner | null {
   const alivePlayers = players.filter((player) => player.alive);
   const loverPair = alivePlayers.filter((player) => player.loverId);
@@ -799,9 +823,11 @@ export function checkWin(
     if (options.winMode === "extended") {
       const villagePlayers = alivePlayers.filter((player) => playerTeam(player) !== "werewolves");
       const hunterAlive = villagePlayers.some((player) => player.roleId === "hunter");
+      const doctorAlive = villagePlayers.some((player) => player.roleId === "doctor");
       const witchAlive = villagePlayers.some((player) => player.roleId === "witch");
+      const doctorHasHeal = doctorAlive && !options.doctorHealUsed;
       const witchHasPotion = witchAlive && (!options.witchHealUsed || !options.witchPoisonUsed);
-      if (hunterAlive || witchHasPotion) return null;
+      if (hunterAlive || doctorHasHeal || witchHasPotion) return null;
     }
     return "werewolves";
   }
@@ -839,6 +865,8 @@ function createWerewolfState(players: WerewolfPlayer[], options: WerewolfOptions
     cursedConvertedTonightId: null,
     alphaWolfTransform: null,
     alphaWolfUsed: false,
+    doctorHealUsed: false,
+    doctorHealTonight: false,
     witchHealUsed: false,
     witchPoisonUsed: false,
     witchHealTonight: false,
@@ -967,6 +995,17 @@ function withValidWitchPoisonTarget(state: WerewolfState): WerewolfState {
   return { ...state, witchPoisonTargetId: null };
 }
 
+function withValidNightChoices(state: WerewolfState): WerewolfState {
+  let nextState = withValidWitchPoisonTarget(state);
+  if (nextState.doctorHealTonight && !canDoctorHealWolfTarget(nextState)) {
+    nextState = { ...nextState, doctorHealTonight: false };
+  }
+  if (nextState.witchHealTonight && !canWitchHealWolfTarget(nextState)) {
+    nextState = { ...nextState, witchHealTonight: false };
+  }
+  return nextState;
+}
+
 function advanceFromAlphaWolf(state: WerewolfState): WerewolfState {
   const wolfTarget = getWolfTarget(state);
   if (!wolfTarget || wolfTarget.alphaWolfInfected) return state;
@@ -1019,8 +1058,16 @@ function getToughGuyWoundedByWolfAttack(state: WerewolfState) {
   if (state.toughGuyWoundedId === wolfTarget.id) return null;
   if (!wolfAttackReachesTarget(state)) return null;
   if (alphaWolfTransformPreventsWolfKill(state)) return null;
-  if (state.witchHealTonight && canWitchHealWolfTarget(state)) return null;
+  if (doctorHealApplies(state) || witchHealAppliesTonight(state)) return null;
   return wolfTarget;
+}
+
+function doctorHealApplies(state: WerewolfState) {
+  return Boolean(state.doctorHealTonight && canDoctorHealWolfTarget(state));
+}
+
+function witchHealAppliesTonight(state: WerewolfState) {
+  return Boolean(state.witchHealTonight && canWitchHealWolfTarget(state));
 }
 
 function alphaWolfTransformPreventsWolfKill(state: WerewolfState) {
@@ -1192,6 +1239,10 @@ function createNightStepLogs(state: WerewolfState, stepId: NightStepId): Werewol
       }),
     ];
   }
+  if (stepId === "doctor") {
+    const healTarget = doctorHealApplies(state) ? getWolfTarget(state) : null;
+    return healTarget ? [roleAction("doctorHealed", [healTarget.id])] : [roleAction("doctorNoHeal", [])];
+  }
   if (stepId === "witch") {
     const logs: WerewolfLogEntry[] = [];
     const healTarget = state.witchHealTonight && canWitchHealWolfTarget(state) ? getWolfTarget(state) : null;
@@ -1219,6 +1270,7 @@ function actorRoleForStep(stepId: NightStepId): RoleId | undefined {
     seer: "seer",
     auraSeer: "auraSeer",
     detective: "detective",
+    doctor: "doctor",
     witch: "witch",
   };
   return rolesByStep[stepId];

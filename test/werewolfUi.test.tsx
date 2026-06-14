@@ -34,6 +34,7 @@ const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   revealNightResult: () => undefined,
   setWolfTarget: () => undefined,
   setAlphaWolfTransform: () => undefined,
+  setDoctorHealTonight: () => undefined,
   setWitchHealTonight: () => undefined,
   setWitchPoisonTarget: () => undefined,
   advanceNightStep: () => undefined,
@@ -249,6 +250,31 @@ describe("werewolf play surface", () => {
     expect(html).toContain("witch-heal-action");
     expect(html).toContain("witch-poison-action");
     expect(html).toContain("werewolf-action-icon");
+    expect(html).not.toContain("witch-potion-card");
+  });
+
+  it("renders the doctor heal action as a single flat icon action block", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doktor", roleId: "doctor" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state = {
+      ...game,
+      nightStepIndex: game.nightSteps.indexOf("doctor"),
+      wolfTargetId: "one",
+    };
+    const html = renderGame(state);
+
+    expect(html).toContain("doctor-heal-action");
+    expect(html).toContain("werewolf-action-icon");
+    expect(html).toContain(translate("de", "werewolf.doctorTreatment"));
+    expect(html).not.toContain("witch-poison-action");
     expect(html).not.toContain("witch-potion-card");
   });
 
@@ -746,6 +772,32 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "werewolf.minPlayers"));
     expect(html).not.toContain(translate("de", "werewolf.addSamplePlayers"));
     expect(html).not.toContain(translate("de", "werewolf.nextRoles"));
+  });
+
+  it("restores old local doctor games without doctor state fields", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doktor", roleId: "doctor" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const savedGame: Partial<WerewolfState> = {
+      ...game,
+      nightStepIndex: game.nightSteps.indexOf("doctor"),
+      wolfTargetId: "one",
+    };
+    delete savedGame.doctorHealUsed;
+    delete savedGame.doctorHealTonight;
+
+    const html = renderWithStorage(<LocalWerewolfApp navigate={() => undefined} />, JSON.stringify(savedGame));
+
+    expect(html).toContain("doctor-heal-action");
+    expect(html).toContain(translate("de", "werewolf.doctorTreatment"));
+    expect(html).toContain(translate("de", "werewolf.healAction"));
   });
 
   it("renders only the selected general game rules", () => {
@@ -1678,12 +1730,12 @@ function activeStageHtml(html: string) {
   return rail > start ? html.slice(start, rail) : html.slice(start);
 }
 
-function renderWithStorage(node: ReactNode) {
+function renderWithStorage(node: ReactNode, initialValue: string | null = null) {
   const previousStorage = globalThis.localStorage;
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: {
-      getItem: () => null,
+      getItem: () => initialValue,
       removeItem: () => undefined,
       setItem: () => undefined,
     },

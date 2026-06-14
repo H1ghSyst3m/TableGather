@@ -28,7 +28,7 @@ Use these files before changing role behavior:
 | Area | TableGather rule |
 | --- | --- |
 | Commit point | Night selections are reversible until the GM advances or resolves the step. Day-vote elimination uses selected player plus footer action. No-vote and Hunter skip use confirmation dialogs. |
-| Wolf attack pipeline | Protector and away Night Guest are checked before Cursed, Alpha Wolf, Tough Guy, Infected, and Night Guest collateral. |
+| Wolf attack pipeline | Protector and away Night Guest are checked before Cursed, Alpha Wolf, Tough Guy, Infected, Doctor/Witch heal, and Night Guest collateral. |
 | Direct effects | Witch poison, day vote, Hunter shot, lover death, and special wins are not blocked by Protector or Night Guest. |
 | Infected trigger | Wolves skip only when the Infected is the main wolf target and actually dies from that wolf attack. |
 | Tough Guy wound | A wound is created only by an unprotected, unhealed, non-infecting wolf hit and is cleared if the Tough Guy dies by any other cause. |
@@ -47,9 +47,10 @@ Use these files before changing role behavior:
 
 | Role | Timing | Targets and exclusions | Commit and interactions | Visibility |
 | --- | --- | --- | --- | --- |
-| Werewolf | Every night while any wolf-aligned player exists. Weakened wolves still get a rhythm step with no victim. | Any living non-wolf effective team player. Alpha Wolf infected players are treated as wolf-aligned. | Main wolf attack drives Protector, Night Guest, Cursed, Alpha Wolf, Tough Guy, Infected, Witch heal, and Night Guest collateral interactions. | GM sees wolf actors and chosen victim. Player clients do not see target state. |
+| Werewolf | Every night while any wolf-aligned player exists. Weakened wolves still get a rhythm step with no victim. | Any living non-wolf effective team player. Alpha Wolf infected players are treated as wolf-aligned. | Main wolf attack drives Protector, Night Guest, Cursed, Alpha Wolf, Tough Guy, Infected, Doctor heal, Witch heal, and Night Guest collateral interactions. | GM sees wolf actors and chosen victim. Player clients do not see target state. |
 | Villager | No night action. | None. | Can die from normal public/direct causes. Auto-filled villagers cover unused role slots. | Role card, reveal summary, and GM overview where exact roles are visible. |
 | Seer | Night step if Seer was in the game; inactive rhythm step if dead. | One living other player. | Result reveal is explicit. Shows current effective role plus hidden Alpha Wolf alignment status where applicable. | GM sees result in footer result card. Player clients do not see target/result. |
+| Doctor | Night step while alive and the heal has not been used. Acts directly before Witch. | Heal only the main wolf victim when that victim would normally die from the wolf attack. | Heal choice is reversible during the Doctor step and spent on night resolution. It prevents Tough Guy wounds and Infected wolf-skip by keeping the target alive. If Doctor heals, Witch cannot spend heal on the same attack. | GM sees heal state and target. Players do not. |
 | Witch | Night step while alive and at least one potion remains. | Heal only a truly healable wolf victim. Poison any other living player, including protected or away wolf targets where no wolf death occurs. | Heal/poison choices are reversible during Witch step and spent on night resolution. Poison is a direct effect. | GM sees potion state and targets. Players do not. |
 | Hunter | No night step. Triggers on death from any cause. | One living player other than the dead Hunter, or pass. | Trigger queue resolves Hunter and lover-chain Hunters sequentially before win checks. Skip is confirmation-protected. | GM gets Hunter shot surface. Players do not see hidden queue data. |
 | Cupid | First night only when present. | Any two living players; Cupid may include themself. | Lovers are committed when two targets are selected and the step advances. Lover death chains from all death causes. | GM overview shows lover status. Player snapshots do not expose pair details. |
@@ -62,9 +63,9 @@ Use these files before changing role behavior:
 | Protector | Night step if present; inactive rhythm step if dead. | One living other player, not same target as previous night. | Blocks only the wolf attack before Cursed, Alpha Wolf, Tough Guy, Infected, and Night Guest collateral. | GM sees current and previous protection state. |
 | Wild Child | First night only when present. | One living other player. | Converts to Werewolf only after the chosen model is newly dead at a handled resolution point. | GM/player exact-role views show Werewolf with former Wild Child after conversion. |
 | Cursed | No active night action; secret info step after successful conversion. | None. | Direct unprotected wolf attack converts instead of killing. Non-wolf causes kill normally. | GM gets secret info step. Player private role card updates. |
-| Infected | No active night action. | None. | Wolves skip next night only if Infected is main wolf target and dies from that main wolf attack. | Skip is GM-only state. Player snapshots do not expose it. |
+| Infected | No active night action. | None. | Wolves skip next night only if Infected is main wolf target and dies from that main wolf attack. Doctor/Witch heal prevents the skip because the Infected survives. | Skip is GM-only state. Player snapshots do not expose it. |
 | Little Girl | No app-handled night step. | Table-only. | Table handles peeking/risk physically. TableGather does not automate kills or checks. | Documented in role rules only. |
-| Tough Guy | No active target step; GM info step after real wound. | None. | A wolf hit wounds instead of killing unless blocked, healed, or replaced by Alpha infection. Old wound death resolves later and cannot be healed by later protection/heal. | GM sees wound notification. Player snapshots do not expose wound state. |
+| Tough Guy | No active target step; GM info step after real wound. | None. | A wolf hit wounds instead of killing unless blocked, healed by Doctor/Witch, or replaced by Alpha infection. Old wound death resolves later and cannot be healed by later protection/heal. | GM sees wound notification. Player snapshots do not expose wound state. |
 
 ## UI Behavior Notes
 

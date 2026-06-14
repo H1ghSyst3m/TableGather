@@ -5,6 +5,7 @@ import {
   advanceRoleReveal,
   buildNightSteps,
   canAlphaWolfTransformTarget,
+  canDoctorHealWolfTarget,
   canWitchHealWolfTarget,
   checkWin,
   createWerewolfGame,
@@ -20,6 +21,7 @@ import {
   setAlphaWolfTransform,
   setAuraTarget,
   setDetectiveTargets,
+  setDoctorHealTonight,
   setDayTimerDuration,
   setInspectedPlayer,
   setNightGuestHost,
@@ -140,6 +142,21 @@ describe("werewolf domain", () => {
       "seer",
       "dawn",
     ]);
+  });
+
+  it("places the doctor directly before the witch in night order", () => {
+    const steps = buildNightSteps([
+      player("wolf", "werewolf"),
+      player("alpha", "alphaWolf"),
+      player("seer", "seer"),
+      player("aura", "auraSeer"),
+      player("detective", "detective"),
+      player("doctor", "doctor"),
+      player("witch", "witch"),
+      player("villager", "villager"),
+    ]);
+
+    expect(steps).toEqual(["sleep", "wolves", "alphaWolf", "seer", "auraSeer", "detective", "doctor", "witch", "dawn"]);
   });
 
   it("filters invalid self targets and defends engine commands", () => {
@@ -333,6 +350,174 @@ describe("werewolf domain", () => {
     expect(game.toughGuyWoundedId).toBeNull();
     expect(game.witchHealUsed).toBe(true);
     expect(game.players.find((item) => item.id === "tough")?.alive).toBe(true);
+  });
+
+  it("lets the doctor heal the main wolf victim once and blocks witch double-heal", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "witch", name: "Witch", roleId: "witch" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "villager", name: "Villager", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    game = setWolfTarget(game, "target");
+    expect(canDoctorHealWolfTarget(game)).toBe(true);
+    game = setDoctorHealTonight(game, true);
+
+    expect(game.doctorHealTonight).toBe(true);
+    expect(canWitchHealWolfTarget(game)).toBe(false);
+    expect(setWitchHealTonight(game, true).witchHealTonight).toBe(false);
+
+    game = { ...game, nightStepIndex: game.nightSteps.indexOf("doctor") };
+    game = advanceNightStep(game);
+    expect(game.log.at(-1)).toMatchObject({ type: "roleAction", stepId: "doctor", result: "doctorHealed", targetIds: ["target"] });
+
+    game = resolveNight(game);
+    expect(game.lastNightDeaths).toEqual([]);
+    expect(game.players.find((item) => item.id === "target")?.alive).toBe(true);
+    expect(game.doctorHealUsed).toBe(true);
+    expect(game.doctorHealTonight).toBe(false);
+    expect(game.witchHealUsed).toBe(false);
+
+    const nextAttempt = setWolfTarget({ ...game, nightResolved: false }, "villager");
+    expect(canDoctorHealWolfTarget(nextAttempt)).toBe(false);
+    expect(setDoctorHealTonight(nextAttempt, true).doctorHealTonight).toBe(false);
+  });
+
+  it("doctor heal prevents tough guy wounds and infected wolf-skip", () => {
+    let toughGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "tough", name: "Tough", roleId: "toughGuy" },
+        { id: "villager-1", name: "Villager 1", roleId: "villager" },
+        { id: "villager-2", name: "Villager 2", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    toughGame = setWolfTarget(toughGame, "tough");
+    toughGame = setDoctorHealTonight(toughGame, true);
+    toughGame = { ...toughGame, nightStepIndex: toughGame.nightSteps.indexOf("doctor") };
+    toughGame = advanceNightStep(toughGame);
+
+    expect(toughGame.nightSteps).not.toContain("toughGuyInfo");
+
+    toughGame = resolveNight(toughGame);
+    expect(toughGame.lastNightDeaths).toEqual([]);
+    expect(toughGame.toughGuyWoundedId).toBeNull();
+    expect(toughGame.players.find((item) => item.id === "tough")?.alive).toBe(true);
+
+    let infectedGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "infected", name: "Infected", roleId: "infected" },
+        { id: "villager-1", name: "Villager 1", roleId: "villager" },
+        { id: "villager-2", name: "Villager 2", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    infectedGame = setWolfTarget(infectedGame, "infected");
+    infectedGame = setDoctorHealTonight(infectedGame, true);
+    infectedGame = resolveNight(infectedGame);
+
+    expect(infectedGame.lastNightDeaths).toEqual([]);
+    expect(infectedGame.players.find((item) => item.id === "infected")?.alive).toBe(true);
+    expect(infectedGame.wolvesSkipNextNight).toBe(false);
+  });
+
+  it("only lets the doctor heal a normal unblocked wolf kill", () => {
+    let protectedGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "protector", name: "Protector", roleId: "protector" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "villager", name: "Villager", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    protectedGame = setProtectedPlayer(protectedGame, "target");
+    protectedGame = setWolfTarget(protectedGame, "target");
+    expect(canDoctorHealWolfTarget(protectedGame)).toBe(false);
+    expect(setDoctorHealTonight(protectedGame, true).doctorHealTonight).toBe(false);
+
+    let cursedGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "cursed", name: "Cursed", roleId: "cursed" },
+        { id: "villager-1", name: "Villager 1", roleId: "villager" },
+        { id: "villager-2", name: "Villager 2", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    cursedGame = setWolfTarget(cursedGame, "cursed");
+    expect(canDoctorHealWolfTarget(cursedGame)).toBe(false);
+    cursedGame = { ...cursedGame, nightStepIndex: cursedGame.nightSteps.indexOf("wolves") };
+    cursedGame = advanceNightStep(cursedGame);
+    expect(cursedGame.cursedConvertedTonightId).toBe("cursed");
+    expect(canDoctorHealWolfTarget(cursedGame)).toBe(false);
+
+    let alphaGame = createWerewolfGameFromAssignments(
+      [
+        { id: "alpha", name: "Alpha", roleId: "alphaWolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "villager-1", name: "Villager 1", roleId: "villager" },
+        { id: "villager-2", name: "Villager 2", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    alphaGame = setWolfTarget(alphaGame, "target");
+    alphaGame = setAlphaWolfTransform(alphaGame, true);
+    expect(canDoctorHealWolfTarget(alphaGame)).toBe(false);
+    expect(setDoctorHealTonight(alphaGame, true).doctorHealTonight).toBe(false);
+
+    let awayGuestGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "guest", name: "Guest", roleId: "nightGuest" },
+        { id: "host", name: "Host", roleId: "villager" },
+        { id: "villager", name: "Villager", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    awayGuestGame = setNightGuestHost(awayGuestGame, "host");
+    awayGuestGame = setWolfTarget(awayGuestGame, "guest");
+    expect(canDoctorHealWolfTarget(awayGuestGame)).toBe(false);
+    expect(setDoctorHealTonight(awayGuestGame, true).doctorHealTonight).toBe(false);
+  });
+
+  it("doctor heal does not prevent night guest collateral deaths", () => {
+    let game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "guest", name: "Guest", roleId: "nightGuest" },
+        { id: "host", name: "Host", roleId: "villager" },
+        { id: "villager", name: "Villager", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+
+    game = setNightGuestHost(game, "host");
+    game = setWolfTarget(game, "host");
+    expect(canDoctorHealWolfTarget(game)).toBe(true);
+    game = setDoctorHealTonight(game, true);
+    game = resolveNight(game);
+
+    expect(game.lastNightDeaths).toEqual(["guest"]);
+    expect(game.players.find((item) => item.id === "host")?.alive).toBe(true);
+    expect(game.players.find((item) => item.id === "guest")?.alive).toBe(false);
+    expect(game.doctorHealUsed).toBe(true);
   });
 
   it("converts the cursed only when the wolf attack really reaches them", () => {
@@ -1076,6 +1261,8 @@ describe("werewolf domain", () => {
         witchPoisonUsed: false,
       }),
     ).toBeNull();
+    expect(checkWin([player("wolf", "werewolf"), player("doctor", "doctor")], { winMode: "extended", doctorHealUsed: false })).toBeNull();
+    expect(checkWin([player("wolf", "werewolf"), player("doctor", "doctor")], { winMode: "extended", doctorHealUsed: true })).toBe("werewolves");
     expect(
       checkWin([player("wolf", "werewolf"), player("witch", "witch")], {
         winMode: "extended",

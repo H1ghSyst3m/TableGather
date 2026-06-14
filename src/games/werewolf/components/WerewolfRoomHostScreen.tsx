@@ -377,6 +377,7 @@ export function WerewolfRoomHostScreen({
             revealNightResult: (step) => hostCommand({ type: "revealNightResult", step }),
             setWolfTarget: (playerId) => hostCommand({ type: "setWolfTarget", playerId }),
             setAlphaWolfTransform: (value) => hostCommand({ type: "setAlphaWolfTransform", value }),
+            setDoctorHealTonight: (value) => hostCommand({ type: "setDoctorHealTonight", value }),
             setWitchHealTonight: (value) => hostCommand({ type: "setWitchHealTonight", value }),
             setWitchPoisonTarget: (playerId) => hostCommand({ type: "setWitchPoisonTarget", playerId }),
             advanceNightStep: () => hostCommand({ type: "advanceNightStep" }),
