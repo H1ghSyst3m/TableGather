@@ -60,7 +60,53 @@ export const werewolfRoomAdapter = {
     const command = rawCommand as WerewolfHostCommand;
 
     switch (command.type) {
+      case "beginSetup": {
+        if (room.phase !== "lobby") throw new Error("Room is not in the player lobby.");
+        const roleCounts = normalizeRoomRoleCounts(room.players.length, command.roleCounts ?? readSetup(room).roleCounts);
+        const validation = validateRoleCounts(room.players.length, roleCounts);
+        if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
+
+        const options = { ...(command.options ?? readSetup(room).options), roleReveal: true };
+
+        writeSetup(room, roleCounts, options, null);
+        room.assignment = [];
+        room.gameState = null;
+        room.undoState = null;
+        room.phase = "setup";
+        break;
+      }
+      case "updateSetup": {
+        requireSetupPhase(room);
+        const roleCounts = normalizeRoomRoleCounts(room.players.length, command.roleCounts);
+        const validation = validateRoleCounts(room.players.length, roleCounts);
+        if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
+
+        writeSetup(room, roleCounts, { ...(command.options ?? readSetup(room).options), roleReveal: true }, null);
+        room.assignment = [];
+        room.gameState = null;
+        room.undoState = null;
+        break;
+      }
+      case "returnToPlayerLobby": {
+        requireSetupPhase(room);
+        writeAssignMode(room, null);
+        room.assignment = [];
+        room.gameState = null;
+        room.undoState = null;
+        room.phase = "lobby";
+        break;
+      }
+      case "returnToGameSettings": {
+        requireAssignmentPhase(room);
+        writeAssignMode(room, null);
+        room.assignment = [];
+        room.gameState = null;
+        room.undoState = null;
+        room.phase = "setup";
+        break;
+      }
       case "prepareAssignment": {
+        if (room.phase !== "setup" && room.phase !== "lobby") throw new Error("Room is not in setup.");
         const roleCounts = normalizeRoomRoleCounts(room.players.length, command.roleCounts);
         const validation = validateRoleCounts(room.players.length, roleCounts);
         if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
@@ -324,6 +370,10 @@ function writeAssignMode(room: GameRoomRuntime, assignMode: WerewolfSetupState["
 
 function requireAssignmentPhase(room: GameRoomRuntime) {
   if (room.phase !== "assignment") throw new Error("Room is not in assignment.");
+}
+
+function requireSetupPhase(room: GameRoomRuntime) {
+  if (room.phase !== "setup") throw new Error("Room is not in setup.");
 }
 
 function createRandomAssignment(room: GameRoomRuntime): WerewolfRoomAssignmentEntry[] {

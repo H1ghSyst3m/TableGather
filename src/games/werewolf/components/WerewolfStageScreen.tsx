@@ -186,8 +186,10 @@ function LanguageToggle({ locale, onLocaleChange }: { locale: Locale; onLocaleCh
 function StageBody({ snapshot, joinQr }: { snapshot: WerewolfStageRoomSnapshot; joinQr: string | null }) {
   switch (snapshot.scene) {
     case "lobby":
-    case "assignment":
       return <LobbyStage snapshot={snapshot} joinQr={joinQr} />;
+    case "setup":
+    case "assignment":
+      return <PreparationStage snapshot={snapshot} />;
     case "roleReveal":
       return <RoleRevealStage snapshot={snapshot} />;
     case "night":
@@ -218,6 +220,20 @@ function LobbyStage({ snapshot, joinQr }: { snapshot: WerewolfStageRoomSnapshot;
       <div className="werewolf-stage-qr">
         {joinQr && <img src={joinQr} alt={t("werewolf.joinLink")} />}
         <span>{t("werewolf.joinRoom")}</span>
+      </div>
+      <PlayerWall snapshot={snapshot} />
+    </section>
+  );
+}
+
+function PreparationStage({ snapshot }: { snapshot: WerewolfStageRoomSnapshot }) {
+  const { t } = useI18n();
+  return (
+    <section className="werewolf-stage-grid single">
+      <div className="werewolf-stage-hero">
+        <StageSymbol icon={<Users />} />
+        <p>{t("werewolf.stageSetupHint")}</p>
+        <h2>{t("werewolf.roomCode")}: {snapshot.code}</h2>
       </div>
       <PlayerWall snapshot={snapshot} />
     </section>

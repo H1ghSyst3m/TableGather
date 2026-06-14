@@ -53,7 +53,7 @@ import { loadWerewolfHostOptions, saveWerewolfHostOptions } from "../hostOptions
 
 const STORAGE_KEY = "tablegather-werewolf-local";
 
-type SetupStep = 1 | 2;
+type SetupStep = 1 | 2 | 3;
 type AssignMode = "random" | "manual" | null;
 
 interface SetupPlayer {
@@ -151,6 +151,12 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
     setManualAssign({});
     setRandomPreview(null);
   };
+  const resetAssignmentState = () => {
+    setCounts(autoFillVillagers(counts, players.length));
+    setAssignMode(null);
+    setManualAssign({});
+    setRandomPreview(null);
+  };
   const settingsActions = (
     <>
       <GameRulesButton options={state?.options ?? options} />
@@ -175,13 +181,18 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
     />
   ) : null;
   const setupBack = () => {
-    if (setupStep === 2) {
+    if (setupStep === 3) {
       if (assignMode) {
         setAssignMode(null);
         setRandomPreview(null);
         setManualAssign({});
         return;
       }
+      setSetupStep(2);
+      return;
+    }
+
+    if (setupStep === 2) {
       setSetupStep(1);
       return;
     }
@@ -267,7 +278,13 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
 
   return (
     <WerewolfFlowShell
-      title={setupStep === 1 ? t("werewolf.setupTitle") : t("werewolf.setupAssignmentTitle")}
+      title={
+        setupStep === 1
+          ? t("werewolf.playerLobbyTitle")
+          : setupStep === 2
+            ? t("werewolf.gameSettingsTitle")
+            : t("werewolf.setupAssignmentTitle")
+      }
       onBack={setupBack}
       settingsActions={settingsActions}
       footer={
@@ -276,11 +293,20 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
             className="primary-action"
             type="button"
             onClick={() => {
-              setCounts(autoFillVillagers(counts, players.length));
-              setAssignMode(null);
-              setManualAssign({});
-              setRandomPreview(null);
+              resetAssignmentState();
               setSetupStep(2);
+            }}
+            disabled={!validation.valid}
+          >
+            {players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextRoles")}
+          </button>
+        ) : setupStep === 2 ? (
+          <button
+            className="primary-action"
+            type="button"
+            onClick={() => {
+              resetAssignmentState();
+              setSetupStep(3);
             }}
             disabled={!validation.valid}
           >
@@ -323,8 +349,8 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
         >
           <section className="setup-hero">
             <p className="section-label">{t("hub.passAndPlay")}</p>
-            <h2>{t("werewolf.setupTitle")}</h2>
-            <p>{t("werewolf.setupSubtitle")}</p>
+            <h2>{t("werewolf.playerLobbyTitle")}</h2>
+            <p>{t("werewolf.playerLobbySubtitle")}</p>
           </section>
 
           <section className="panel">
@@ -371,13 +397,26 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
             </div>
           </section>
 
-          <RoleCountEditor playerCount={players.length} counts={displayCounts} onChange={setCounts} options={options} onOptionsChange={updateOptions} />
         </SetupShell>
       )}
 
       {setupStep === 2 && (
         <SetupShell
           step={2}
+        >
+          <section className="setup-hero">
+            <p className="section-label">{t("werewolf.setupTitle")}</p>
+            <h2>{t("werewolf.gameSettingsTitle")}</h2>
+            <p>{t("werewolf.gameSettingsSubtitle")}</p>
+          </section>
+
+          <RoleCountEditor playerCount={players.length} counts={displayCounts} onChange={setCounts} options={options} onOptionsChange={updateOptions} />
+        </SetupShell>
+      )}
+
+      {setupStep === 3 && (
+        <SetupShell
+          step={3}
         >
           {!assignMode && (
             <section className="assignment-choice">
@@ -459,7 +498,7 @@ function SetupShell({
   return (
     <section className="setup-shell">
       <div className="setup-shell-progress">
-        <span>{step} / 2</span>
+        <span>{step} / 3</span>
       </div>
       <div className="setup-shell-content">{children}</div>
     </section>

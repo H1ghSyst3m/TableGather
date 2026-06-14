@@ -23,6 +23,7 @@ export const hubEn = {
     "sessionExpiresIn": "{hours}h left",
     "sessionExpiresSoon": "Less than 1h left",
     "sessionPhaseLobby": "Lobby",
+    "sessionPhaseSetup": "Game settings",
     "sessionPhaseAssignment": "Role assignment",
     "sessionPhaseRoleReveal": "Role reveal",
     "sessionPhasePlaying": "Playing",

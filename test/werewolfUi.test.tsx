@@ -736,12 +736,13 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "werewolf.confirmNoVoteNightTitle"));
   });
 
-  it("renders Pass-and-Play player list and role setup on one setup screen", () => {
+  it("renders Pass-and-Play player lobby before role setup and assignment", () => {
     const html = renderWithStorage(<LocalWerewolfApp navigate={() => undefined} />);
 
+    expect(html).toContain(translate("de", "werewolf.playerLobbyTitle"));
     expect(html).toContain(translate("de", "werewolf.playerList"));
-    expect(html).toContain(translate("de", "werewolf.roleSetup"));
-    expect(html).toContain("1 / 2");
+    expect(html).not.toContain(translate("de", "werewolf.roleSetup"));
+    expect(html).toContain("1 / 3");
     expect(html).toContain(translate("de", "werewolf.minPlayers"));
     expect(html).not.toContain(translate("de", "werewolf.addSamplePlayers"));
     expect(html).not.toContain(translate("de", "werewolf.nextRoles"));
@@ -857,6 +858,16 @@ describe("werewolf play surface", () => {
             lastActivityAt: Date.now() - 1_000,
             expiresAt: Date.now() + 2 * 60 * 60 * 1000,
           },
+          {
+            roomCode: "SETU",
+            role: "host",
+            gameId: "werewolf",
+            phase: "setup",
+            playerCount: 5,
+            createdAt: Date.now(),
+            lastActivityAt: Date.now() - 2_000,
+            expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+          },
         ]}
         error={null}
         loading={false}
@@ -868,9 +879,12 @@ describe("werewolf play surface", () => {
     expect(html).toContain("session-room-card");
     expect(html).toContain("ABCD");
     expect(html).toContain("WXYZ");
+    expect(html).toContain("SETU");
     expect(html).toContain(translate("de", "hub.sessionRoleHost"));
     expect(html).toContain(translate("de", "hub.sessionRolePlayer"));
     expect(html).toContain(translate("de", "hub.sessionPhasePlaying"));
+    expect(html).toContain(translate("de", "hub.sessionPhaseLobby"));
+    expect(html).toContain(translate("de", "hub.sessionPhaseSetup"));
     expect(html).toContain(translate("de", "hub.sessionPlayerName", { name: "Alex" }));
   });
 
@@ -901,20 +915,20 @@ describe("werewolf play surface", () => {
     const runningHtml = renderAdminDashboard(summary, "all", "running");
     const activeRunningHtml = renderAdminDashboard(summary, "active", "running");
     const inactiveRunningHtml = renderAdminDashboard(summary, "inactive", "running");
-    const activeLobbyHtml = renderAdminDashboard(summary, "active", "waiting");
+    const activeWaitingHtml = renderAdminDashboard(summary, "active", "waiting");
 
-    expect(runningHtml).toContain("ABCD");
+    expect(runningHtml).not.toContain("ABCD");
     expect(runningHtml).toContain("WXYZ");
     expect(runningHtml).not.toContain("LOBB");
-    expect(activeRunningHtml).toContain("ABCD");
+    expect(activeRunningHtml).not.toContain("ABCD");
     expect(activeRunningHtml).not.toContain("WXYZ");
     expect(activeRunningHtml).not.toContain("LOBB");
     expect(inactiveRunningHtml).toContain("WXYZ");
     expect(inactiveRunningHtml).not.toContain("ABCD");
     expect(inactiveRunningHtml).not.toContain("LOBB");
-    expect(activeLobbyHtml).toContain("LOBB");
-    expect(activeLobbyHtml).not.toContain("ABCD");
-    expect(activeLobbyHtml).not.toContain("WXYZ");
+    expect(activeWaitingHtml).toContain("ABCD");
+    expect(activeWaitingHtml).toContain("LOBB");
+    expect(activeWaitingHtml).not.toContain("WXYZ");
   });
 
   it("renders admin token, error, and empty states", () => {
@@ -951,6 +965,7 @@ describe("werewolf play surface", () => {
     expect(emptyHtml).toContain(translate("de", "admin.emptyDescription"));
     expect(emptyHtml).toContain("Werwolf<strong>0</strong>");
     expect(emptyHtml).toContain("Lobby<strong>0</strong>");
+    expect(emptyHtml).toContain(`${translate("de", "hub.sessionPhaseSetup")}<strong>0</strong>`);
   });
 
   it("stores trimmed admin token submissions and rejects empty values", () => {
@@ -1089,6 +1104,18 @@ describe("werewolf stage", () => {
     expect(lobby).toContain("ABCD");
     expect(countOccurrences(lobby, translate("de", "werewolf.stageMode"))).toBe(1);
     expect(lobby).not.toContain(`<h1>${translate("de", "werewolf.stageMode")}</h1>`);
+
+    const setup = renderStage({ scene: "setup", phase: "setup", round: null, events: [] });
+    expect(setup).toContain(`<h1>${translate("de", "werewolf.stagePreparation")}</h1>`);
+    expect(setup).toContain(translate("de", "werewolf.stageSetupHint"));
+    expect(setup).toContain(`${translate("de", "werewolf.roomCode")}: ABCD`);
+    expect(setup).not.toContain(translate("de", "werewolf.stageLobbyHint"));
+    expect(setup).not.toContain(translate("de", "werewolf.joinRoom"));
+
+    const assignment = renderStage({ scene: "assignment", phase: "assignment", round: null, events: [] });
+    expect(assignment).toContain(translate("de", "werewolf.stageSetupHint"));
+    expect(assignment).not.toContain(translate("de", "werewolf.stageLobbyHint"));
+    expect(assignment).not.toContain(translate("de", "werewolf.joinRoom"));
 
     const roleReveal = renderStage({ scene: "roleReveal", phase: "roleReveal", round: null, events: [] });
     expect(roleReveal).toContain(`<h1>${translate("de", "werewolf.roleReveal")}</h1>`);
@@ -1444,14 +1471,15 @@ function createAdminSummary(): AdminRoomsSummary {
   return {
     serverTime,
     inactiveActivityMs: 30 * 60 * 1000,
-    totals: { total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 },
+    totals: { total: 3, active: 2, running: 1, waiting: 2, inactive: 1, ended: 0 },
     byGame: {
-      werewolf: { total: 3, active: 2, running: 2, waiting: 1, inactive: 1, ended: 0 },
+      werewolf: { total: 3, active: 2, running: 1, waiting: 2, inactive: 1, ended: 0 },
       imposter: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 },
       undercover: { total: 0, active: 0, running: 0, waiting: 0, inactive: 0, ended: 0 },
     },
     byPhase: {
       lobby: 1,
+      setup: 0,
       assignment: 0,
       roleReveal: 1,
       playing: 1,
@@ -1468,11 +1496,11 @@ function createAdminSummary(): AdminRoomsSummary {
         createdAt: serverTime - 20 * 60 * 1000,
         lastActivityAt: serverTime - 2 * 60 * 1000,
         expiresAt: serverTime + 47 * 60 * 60 * 1000,
-        started: true,
+        started: false,
         active: true,
-        running: true,
-        waiting: false,
-        progressStatus: "running",
+        running: false,
+        waiting: true,
+        progressStatus: "waiting",
         inactive: false,
         inactiveReasons: [],
       },
@@ -1529,6 +1557,7 @@ function createEmptyAdminSummary(): AdminRoomsSummary {
     },
     byPhase: {
       lobby: 0,
+      setup: 0,
       assignment: 0,
       roleReveal: 0,
       playing: 0,

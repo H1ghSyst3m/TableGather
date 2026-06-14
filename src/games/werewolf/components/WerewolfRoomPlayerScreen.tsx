@@ -20,7 +20,7 @@ import { RoleRevealScreen } from "./RoleRevealScreen";
 import { GameRulesButton } from "./RoleRulesModal";
 import { WerewolfFlowShell } from "./WerewolfFlowShell";
 
-type JoinRoomStatus = "idle" | "checking" | "joinable" | "notFound" | "started";
+type JoinRoomStatus = "idle" | "checking" | "joinable" | "locked" | "notFound" | "started";
 
 const werewolfAssets = resolveGameTheme({ theme: werewolfTheme }).assets;
 
@@ -52,7 +52,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
   const { connect, send, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "roomStatus" && message.roomCode === pendingCode) {
       setRoomPlayerCount(message.playerCount ?? null);
-      setRoomStatus(!message.exists ? "notFound" : message.joinable ? "joinable" : "started");
+      setRoomStatus(!message.exists ? "notFound" : message.joinable ? "joinable" : isPreparationPhase(message.phase) ? "locked" : "started");
       setServerError(null);
     }
     if (message.type === "connected" && message.role === "player") {
@@ -262,7 +262,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
 
   return (
     <WerewolfFlowShell
-      title={snapshot.phase === "lobby" || snapshot.phase === "assignment" ? t("werewolf.roomWaiting") : t("werewolf.privateRole")}
+      title={isPreparationPhase(snapshot.phase) ? t("werewolf.roomWaiting") : t("werewolf.privateRole")}
       onBack={() => navigate("/")}
       settingsActions={settingsActions}
       footer={
@@ -329,8 +329,13 @@ function normalizeRoomCode(value: string) {
 function roomStatusText(status: JoinRoomStatus, playerCount: number | null, t: ReturnType<typeof useI18n>["t"]) {
   if (status === "checking") return t("werewolf.roomChecking");
   if (status === "notFound") return t("errors.roomNotFoundClosed");
+  if (status === "locked") return t("werewolf.roomLocked");
   if (status === "started") return t("errors.roomAlreadyStarted");
   return playerCount === null ? t("werewolf.roomJoinable") : t("werewolf.roomJoinableWithCount", { count: playerCount });
+}
+
+function isPreparationPhase(phase: WerewolfPlayerRoomSnapshot["phase"] | undefined) {
+  return phase === "lobby" || phase === "setup" || phase === "assignment" || phase === "roleReveal";
 }
 
 function translateRoomServerError(message: string, t: ReturnType<typeof useI18n>["t"]) {

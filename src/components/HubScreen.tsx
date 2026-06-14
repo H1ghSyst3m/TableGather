@@ -433,6 +433,8 @@ function roomPhaseLabel(phase: RoomPhase, t: ReturnType<typeof useI18n>["t"]) {
   switch (phase) {
     case "lobby":
       return t("hub.sessionPhaseLobby");
+    case "setup":
+      return t("hub.sessionPhaseSetup");
     case "assignment":
       return t("hub.sessionPhaseAssignment");
     case "roleReveal":

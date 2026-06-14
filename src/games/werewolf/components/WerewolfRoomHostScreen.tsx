@@ -53,6 +53,7 @@ export function WerewolfRoomHostScreen({
   const [closeOpen, setCloseOpen] = useState(false);
   const [counts, setCounts] = useState<RoleCounts>(() => createDefaultRoleCounts(5));
   const [options, setOptions] = useState<WerewolfOptions>(() => ({ ...loadWerewolfHostOptions(), roleReveal: true }));
+  const setupDraftRef = useRef<{ roleCounts: RoleCounts; options: WerewolfOptions }>({ roleCounts: counts, options });
   const joinLink = snapshot ? `${window.location.origin}/room/${snapshot.code}` : "";
   const stageLink = snapshot?.stageToken ? `${window.location.origin}/stage/${snapshot.code}/${snapshot.stageToken}` : "";
   const stageLocale = snapshot?.stageLocale ?? locale;
@@ -80,7 +81,13 @@ export function WerewolfRoomHostScreen({
       if (window.location.pathname !== `/room/${message.roomCode}`) replaceRoute(`/room/${message.roomCode}`);
     }
     if (message.type === "snapshot" && (message.snapshot as WerewolfHostRoomSnapshot).audience === "host") {
-      setSnapshot(message.snapshot as WerewolfHostRoomSnapshot);
+      const nextSnapshot = message.snapshot as WerewolfHostRoomSnapshot;
+      setSnapshot(nextSnapshot);
+      if (nextSnapshot.phase === "lobby" || nextSnapshot.phase === "setup" || nextSnapshot.phase === "assignment") {
+        setupDraftRef.current = { roleCounts: nextSnapshot.roleCounts, options: nextSnapshot.options };
+        setCounts(nextSnapshot.roleCounts);
+        setOptions(nextSnapshot.options);
+      }
     }
     if (message.type === "hostTransferred") {
       removeHostRoomSession(message.roomCode);
@@ -153,10 +160,24 @@ export function WerewolfRoomHostScreen({
   };
   const rulesOptions =
     (snapshot?.gameState as WerewolfState | null)?.options ?? (snapshot?.phase === "lobby" ? options : snapshot?.options ?? options);
+  const updateCounts = (nextCounts: RoleCounts) => {
+    const roleCounts = autoFillVillagers(nextCounts, playerCount);
+    const draft = { roleCounts, options: setupDraftRef.current.options };
+    setupDraftRef.current = draft;
+    setCounts(nextCounts);
+    if (snapshot?.phase === "setup") {
+      hostCommand({ type: "updateSetup", roleCounts: draft.roleCounts, options: draft.options });
+    }
+  };
   const updateOptions = (nextOptions: WerewolfOptions) => {
     const roomOptions = { ...nextOptions, roleReveal: true };
+    const draft = { roleCounts: setupDraftRef.current.roleCounts, options: roomOptions };
+    setupDraftRef.current = draft;
     setOptions(roomOptions);
     saveWerewolfHostOptionsPatch({ winMode: roomOptions.winMode, revealMode: roomOptions.revealMode });
+    if (snapshot?.phase === "setup") {
+      hostCommand({ type: "updateSetup", roleCounts: draft.roleCounts, options: draft.options });
+    }
   };
   const createStageLink = () => hostCommand({ type: "createStageLink", stageLocale });
   const setStageLocale = (nextLocale: Locale) => hostCommand({ type: "setStageLocale", stageLocale: nextLocale });
@@ -164,7 +185,7 @@ export function WerewolfRoomHostScreen({
     <HostSettingsActions
       options={rulesOptions}
       stageLink={stageLink}
-      showAbort={Boolean(snapshot && snapshot.phase !== "lobby")}
+      showAbort={Boolean(snapshot && (snapshot.phase === "roleReveal" || snapshot.phase === "playing" || snapshot.phase === "ended"))}
       showClose={Boolean(snapshot)}
       onAbort={() => setAbortOpen(true)}
       onCloseRoom={() => setCloseOpen(true)}
@@ -260,11 +281,55 @@ export function WerewolfRoomHostScreen({
     ) : null;
 
     return (
-      <WerewolfFlowShell title={t("werewolf.setupAssignmentTitle")} onBack={() => navigate("/")} settingsActions={settingsActions} footer={assignmentFooter}>
+      <WerewolfFlowShell
+        title={t("werewolf.setupAssignmentTitle")}
+        onBack={() => hostCommand({ type: "returnToGameSettings" })}
+        settingsActions={settingsActions}
+        footer={assignmentFooter}
+      >
         <RoomAssignmentPanel
           snapshot={snapshot}
           onSetAssignMode={(assignMode) => hostCommand({ type: "setAssignMode", assignMode })}
           onManualAssignment={(assignment) => hostCommand({ type: "setManualAssignment", assignment })}
+        />
+        {confirmDialogs}
+      </WerewolfFlowShell>
+    );
+  }
+
+  if (snapshot.phase === "setup") {
+    return (
+      <WerewolfFlowShell
+        title={t("werewolf.gameSettingsTitle")}
+        onBack={() => hostCommand({ type: "returnToPlayerLobby" })}
+        settingsActions={settingsActions}
+        footer={
+          <>
+            <button
+              className="primary-action"
+              type="button"
+              disabled={!validation.valid}
+              onClick={() => hostCommand({ type: "prepareAssignment", roleCounts: visibleCounts, options: { ...options, roleReveal: true } })}
+            >
+              {snapshot.players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextAssignment")}
+            </button>
+            {serverError && <p className="error-text">{serverError}</p>}
+          </>
+        }
+      >
+        <section className="setup-hero">
+          <p className="section-label">{t("werewolf.setupTitle")}</p>
+          <h2>{t("werewolf.gameSettingsTitle")}</h2>
+          <p>{t("werewolf.gameSettingsSubtitle")}</p>
+        </section>
+
+        <RoleCountEditor
+          playerCount={snapshot.players.length}
+          counts={visibleCounts}
+          onChange={updateCounts}
+          options={options}
+          onOptionsChange={updateOptions}
+          hideRoleReveal
         />
         {confirmDialogs}
       </WerewolfFlowShell>
@@ -337,7 +402,7 @@ export function WerewolfRoomHostScreen({
 
   return (
     <WerewolfFlowShell
-      title={t("werewolf.roomCode")}
+      title={t("werewolf.playerLobbyTitle")}
       onBack={() => navigate("/")}
       settingsActions={settingsActions}
       footer={
@@ -346,9 +411,9 @@ export function WerewolfRoomHostScreen({
             className="primary-action"
             type="button"
             disabled={!validation.valid}
-            onClick={() => hostCommand({ type: "prepareAssignment", roleCounts: visibleCounts, options: { ...options, roleReveal: true } })}
+            onClick={() => hostCommand({ type: "beginSetup", roleCounts: visibleCounts, options: { ...options, roleReveal: true } })}
           >
-            {snapshot.players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextAssignment")}
+            {snapshot.players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextRoles")}
           </button>
           {serverError && <p className="error-text">{serverError}</p>}
         </>
@@ -384,14 +449,6 @@ export function WerewolfRoomHostScreen({
         }}
       />
 
-      <RoleCountEditor
-        playerCount={snapshot.players.length}
-        counts={visibleCounts}
-        onChange={setCounts}
-        options={options}
-        onOptionsChange={updateOptions}
-        hideRoleReveal
-      />
       {confirmDialogs}
     </WerewolfFlowShell>
   );

@@ -23,6 +23,7 @@ export const hubDe = {
     "sessionExpiresIn": "Noch {hours}h",
     "sessionExpiresSoon": "Weniger als 1h",
     "sessionPhaseLobby": "Lobby",
+    "sessionPhaseSetup": "Spieleinstellungen",
     "sessionPhaseAssignment": "Rollenzuweisung",
     "sessionPhaseRoleReveal": "Rollenaufdeckung",
     "sessionPhasePlaying": "Läuft",

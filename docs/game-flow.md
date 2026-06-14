@@ -32,13 +32,30 @@ Stage mode uses a separate TV/projector layout in `WerewolfStageScreen`. It has 
 
 `LocalWerewolfApp` owns local setup and persists active games in `localStorage` under `tablegather-werewolf-local`.
 
-### Setup Screen
+### Preparation Steps
 
-The local setup screen combines player management and role/rule setup in one scrollable body:
+Local pass-and-play and room host setup both use three preparation steps:
+
+1. Player Lobby
+2. Game Settings
+3. Role Assignment
+
+In room mode, only the Player Lobby accepts new joins. Moving to Game Settings stores setup server-side and blocks new player joins; returning to Player Lobby reopens joins. Existing players stay in the room and continue seeing status/waiting screens.
+
+### Player Lobby
+
+The Player Lobby manages table membership:
 
 - add a player by name;
 - remove players from the player list;
 - clear the list;
+
+Room mode also shows room code/QR, player status, Stage controls, and Host Transfer in this step.
+
+### Game Settings
+
+Game Settings owns the role and rule setup:
+
 - configure role counts in `RoleCountEditor`;
 - auto-fill Villagers for open role slots;
 - open Game rules inside the role setup card;
@@ -51,7 +68,7 @@ Validation is domain-driven:
 - unique roles cannot exceed one;
 - role count defaults come from `createDefaultRoleCounts`.
 
-Primary setup actions live in the bottom action bar. Setup body buttons remain contextual, for example player add/remove; room-link copy is room-mode only.
+Primary setup actions live in the bottom action bar. Setup body buttons remain contextual, for example player add/remove; room-link copy is room-mode only. In room mode, Game Settings changes are sent through `updateSetup` so the server snapshot stays authoritative.
 
 ### Assignment
 
@@ -195,7 +212,8 @@ Stage mode is a read-only Werewolf room client for a public display. The host cr
 Stage scenes:
 
 - `lobby`: room code, player list, ready/status information, and player-join QR.
-- `assignment`: preparation-style screen while the host assigns roles.
+- `setup`: room code, player wall, and preparation status while the host edits roles/rules, without a player-join QR.
+- `assignment`: room code, player wall, and preparation status while the host assigns roles, without a player-join QR.
 - `roleReveal`: neutral progress screen while players view private roles.
 - `night`: public night atmosphere only, with no role/action hints.
 - `nightReport`: night deaths grouped together or no-death result.

@@ -287,11 +287,11 @@ export class RoomManager {
     const byPhase = createPhaseCounts();
     const totals = createEmptyCounts();
     const rooms = this.store.list().map((room) => {
-      const started = room.phase !== "lobby";
       const inactiveReasons = this.inactiveReasons(room, serverTime);
       const inactive = inactiveReasons.length > 0;
       const active = !inactive;
       const progressStatus = progressStatusForRoom(room);
+      const started = progressStatus !== "waiting";
       const running = progressStatus === "running";
       const waiting = progressStatus === "waiting";
 
@@ -460,8 +460,8 @@ function createPhaseCounts() {
 
 function progressStatusForRoom(room: Room): AdminProgressStatus {
   if (room.phase === "ended") return "ended";
-  if (room.phase === "lobby") return "waiting";
-  return "running";
+  if (room.phase === "playing") return "running";
+  return "waiting";
 }
 
 function incrementCounts(counts: AdminGameCounts, flags: { active: boolean; progressStatus: AdminProgressStatus }) {

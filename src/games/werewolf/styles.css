@@ -3511,6 +3511,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
 }
 
 .game-theme-werewolf .room-status-pill.notFound,
+.game-theme-werewolf .room-status-pill.locked,
 .game-theme-werewolf .room-status-pill.started {
   border-color: rgba(228, 93, 122, 0.32);
   color: #ff9daf;

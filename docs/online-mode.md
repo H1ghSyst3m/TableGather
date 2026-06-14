@@ -26,7 +26,7 @@ The WebSocket server is generic. Werewolf-specific behavior enters through `were
 
 The room server uses `InMemoryRoomStore`. Rooms expire after 48 hours of inactivity, and a server restart clears active in-memory room state. Reconnect tokens, stage tokens, and browser/localStorage session tokens can remain on the client until explicitly invalidated by the server or user, but those tokens may no longer map to an active server-side room after expiry or restart.
 
-The `/admin` browser route reads the admin token from `#token=...`, stores it in `sessionStorage`, removes it from the URL fragment, and fetches `/admin/rooms` with a bearer token. The admin summary flags inactive rooms when the host is offline or the room has had no activity for at least 30 minutes, and separates active lobby rooms from currently running rooms.
+The `/admin` browser route reads the admin token from `#token=...`, stores it in `sessionStorage`, removes it from the URL fragment, and fetches `/admin/rooms` with a bearer token. The admin summary flags inactive rooms when the host is offline or the room has had no activity for at least 30 minutes, and separates active preparation rooms from currently running rooms.
 
 ## Production Runtime
 
@@ -45,8 +45,13 @@ Players join by code/name
   -> server returns player token
   -> host and players receive updated snapshots
 
-Host configures Werewolf
+Host opens Game Settings
+  -> room moves from lobby to setup
+  -> new player joins are blocked
   -> role counts and options are host-owned
+
+Host assigns roles
+  -> room moves from setup to assignment
   -> assignment drafts are host-only
 
 Host starts role reveal
@@ -94,6 +99,7 @@ Stage mode is read-only. It cannot send host or player commands.
 Room phases are defined in `src/types.ts`:
 
 - `lobby`
+- `setup`
 - `assignment`
 - `roleReveal`
 - `playing`
@@ -106,7 +112,7 @@ Werewolf game phases inside `WerewolfState` are separate:
 - `day`
 - `ended`
 
-Do not confuse room phase with game phase. A room can be in `playing` while the Werewolf game phase is `night`, `day`, or `ended`.
+Do not confuse room phase with game phase. A room can be in `playing` while the Werewolf game phase is `night`, `day`, or `ended`. Only `lobby` accepts new joins; `setup`, `assignment`, and `roleReveal` keep already connected clients in preparation/status views and are counted as waiting in admin summaries.
 
 ## Tokens And Reconnect
 
@@ -239,7 +245,7 @@ Player snapshots include:
 Player snapshots must not expose:
 
 - assignment drafts before role reveal;
-- role counts/options during assignment;
+- role counts/options during setup or assignment;
 - other players' roles;
 - GM log details;
 - target selections;
@@ -272,7 +278,7 @@ Privacy expectations are covered by `test/roomManager.test.ts` and `test/roomSer
 
 Werewolf host commands include:
 
-- setup/assignment: `prepareAssignment`, `setAssignMode`, `shuffleRoles`, `setManualAssignment`, `startGame`;
+- setup/assignment: `beginSetup`, `updateSetup`, `returnToPlayerLobby`, `prepareAssignment`, `returnToGameSettings`, `setAssignMode`, `shuffleRoles`, `setManualAssignment`, `startGame`;
 - night targets: `setProtectedPlayer`, `setNightGuestHost`, `setWildChildModel`, `setCupidTargets`, `setInspectedPlayer`, `setAuraTarget`, `setDetectiveTargets`, `setWolfTarget`, `setAlphaWolfTransform`, `setWitchHealTonight`, `setWitchPoisonTarget`;
 - explicit reveals and progression: `revealNightResult`, `advanceNightStep`, `resolveNight`, `startDay`, `startNextNight`;
 - public reveal queue: `advancePublicEvent`;

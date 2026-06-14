@@ -205,8 +205,8 @@ describe("room websocket server", () => {
       ok: true,
       protocolVersion: ROOM_PROTOCOL_VERSION,
       features: ROOM_PROTOCOL_FEATURES,
-      totals: { total: 1, active: 1, running: 1, waiting: 0, inactive: 0, ended: 0 },
-      byGame: { werewolf: { total: 1, active: 1, running: 1, waiting: 0, inactive: 0, ended: 0 } },
+      totals: { total: 1, active: 1, running: 0, waiting: 1, inactive: 0, ended: 0 },
+      byGame: { werewolf: { total: 1, active: 1, running: 0, waiting: 1, inactive: 0, ended: 0 } },
       byPhase: { assignment: 1 },
       rooms: [
         {
@@ -216,11 +216,11 @@ describe("room websocket server", () => {
           playerCount: 1,
           connectedPlayerCount: 1,
           hostConnected: true,
-          started: true,
+          started: false,
           active: true,
-          running: true,
-          waiting: false,
-          progressStatus: "running",
+          running: false,
+          waiting: true,
+          progressStatus: "waiting",
           inactive: false,
           inactiveReasons: [],
         },
@@ -277,6 +277,27 @@ describe("room websocket server", () => {
 
     const players = await Promise.all(["P1", "P2", "P3", "P4", "P5"].map((name) => joinPlayer(url, roomCode, name)));
     await host.next((message) => message.type === "snapshot" && hostSnapshot(message).players.length === 5);
+    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "beginSetup", roleCounts: { werewolf: 1, villager: 4 } } });
+    await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "setup");
+
+    guest.send({ type: "inspectRoom", requestId: "setup-room", roomCode });
+    await expect(guest.next((message) => message.type === "roomStatus")).resolves.toMatchObject({
+      type: "roomStatus",
+      requestId: "setup-room",
+      roomCode,
+      exists: true,
+      joinable: false,
+      phase: "setup",
+      playerCount: 5,
+    } satisfies Partial<RoomStatusMessage>);
+
+    const latePlayer = await openSocket(url);
+    latePlayer.send({ type: "joinRoom", roomCode, payload: { name: "Late" } });
+    await expect(latePlayer.next((message) => message.type === "error")).resolves.toMatchObject({
+      type: "error",
+      message: "The room is already in game.",
+    });
+
     host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "startGame", roleCounts: { werewolf: 1, villager: 4 } } });
     await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "roleReveal");
     await Promise.all(players.map((player) => player.next((message) => message.type === "snapshot" && playerSnapshot(message).phase === "roleReveal")));
