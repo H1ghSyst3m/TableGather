@@ -274,6 +274,10 @@ describe("werewolf play surface", () => {
     expect(html).toContain("doctor-heal-action");
     expect(html).toContain("werewolf-action-icon");
     expect(html).toContain(translate("de", "werewolf.doctorTreatment"));
+    expect(countOccurrences(html, translate("de", "werewolf.doctorTreatment"))).toBe(1);
+    expect(html).toContain(translate("de", "werewolf.doctorTarget"));
+    expect(html).toContain(translate("de", "werewolf.stepDoctorDescription"));
+    expect(html).not.toContain("bevor die Hexe handelt");
     expect(html).not.toContain("witch-poison-action");
     expect(html).not.toContain("witch-potion-card");
   });

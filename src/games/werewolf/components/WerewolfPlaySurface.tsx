@@ -943,7 +943,7 @@ function DoctorPanel({ state, actions }: { state: WerewolfState; actions: Werewo
           <div className="night-action-heading">
             <ActionIconChip icon="heal" />
             <div>
-              <strong>{t("werewolf.doctorTreatment")}</strong>
+              <strong>{t("werewolf.doctorTarget")}</strong>
               <span>{t("werewolf.wolfVictimAttacked", { name: victim.name })}</span>
             </div>
           </div>
@@ -957,9 +957,9 @@ function DoctorPanel({ state, actions }: { state: WerewolfState; actions: Werewo
         </div>
       )}
       {!state.doctorHealUsed && victim && !canHealVictim && (
-        <ActionNotice icon="protect" title={t("werewolf.doctorTreatment")} text={t("werewolf.doctorNoHealTarget")} />
+        <ActionNotice icon="protect" title={t("werewolf.doctorHealUnavailable")} text={t("werewolf.doctorNoHealTarget")} />
       )}
-      {state.doctorHealUsed && <ActionNotice icon="heal" title={t("werewolf.doctorTreatment")} text={t("werewolf.doctorHealAlreadyUsed")} />}
+      {state.doctorHealUsed && <ActionNotice icon="heal" title={t("werewolf.doctorHealSpent")} text={t("werewolf.doctorHealAlreadyUsed")} />}
     </div>
   );
 }
