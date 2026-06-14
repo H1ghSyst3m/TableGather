@@ -30,7 +30,7 @@ Stage mode uses a separate TV/projector layout in `WerewolfStageScreen`. It has 
 
 ## Pass-And-Play Setup
 
-`LocalWerewolfApp` owns local setup and persists active games in `localStorage` under `tablegather-werewolf-local`.
+`LocalWerewolfApp` owns local setup and persists active games in `localStorage` under `tablegather-werewolf-local`. Restored games pass through `normalizeSavedGame`; when the Werewolf state shape changes, new persisted `WerewolfState` or `WerewolfPlayer` fields need defaults there so older local sessions remain safe.
 
 ### Preparation Steps
 
@@ -274,6 +274,7 @@ Room player screens are role-filtered:
 
 - Local setup and assignment: `src/games/werewolf/components/LocalWerewolfApp.tsx`
 - Role setup controls: `src/games/werewolf/components/RoleCountEditor.tsx`
+- Role/action/status icons: `src/games/werewolf/components/WerewolfIcons.tsx`
 - Shared role reveal: `src/games/werewolf/components/RoleRevealScreen.tsx`
 - Play flow surfaces: `src/games/werewolf/components/WerewolfPlaySurface.tsx`
 - Room host/player screens: `src/games/werewolf/components/WerewolfRoomHostScreen.tsx`, `src/games/werewolf/components/WerewolfRoomPlayerScreen.tsx`

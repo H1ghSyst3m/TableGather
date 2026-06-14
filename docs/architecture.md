@@ -50,13 +50,13 @@ The Werewolf module is split by responsibility:
 | --- | --- | --- |
 | Definition and commands | `definition.ts`, `commands.ts` | Game registration and room command type lists. |
 | Domain model | `domain/types.ts` | Role ids, phases, state shape, options, logs, and validation result types. |
-| Role catalog | `domain/roles.ts` | Role metadata, role order, categories, groups, icons, and `handledByApp`. |
+| Role catalog | `domain/roles.ts`, `components/WerewolfIcons.tsx` | Role metadata, role order, categories, groups, role icon ids/fallbacks, action/status icon chips, and `handledByApp`. |
 | Setup helpers | `domain/setup.ts` | Minimum players, default options, default role counts, villager autofill, validation. |
 | Alignment helpers | `domain/alignment.ts` | Effective role/team logic, including Alpha Wolf hidden alignment overlays. |
 | Target helpers | `domain/targets.ts` | Valid targets and active/inactive night-step checks. |
 | Engine | `domain/engine.ts` | Game creation, role reveal, night/day progression, effects, hunter queues, wins, logs. |
 | Room adapter | `roomAdapter.ts`, `roomTypes.ts`, `stage.ts` | Host/player/stage snapshots, assignment drafts, command routing, privacy filtering. |
-| React screens | `components/*.tsx` | Local setup, role reveal, play surface, room host/player/stage, rules/info modals. |
+| React screens | `components/*.tsx` | Local setup and restored-game normalization, role reveal, play surface, room host/player/stage, rules/info modals. |
 | Text and theme | `i18n/en.ts`, `i18n/de.ts`, `theme.ts`, `styles.css` | Copy, role rule text, theme tokens, and Werewolf-specific CSS. |
 
 The domain engine owns behavior. UI components should send commands or call engine functions; they should not duplicate game rules.

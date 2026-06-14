@@ -10,6 +10,7 @@ Use these files before changing role behavior:
 | --- | --- |
 | Role ids, game phases, state fields | `src/games/werewolf/domain/types.ts` |
 | Role names, descriptions, rules, category, group, icon, uniqueness, app/table-only flag | `src/games/werewolf/domain/roles.ts` |
+| Role icon fallbacks and action/status icon chips | `src/games/werewolf/components/WerewolfIcons.tsx` |
 | Default options, role counts, villager autofill, validation | `src/games/werewolf/domain/setup.ts` |
 | Effective role/team and hidden Alpha Wolf alignment | `src/games/werewolf/domain/alignment.ts` |
 | Night target validity and active/inactive step logic | `src/games/werewolf/domain/targets.ts` |
@@ -18,7 +19,7 @@ Use these files before changing role behavior:
 | Host UI, footer actions, public reveal steps, night result cards, day vote, game log, player overview | `src/games/werewolf/components/WerewolfPlaySurface.tsx` |
 | Stage public display | `src/games/werewolf/components/WerewolfStageScreen.tsx`, `src/games/werewolf/components/StageLinkPanel.tsx` |
 | Setup UI and role rules UI | `src/games/werewolf/components/RoleCountEditor.tsx`, `src/games/werewolf/components/RoleRulesModal.tsx`, `src/games/werewolf/components/RoleInfoModal.tsx` |
-| Local and room entrypoints | `LocalWerewolfApp.tsx`, `WerewolfRoomHostScreen.tsx`, `WerewolfRoomPlayerScreen.tsx` |
+| Local persistence and room entrypoints | `LocalWerewolfApp.tsx`, `WerewolfRoomHostScreen.tsx`, `WerewolfRoomPlayerScreen.tsx` |
 | Role copy and rule copy | `src/games/werewolf/i18n/en.ts`, `src/games/werewolf/i18n/de.ts` |
 | Behavior tests | `test/werewolf.test.ts`, `test/roomManager.test.ts`, `test/roomServer.test.ts`, `test/werewolfUi.test.tsx` |
 
@@ -40,6 +41,7 @@ Use these files before changing role behavior:
 | Public reveal queue | `publicEvents` plus `publicEventIndex` controls host and Stage public reveal order. `advancePublicEvent` moves between public events; `hunterPending` is resolved by `resolveHunterShot`. |
 | Table-only roles | Little Girl is documented and selectable but has no automated night step, target state, or death effect. |
 | Room assignment | Room host owns role counts and random/manual assignment drafts before role reveal; player snapshots do not expose drafts or role tables. |
+| Local persistence | Browser-local pass-and-play games are restored through `normalizeSavedGame`; new persisted state fields must get safe defaults there as well as in fresh game creation. |
 
 ## Role Matrix
 
@@ -76,6 +78,7 @@ Use these files before changing role behavior:
 ## Room And Local Checks
 
 - Local pass-and-play and room host mode call the same domain engine functions.
+- Local pass-and-play persists active games in browser `localStorage`; state-shape changes must keep older restored games safe through `normalizeSavedGame`.
 - Room mode has a host-only assignment phase before player-owned role reveal.
 - Nullable target commands are used for clear/undo in room mode.
 - Player devices receive private role cards and public player status only.
@@ -88,4 +91,5 @@ Use these files before changing role behavior:
 - Add or update room privacy/command tests in `test/roomManager.test.ts` or `test/roomServer.test.ts`.
 - Add or update rendered UI expectations in `test/werewolfUi.test.tsx`.
 - Add or update Stage event-order and privacy tests when changing public deaths, Hunter chains, lover chains, or reveal rules.
+- Add or update local restored-state tests when adding persisted `WerewolfState` or `WerewolfPlayer` fields.
 - Add or update translation coverage in `test/i18n.test.ts` when adding role rules/copy.

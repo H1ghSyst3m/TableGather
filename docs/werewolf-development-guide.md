@@ -46,12 +46,14 @@ Update `src/games/werewolf/domain/roles.ts`:
 - set `nameKey` and `descriptionKey`;
 - set `ruleKeys` used by role rules/info modals;
 - choose `team`, `category`, and `group`;
-- choose an icon id supported by `roleIconMap` in `RoleCountEditor`;
+- choose an icon id supported by `roleIconMap` in `src/games/werewolf/components/WerewolfIcons.tsx`;
 - set `unique` when the role should be limited to one;
 - set `handledByApp` accurately;
 - insert the role in `roleOrder` and `selectableRoleOrder` order.
 
 Use `villager` only as the autofill role. Do not add Villager to selectable setup order.
+
+Role art is optional. If real role art is added later, wire it through `werewolfTheme.assets.roleIcons` or game assets; do not add placeholder SVG art just to fill a slot.
 
 ### 3. Setup Defaults And Validation
 
@@ -90,6 +92,7 @@ Target rules should be deterministic and should not mutate state.
 Update `src/games/werewolf/domain/engine.ts`:
 
 - initialize any new state in `createWerewolfState`;
+- add restored-game defaults in `normalizeSavedGame` inside `src/games/werewolf/components/LocalWerewolfApp.tsx` for every new persisted `WerewolfState` or `WerewolfPlayer` field;
 - include the night step in `buildNightSteps` when relevant;
 - add setter functions for reversible choices;
 - clear stale selections when advancing from the role's step;
@@ -107,6 +110,7 @@ Important engine patterns:
 - Direct effects bypass Protector/Night Guest.
 - Hunter queues must resolve before normal win checks continue.
 - Wild Child conversion happens only after handled resolution points.
+- Fresh games and restored local pass-and-play games must get the same safe defaults for any new state field.
 
 ### 7. Room Commands And Adapter
 
@@ -115,7 +119,7 @@ If the role needs host input in room mode, update:
 - `src/games/werewolf/commands.ts` with host/player command type;
 - `werewolfHostCommandTypes` or `werewolfPlayerCommandTypes`;
 - `src/games/werewolf/roomAdapter.ts` command routing;
-- `roomTypes.ts` only if snapshot shape needs typed additions.
+- `src/games/werewolf/roomTypes.ts` if host, player, or stage snapshot shape needs typed additions;
 - `src/games/werewolf/stage.ts` if the role affects public Stage scenes or reveal data.
 
 Shared non-role day state, such as the day timer, follows the same ownership boundaries: initialize it in domain state, route host-owned actions through room commands when room mode needs them, and expose only host-safe or public stage-safe snapshots. Player snapshots should not receive shared host tooling state unless it is explicitly player-facing.
@@ -148,7 +152,8 @@ Update `src/games/werewolf/components/WerewolfPlaySurface.tsx` for app-handled r
 
 Update setup-related UI when needed:
 
-- `RoleCountEditor` for role icon mapping or grouping behavior;
+- `RoleCountEditor` for setup grouping, count behavior, and category placement;
+- `WerewolfIcons.tsx` for role icon ids, `RoleIconChip`, `WerewolfActionIconId`, `ActionIconChip`, `WerewolfStatusIconId`, or `StatusIconChip`;
 - `RoleInfoModal` and `RoleRulesModal` only through role metadata/rule keys when possible.
 
 Do not add a second toolbar row for host tools. Game Log and Players Overview stay header icon actions.
@@ -161,7 +166,7 @@ Check `RoleRevealScreen` and `WerewolfRoomPlayerScreen` if the role affects priv
 - former-role text should remain visible where exact identity is shown;
 - hidden Alpha Wolf infection-style private flags must be visible only to the affected player and host.
 
-If adding a new hidden private status, update room player snapshots and tests.
+If adding a new hidden private status, update `WerewolfPlayerRoomSnapshot["self"]` in `roomTypes.ts`, `playerSnapshot` in `roomAdapter.ts`, and tests that prove other player snapshots do not expose it.
 
 ### 10. I18n
 
@@ -176,7 +181,8 @@ Required copy:
 - `roles.<roleId>.description`;
 - every `ruleKeys` entry for role info/rules;
 - night-step labels/descriptions if app-handled;
-- command/result/log text if UI needs new copy.
+- command/result/log text if UI needs new copy;
+- public event, game-over, or status copy when the role changes reveal or win surfaces.
 
 Run i18n tests after changes. English and German keys must stay aligned.
 
@@ -198,6 +204,7 @@ Prefer focused tests over broad snapshots. Tests should cover:
 - resolution effects;
 - room privacy;
 - stage public event order and privacy when public deaths/reveals change;
+- restored local pass-and-play defaults when adding persisted state fields;
 - current UI placement for primary action/results.
 
 ## Common Role Patterns
@@ -216,6 +223,19 @@ Typical changes:
 - render selector in `WerewolfPlaySurface`;
 - clear stale targets when advancing;
 - add tests for target validity and room command clear/undo.
+
+### Persisted State Field
+
+Use when a role adds a new field to `WerewolfState` or `WerewolfPlayer`.
+
+Typical changes:
+
+- add the field to `domain/types.ts`;
+- initialize it in `createWerewolfState` or `createPlayer`;
+- reset, clear, or carry it in `advanceNightStep`, `resolveNight`, `startDay`, `startNextNight`, or role-specific reducers as needed;
+- add a fallback in `LocalWerewolfApp.normalizeSavedGame` so older browser-local games restore safely;
+- expose it through room snapshots only if the host, player self, or Stage must see it;
+- add a regression test for the restored-game fallback when the missing field would affect behavior.
 
 ### Info/Reminder Role
 
