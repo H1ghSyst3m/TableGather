@@ -21,6 +21,7 @@ const SESSION_INSPECT_TIMEOUT_MS = 5_000;
 interface HubScreenProps {
   navigate: (path: string) => void;
   initialTab?: HubTab;
+  initialMode?: SessionMode;
 }
 
 type HubTab = "games" | "session";
@@ -37,10 +38,10 @@ interface HubSessionCard {
   playerName?: string;
 }
 
-export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
+export function HubScreen({ navigate, initialTab = "games", initialMode = "room" }: HubScreenProps) {
   const { t } = useI18n();
   const [selectedGameId, setSelectedGameId] = useState<GameId>("werewolf");
-  const [mode, setMode] = useState<SessionMode>("room");
+  const [mode, setMode] = useState<SessionMode>(initialMode);
   const [activeTab, setActiveTab] = useState<HubTab>(initialTab);
   const [sessionCards, setSessionCards] = useState<HubSessionCard[]>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -158,121 +159,126 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
     <main className="app-frame hub-screen" style={gameThemeStyle({ theme: hubDefaultTheme })}>
       <HeaderBar />
 
-      <section className="segmented-tabs" aria-label={t("common.session")}>
-        <button
-          className={`segmented-tab ${activeTab === "games" ? "active" : ""}`}
-          type="button"
-          aria-pressed={activeTab === "games"}
-          onClick={() => setActiveTab("games")}
-        >
-          <GameIcon game={currentGame} />
-          <span>{t("common.games")}</span>
-        </button>
-        <button
-          className={`segmented-tab ${activeTab === "session" ? "active" : ""}`}
-          type="button"
-          aria-pressed={activeTab === "session"}
-          onClick={() => setActiveTab("session")}
-        >
-          <Users />
-          <span>{t("common.session")}</span>
-        </button>
-      </section>
+      <div className="hub-screen-body">
+        <section className="segmented-tabs">
+          <button
+            className={`segmented-tab ${activeTab === "games" ? "active" : ""}`}
+            type="button"
+            aria-pressed={activeTab === "games"}
+            onClick={() => setActiveTab("games")}
+          >
+            <GameIcon game={currentGame} />
+            <span>{t("common.games")}</span>
+          </button>
+          <button
+            className={`segmented-tab ${activeTab === "session" ? "active" : ""}`}
+            type="button"
+            aria-pressed={activeTab === "session"}
+            onClick={() => setActiveTab("session")}
+          >
+            <Users />
+            <span>{t("common.session")}</span>
+          </button>
+        </section>
 
-      {activeTab === "games" ? (
-        <>
-          <section className="section-block current-game">
-            <p className="section-label">{t("common.currentGame")}</p>
-            <div className="current-game-layout">
-              <GameIcon game={currentGame} size="large" />
-              <div>
-                <h2>{t(currentGame.titleKey as TranslationKey)}</h2>
-                <p>{t(currentGame.descriptionKey as TranslationKey)}</p>
+        {activeTab === "games" ? (
+          <div className="hub-game-sections">
+            <section className="section-block current-game">
+              <p className="section-label">{t("common.currentGame")}</p>
+              <div className="current-game-layout">
+                <GameIcon game={currentGame} size="large" />
+                <div>
+                  <h2>{t(currentGame.titleKey as TranslationKey)}</h2>
+                  <p>{t(currentGame.descriptionKey as TranslationKey)}</p>
+                </div>
               </div>
-            </div>
-            <div className="game-facts" aria-label={t("common.currentGame")}>
-              <span>
-                <Users /> {currentGame.playerRange} {t("common.players")}
-              </span>
-              <span>
-                <Clock3 /> {currentGame.duration}
-              </span>
-              <span>
-                <SignalMedium /> {t(currentGame.difficultyKey as TranslationKey)}
-              </span>
-            </div>
-          </section>
+              <div className="game-facts" aria-label={t("common.currentGame")}>
+                <span>
+                  <Users /> {currentGame.playerRange} {t("common.players")}
+                </span>
+                <span>
+                  <Clock3 /> {currentGame.duration}
+                </span>
+                <span>
+                  <SignalMedium /> {t(currentGame.difficultyKey as TranslationKey)}
+                </span>
+              </div>
+            </section>
 
-          <section className="section-block">
-            <p className="section-label">{t("common.otherGames")}</p>
-            <div className="list-surface">
-              {otherGames.map((game) => (
-                <button
-                  className="game-row"
-                  key={game.id}
-                  type="button"
-                  onClick={() => setSelectedGameId(game.id)}
-                  disabled={game.status !== "playable"}
-                >
-                  <GameIcon game={game} />
-                  <span className="row-main">
-                    <strong>{t(game.titleKey as TranslationKey)}</strong>
-                    <span>{t(game.descriptionKey as TranslationKey)}</span>
-                  </span>
-                  <span className={`status-label status-${game.id}`}>
-                    <Lock /> {t("common.comingSoon")}
-                  </span>
-                  <ChevronRight />
-                </button>
-              ))}
-            </div>
-          </section>
+            <section className="section-block">
+              <p className="section-label">{t("common.otherGames")}</p>
+              <div className="list-surface">
+                {otherGames.map((game) => (
+                  <button
+                    className="game-row"
+                    key={game.id}
+                    type="button"
+                    onClick={() => setSelectedGameId(game.id)}
+                    disabled={game.status !== "playable"}
+                  >
+                    <GameIcon game={game} />
+                    <span className="row-main">
+                      <strong>{t(game.titleKey as TranslationKey)}</strong>
+                      <span>{t(game.descriptionKey as TranslationKey)}</span>
+                    </span>
+                    <span className={`status-label status-${game.id}`}>
+                      <Lock /> {t("common.comingSoon")}
+                    </span>
+                    <ChevronRight />
+                  </button>
+                ))}
+              </div>
+            </section>
 
-          <section className="section-block">
-            <p className="section-label">{t("common.chooseMode")}</p>
-            <div className="mode-list">
-              <ModeButton
-                active={mode === "room"}
-                title={t("hub.roomMode")}
-                description={t("hub.roomModeDescription")}
-                icon={<QrCode />}
-                onClick={() => setMode("room")}
-              />
-              <ModeButton
-                active={mode === "pass-and-play"}
-                title={t("hub.passAndPlay")}
-                description={t("hub.passAndPlayDescription")}
-                icon={<Users />}
-                onClick={() => setMode("pass-and-play")}
-              />
-            </div>
-          </section>
+            <section className="section-block">
+              <p className="section-label">{t("common.chooseMode")}</p>
+              <div className="mode-list">
+                <ModeButton
+                  active={mode === "room"}
+                  title={t("hub.roomMode")}
+                  description={t("hub.roomModeDescription")}
+                  icon={<QrCode />}
+                  onClick={() => setMode("room")}
+                />
+                <ModeButton
+                  active={mode === "pass-and-play"}
+                  title={t("hub.passAndPlay")}
+                  description={t("hub.passAndPlayDescription")}
+                  icon={<Users />}
+                  onClick={() => setMode("pass-and-play")}
+                />
+              </div>
+            </section>
+          </div>
+        ) : (
+          <HubSessionPanel
+            cards={sessionCards}
+            error={
+              roomSocketError
+                ? t(roomSocketError === "roomProtocolMismatch" ? "errors.roomProtocolMismatch" : "errors.roomConnection")
+                : sessionServerError
+            }
+            loading={sessionLoading && !roomSocketError}
+            navigate={navigate}
+            onRefresh={() => setSessionRefreshKey((key) => key + 1)}
+          />
+        )}
+      </div>
 
-          <div className="sticky-action">
-            <button className="primary-action" type="button" onClick={start} disabled={!canStart}>
-              <Play />
-              {t("hub.startGame", { game: t(currentGame.titleKey as TranslationKey) })}
-            </button>
-            {mode === "room" && (
-              <button className="secondary-button full hub-join-room-action" type="button" onClick={() => navigate("/room/join")} disabled={!canStart}>
+      {activeTab === "games" && (
+        <footer className="hub-action-footer">
+          <div className="hub-action-footer-content">
+            <div className="hub-action-footer-actions">
+              <button className="primary-action" type="button" onClick={start} disabled={!canStart}>
+                <Play />
+                {t("hub.startGame", { game: t(currentGame.titleKey as TranslationKey) })}
+              </button>
+              <button className="secondary-button full hub-join-room-action" type="button" onClick={() => navigate("/room/join")}>
                 <LogIn /> {t("hub.joinRoomByCode")}
               </button>
-            )}
-            <p>{t("hub.helper")}</p>
+            </div>
           </div>
-        </>
-      ) : (
-        <HubSessionPanel
-          cards={sessionCards}
-          error={
-            roomSocketError
-              ? t(roomSocketError === "roomProtocolMismatch" ? "errors.roomProtocolMismatch" : "errors.roomConnection")
-              : sessionServerError
-          }
-          loading={sessionLoading && !roomSocketError}
-          navigate={navigate}
-          onRefresh={() => setSessionRefreshKey((key) => key + 1)}
-        />
+        </footer>
       )}
     </main>
   );

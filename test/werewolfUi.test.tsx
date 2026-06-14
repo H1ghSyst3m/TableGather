@@ -800,10 +800,26 @@ describe("werewolf play surface", () => {
     const html = renderWithI18n(<HubScreen navigate={() => undefined} />);
 
     expect(html).toContain("--app-bg:rgba(255, 255, 255, 0.96)");
+    expect(html).toContain("hub-screen-body");
+    expect(html).toContain("hub-action-footer");
+    expect(html).toContain("hub-action-footer-actions");
     expect(html).toContain("game-icon game-icon-werewolf game-icon-large");
     expect(html).toContain("werewolf-mark.png");
     expect(html).toContain(translate("de", "hub.joinRoomByCode"));
+    expect(html).not.toContain(`class="segmented-tabs" aria-label="${translate("de", "common.session")}"`);
+    expect(buttonHtmlForClass(html, "hub-join-room-action")).not.toContain("disabled");
+    expect(html).not.toContain("sticky-action");
     expect(html).not.toContain('class="current-game-logo"');
+  });
+
+  it("keeps the Hub join room action available in pass-and-play mode", () => {
+    const html = renderWithI18n(<HubScreen initialMode="pass-and-play" navigate={() => undefined} />);
+    const joinActionHtml = buttonHtmlForClass(html, "hub-join-room-action");
+
+    expect(html).toContain(translate("de", "hub.passAndPlay"));
+    expect(joinActionHtml).toContain(translate("de", "hub.joinRoomByCode"));
+    expect(joinActionHtml).not.toContain("disabled");
+    expect(html).toContain(translate("de", "hub.startGame", { game: translate("de", "games.werewolf") }));
   });
 
   it("renders the Hub session tab empty state", () => {
@@ -812,6 +828,7 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "hub.sessionTitle"));
     expect(html).toContain(translate("de", "hub.sessionEmptyTitle"));
     expect(html).toContain(translate("de", "hub.sessionRefresh"));
+    expect(html).not.toContain("hub-action-footer");
     expect(html).not.toContain(translate("de", "hub.startGame", { game: translate("de", "games.werewolf") }));
   });
 
