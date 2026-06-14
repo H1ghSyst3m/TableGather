@@ -21,6 +21,7 @@ const SESSION_INSPECT_TIMEOUT_MS = 5_000;
 interface HubScreenProps {
   navigate: (path: string) => void;
   initialTab?: HubTab;
+  initialMode?: SessionMode;
 }
 
 type HubTab = "games" | "session";
@@ -37,10 +38,10 @@ interface HubSessionCard {
   playerName?: string;
 }
 
-export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
+export function HubScreen({ navigate, initialTab = "games", initialMode = "room" }: HubScreenProps) {
   const { t } = useI18n();
   const [selectedGameId, setSelectedGameId] = useState<GameId>("werewolf");
-  const [mode, setMode] = useState<SessionMode>("room");
+  const [mode, setMode] = useState<SessionMode>(initialMode);
   const [activeTab, setActiveTab] = useState<HubTab>(initialTab);
   const [sessionCards, setSessionCards] = useState<HubSessionCard[]>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -159,7 +160,7 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
       <HeaderBar />
 
       <div className="hub-screen-body">
-        <section className="segmented-tabs" aria-label={t("common.session")}>
+        <section className="segmented-tabs">
           <button
             className={`segmented-tab ${activeTab === "games" ? "active" : ""}`}
             type="button"
@@ -272,11 +273,9 @@ export function HubScreen({ navigate, initialTab = "games" }: HubScreenProps) {
                 <Play />
                 {t("hub.startGame", { game: t(currentGame.titleKey as TranslationKey) })}
               </button>
-              {mode === "room" && (
-                <button className="secondary-button full hub-join-room-action" type="button" onClick={() => navigate("/room/join")} disabled={!canStart}>
-                  <LogIn /> {t("hub.joinRoomByCode")}
-                </button>
-              )}
+              <button className="secondary-button full hub-join-room-action" type="button" onClick={() => navigate("/room/join")}>
+                <LogIn /> {t("hub.joinRoomByCode")}
+              </button>
             </div>
           </div>
         </footer>
