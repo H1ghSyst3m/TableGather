@@ -57,7 +57,14 @@ export function useRoomSocket(
     if (socketRef.current === socket) socketRef.current = null;
 
     if (socket.readyState === WebSocket.CONNECTING) {
-      socket.addEventListener("open", () => socket.close(), { once: true });
+      socket.addEventListener(
+        "open",
+        () => {
+          if (socketRef.current === socket) socketRef.current = null;
+          socket.close();
+        },
+        { once: true },
+      );
       setConnected(false);
       return;
     }
@@ -98,18 +105,24 @@ export function useRoomSocket(
     socketRef.current = socket;
 
     socket.addEventListener("open", () => {
+      if (socketRef.current !== socket) return;
       reconnectAttemptRef.current = 0;
       setConnected(true);
       setError(null);
       optionsRef.current.onOpen?.({ disconnect, send });
     });
     socket.addEventListener("close", () => {
+      if (socketRef.current !== socket) return;
       if (socketRef.current === socket) socketRef.current = null;
       setConnected(false);
       scheduleReconnect();
     });
-    socket.addEventListener("error", () => setError("roomConnection"));
+    socket.addEventListener("error", () => {
+      if (socketRef.current !== socket) return;
+      setError("roomConnection");
+    });
     socket.addEventListener("message", (event) => {
+      if (socketRef.current !== socket) return;
       const message = parseServerMessage(event.data as string);
       if (!message) {
         setError("roomConnection");

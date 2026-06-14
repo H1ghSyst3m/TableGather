@@ -1863,6 +1863,7 @@ svg {
   .hub-action-footer-actions .secondary-button.full {
     width: auto;
     min-width: 12.5rem;
+    margin-top: 0;
   }
 
   .player-grid {

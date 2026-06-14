@@ -56,6 +56,7 @@ export function WerewolfRoomHostScreen({
   const joinLink = snapshot ? `${window.location.origin}/room/${snapshot.code}` : "";
   const stageLink = snapshot?.stageToken ? `${window.location.origin}/stage/${snapshot.code}/${snapshot.stageToken}` : "";
   const stageLocale = snapshot?.stageLocale ?? locale;
+  const createRoomSentRef = useRef(false);
 
   const openHostSession = useCallback(
     (sendMessage: RoomSocketControls["send"]) => {
@@ -66,7 +67,8 @@ export function WerewolfRoomHostScreen({
         return;
       }
 
-      sendMessage({ type: "createRoom", payload: { gameId } });
+      if (createRoomSentRef.current) return;
+      if (sendMessage({ type: "createRoom", payload: { gameId } })) createRoomSentRef.current = true;
     },
     [code, gameId, navigate],
   );
