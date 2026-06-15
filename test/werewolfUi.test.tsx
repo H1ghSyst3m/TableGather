@@ -278,6 +278,7 @@ describe("werewolf play surface", () => {
     expect(countOccurrences(html, translate("de", "werewolf.doctorTreatment"))).toBe(1);
     expect(html).toContain(translate("de", "werewolf.doctorTarget"));
     expect(html).toContain(translate("de", "werewolf.stepDoctorDescription"));
+    // Stale-copy guard: the removed Witch-order clause no longer has an active translation key.
     expect(html).not.toContain("bevor die Hexe handelt");
     expect(html).not.toContain("witch-poison-action");
     expect(html).not.toContain("witch-potion-card");
@@ -1737,20 +1738,12 @@ function activeStageHtml(html: string) {
 
 function renderWithStorage(node: ReactNode, initialValue: string | null = null) {
   const previousStorage = globalThis.localStorage;
-  const values = new Map<string, string>();
-  if (initialValue !== null) values.set(localWerewolfStorageKey, initialValue);
+  const storage = createMemoryStorage();
+  if (initialValue !== null) storage.setItem(localWerewolfStorageKey, initialValue);
 
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
-    value: {
-      getItem: (key: string) => values.get(key) ?? null,
-      removeItem: (key: string) => {
-        values.delete(key);
-      },
-      setItem: (key: string, value: string) => {
-        values.set(key, value);
-      },
-    },
+    value: storage,
   });
 
   try {
