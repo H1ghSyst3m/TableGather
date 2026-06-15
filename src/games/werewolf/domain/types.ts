@@ -3,6 +3,7 @@ export type RoleId =
   | "villager"
   | "seer"
   | "witch"
+  | "doctor"
   | "hunter"
   | "cupid"
   | "fool"
@@ -40,6 +41,7 @@ export type NightStepId =
   | "seer"
   | "auraSeer"
   | "detective"
+  | "doctor"
   | "witch"
   | "toughGuyInfo"
   | "dawn";
@@ -87,6 +89,8 @@ export type WerewolfLogResult =
   | "witchHealed"
   | "witchPoisoned"
   | "witchNoPotion"
+  | "doctorHealed"
+  | "doctorNoHeal"
   | "cursedConverted"
   | "wildChildConverted";
 
@@ -185,6 +189,8 @@ export interface WerewolfState {
   cursedConvertedTonightId: string | null;
   alphaWolfTransform: boolean | null;
   alphaWolfUsed: boolean;
+  doctorHealUsed: boolean;
+  doctorHealTonight: boolean;
   witchHealUsed: boolean;
   witchPoisonUsed: boolean;
   witchHealTonight: boolean;

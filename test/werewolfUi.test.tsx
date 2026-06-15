@@ -22,6 +22,7 @@ import { submitAdminTokenInput } from "../src/online/adminToken";
 import { hasDuplicatePlayerName, normalizePlayerName } from "../src/playerNames";
 
 const previousSessionStorage = globalThis.sessionStorage;
+const localWerewolfStorageKey = "tablegather-werewolf-local";
 
 const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   setProtectedPlayer: () => undefined,
@@ -34,6 +35,7 @@ const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   revealNightResult: () => undefined,
   setWolfTarget: () => undefined,
   setAlphaWolfTransform: () => undefined,
+  setDoctorHealTonight: () => undefined,
   setWitchHealTonight: () => undefined,
   setWitchPoisonTarget: () => undefined,
   advanceNightStep: () => undefined,
@@ -249,6 +251,36 @@ describe("werewolf play surface", () => {
     expect(html).toContain("witch-heal-action");
     expect(html).toContain("witch-poison-action");
     expect(html).toContain("werewolf-action-icon");
+    expect(html).not.toContain("witch-potion-card");
+  });
+
+  it("renders the doctor heal action as a single flat icon action block", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doktor", roleId: "doctor" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const state = {
+      ...game,
+      nightStepIndex: game.nightSteps.indexOf("doctor"),
+      wolfTargetId: "one",
+    };
+    const html = renderGame(state);
+
+    expect(html).toContain("doctor-heal-action");
+    expect(html).toContain("werewolf-action-icon");
+    expect(html).toContain(translate("de", "werewolf.doctorTreatment"));
+    expect(countOccurrences(html, translate("de", "werewolf.doctorTreatment"))).toBe(1);
+    expect(html).toContain(translate("de", "werewolf.doctorTarget"));
+    expect(html).toContain(translate("de", "werewolf.stepDoctorDescription"));
+    // Stale-copy guard: the removed Witch-order clause no longer has an active translation key.
+    expect(html).not.toContain("bevor die Hexe handelt");
+    expect(html).not.toContain("witch-poison-action");
     expect(html).not.toContain("witch-potion-card");
   });
 
@@ -746,6 +778,32 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "werewolf.minPlayers"));
     expect(html).not.toContain(translate("de", "werewolf.addSamplePlayers"));
     expect(html).not.toContain(translate("de", "werewolf.nextRoles"));
+  });
+
+  it("restores old local doctor games without doctor state fields", () => {
+    const game = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doktor", roleId: "doctor" },
+        { id: "one", name: "Eins", roleId: "villager" },
+        { id: "two", name: "Zwei", roleId: "villager" },
+        { id: "three", name: "Drei", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    const savedGame: Partial<WerewolfState> = {
+      ...game,
+      nightStepIndex: game.nightSteps.indexOf("doctor"),
+      wolfTargetId: "one",
+    };
+    delete savedGame.doctorHealUsed;
+    delete savedGame.doctorHealTonight;
+
+    const html = renderWithStorage(<LocalWerewolfApp navigate={() => undefined} />, JSON.stringify(savedGame));
+
+    expect(html).toContain("doctor-heal-action");
+    expect(html).toContain(translate("de", "werewolf.doctorTreatment"));
+    expect(html).toContain(translate("de", "werewolf.healAction"));
   });
 
   it("renders only the selected general game rules", () => {
@@ -1678,15 +1736,14 @@ function activeStageHtml(html: string) {
   return rail > start ? html.slice(start, rail) : html.slice(start);
 }
 
-function renderWithStorage(node: ReactNode) {
+function renderWithStorage(node: ReactNode, initialValue: string | null = null) {
   const previousStorage = globalThis.localStorage;
+  const storage = createMemoryStorage();
+  if (initialValue !== null) storage.setItem(localWerewolfStorageKey, initialValue);
+
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
-    value: {
-      getItem: () => null,
-      removeItem: () => undefined,
-      setItem: () => undefined,
-    },
+    value: storage,
   });
 
   try {

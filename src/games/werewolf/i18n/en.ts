@@ -51,7 +51,7 @@ export const werewolfEn = {
     "winStandard": "Standard",
     "winStandardHint": "Wolves win when wolves are at least equal to villagers.",
     "winExtended": "Extended",
-    "winExtendedHint": "Hunter and unused witch potions can delay a wolf win.",
+    "winExtendedHint": "Hunter, unused Doctor heal, and unused Witch potions can delay a wolf win.",
     "revealMode": "Reveal after vote",
     "revealHidden": "Hidden",
     "revealHiddenHint": "Show nothing after an elimination.",
@@ -173,6 +173,8 @@ export const werewolfEn = {
     "stepAuraSeerDescription": "The Aura Seer chooses one player and learns whether they are good or evil.",
     "stepDetective": "Detective wakes",
     "stepDetectiveDescription": "The Detective chooses two players and learns whether they share a team.",
+    "stepDoctor": "Doctor wakes",
+    "stepDoctorDescription": "The Doctor may save the werewolf victim once per game.",
     "stepWitch": "Witch wakes",
     "stepWitchDescription": "The Witch decides about healing and poison potions.",
     "stepToughGuyInfo": "Inform the Tough Guy",
@@ -204,6 +206,13 @@ export const werewolfEn = {
     "wolfVictimAttacked": "{name} was attacked.",
     "healVictim": "Heal {name}",
     "healVictimHint": "Use the healing potion for the wolf victim.",
+    "doctorTreatment": "Doctor treatment",
+    "doctorTarget": "Werewolf victim",
+    "doctorHealUsed": "Treatment used",
+    "doctorHealSpent": "Treatment already used",
+    "doctorHealUnavailable": "Treatment unavailable",
+    "doctorHealAlreadyUsed": "The Doctor has already healed once this game.",
+    "doctorNoHealTarget": "There is no healable werewolf victim for the Doctor tonight.",
     "witchNoHealTarget": "There is no healable werewolf victim tonight.",
     "witchPoisonUsed": "The poison potion has already been used.",
     "poisonTarget": "Poison one player?",
@@ -320,6 +329,10 @@ export const werewolfEn = {
       "name": "Witch",
       "description": "You have one healing potion and one poison potion for the whole game."
     },
+    "doctor": {
+      "name": "Doctor",
+      "description": "Once per game, save the werewolf victim."
+    },
     "hunter": {
       "name": "Hunter",
       "description": "When you die, table rules may let you immediately take one player with you."
@@ -416,6 +429,16 @@ export const werewolfEn = {
       "poison": {
         "title": "Poison potion",
         "text": "Once per game, choose a living player to eliminate during the night."
+      }
+    },
+    "doctor": {
+      "heal": {
+        "title": "Treatment",
+        "text": "Once per game, save the main victim of the werewolf attack."
+      },
+      "limits": {
+        "title": "Real attacks only",
+        "text": "Treatment is only available when the main victim would die from the werewolf attack."
       }
     },
     "hunter": {
@@ -593,6 +616,8 @@ export const werewolfEn = {
     "titleWitchHealed": "healed",
     "titleWitchPoisoned": "poisoned",
     "titleWitchNoPotion": "used no potion",
+    "titleDoctorHealed": "treated",
+    "titleDoctorNoHeal": "did not treat",
     "titleRoleAction": "took action",
     "titleNightDeath": "was eliminated at night",
     "titleNoNightDeath": "no night elimination",
@@ -624,6 +649,8 @@ export const werewolfEn = {
     "roleActionWitchHealed": "{actor} healed {target}.",
     "roleActionWitchPoisoned": "{actor} poisoned {target}.",
     "roleActionWitchNoPotion": "{actor} used no potion.",
+    "roleActionDoctorHealed": "{actor} treated {target}.",
+    "roleActionDoctorNoHeal": "{actor} did not treat anyone.",
     "detectiveSameTeamResult": "same team",
     "detectiveDifferentTeamResult": "different teams",
     "nightDeath": "{name} was eliminated during the night.",

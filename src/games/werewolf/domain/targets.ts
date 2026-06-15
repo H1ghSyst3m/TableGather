@@ -32,6 +32,7 @@ export function getNightStepActors(state: WerewolfState, stepId: NightStepId): W
     seer: ["seer"],
     auraSeer: ["auraSeer"],
     detective: ["detective"],
+    doctor: ["doctor"],
     witch: ["witch"],
   };
   const roles = rolesByStep[stepId];
@@ -76,6 +77,9 @@ export function isNightStepActive(state: WerewolfState, stepId: NightStepId): bo
   if (stepId === "alphaWolf") return getNightStepActors(state, "alphaWolf").some((player) => player.alive) && !state.alphaWolfUsed;
   if (stepId === "witch") {
     return getNightStepActors(state, "witch").some((player) => player.alive) && (!state.witchHealUsed || !state.witchPoisonUsed);
+  }
+  if (stepId === "doctor") {
+    return getNightStepActors(state, "doctor").some((player) => player.alive) && !state.doctorHealUsed;
   }
   if (stepId === "cursedInfo") return Boolean(state.wolfTargetId);
   if (stepId === "alphaWolfInfo") return Boolean(state.alphaWolfTransform && state.wolfTargetId);

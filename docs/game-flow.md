@@ -112,9 +112,10 @@ Night step order is built by `buildNightSteps(players, round)`:
 10. `seer`
 11. `auraSeer`
 12. `detective`
-13. `witch`
-14. `toughGuyInfo` when inserted after a real wound
-15. `dawn`
+13. `doctor`
+14. `witch`
+15. `toughGuyInfo` when inserted after a real wound
+16. `dawn`
 
 Inactive rhythm steps are still rendered for roles that were in the game but are no longer active. This keeps the host rhythm stable without exposing extra actions.
 
@@ -127,6 +128,7 @@ Common night UI patterns:
 - `PlayerSelector` for one target.
 - `MultiPlayerSelector` for Cupid and Detective.
 - `AlphaWolfPanel` for the one-time transform decision.
+- `DoctorPanel` for the one-time Doctor heal.
 - `WitchPanel` for heal and poison decisions.
 - `StepNote` and `GmOnlyInfo` for non-player or hidden information steps.
 

@@ -18,6 +18,7 @@ import {
   setCupidTargets,
   setDayTimerDuration,
   setDetectiveTargets,
+  setDoctorHealTonight,
   setInspectedPlayer,
   setNightGuestHost,
   setProtectedPlayer,
@@ -214,6 +215,9 @@ export const werewolfRoomAdapter = {
         break;
       case "setAlphaWolfTransform":
         room.gameState = withGame(room.gameState, (state) => setAlphaWolfTransform(state, command.value));
+        break;
+      case "setDoctorHealTonight":
+        room.gameState = withGame(room.gameState, (state) => setDoctorHealTonight(state, command.value));
         break;
       case "setWitchHealTonight":
         room.gameState = withGame(room.gameState, (state) => setWitchHealTonight(state, command.value));

@@ -21,6 +21,7 @@ export type WerewolfHostCommand =
   | { type: "revealNightResult"; step: Extract<NightStepId, "seer" | "auraSeer" | "detective"> }
   | { type: "setWolfTarget"; playerId: string | null }
   | { type: "setAlphaWolfTransform"; value: boolean | null }
+  | { type: "setDoctorHealTonight"; value: boolean }
   | { type: "setWitchHealTonight"; value: boolean }
   | { type: "setWitchPoisonTarget"; playerId: string | null }
   | { type: "advanceNightStep" }
@@ -58,6 +59,7 @@ export const werewolfHostCommandTypes = [
   "revealNightResult",
   "setWolfTarget",
   "setAlphaWolfTransform",
+  "setDoctorHealTonight",
   "setWitchHealTonight",
   "setWitchPoisonTarget",
   "advanceNightStep",

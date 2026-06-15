@@ -51,7 +51,7 @@ export const werewolfDe = {
     "winStandard": "Standard",
     "winStandardHint": "Wölfe gewinnen, wenn sie mindestens gleich viele wie das Dorf sind.",
     "winExtended": "Erweitert",
-    "winExtendedHint": "Jäger und Hexentränke können den Wolf-Sieg verzögern.",
+    "winExtendedHint": "Jäger, ungenutzte Doktor-Heilung und ungenutzte Hexentränke können den Wolf-Sieg verzögern.",
     "revealMode": "Aufdecken nach Abstimmung",
     "revealHidden": "Verborgen",
     "revealHiddenHint": "Nach einer Eliminierung nichts anzeigen.",
@@ -173,6 +173,8 @@ export const werewolfDe = {
     "stepAuraSeerDescription": "Der Aura-Seher wählt einen Spieler und erfährt, ob er gut oder böse ist.",
     "stepDetective": "Detektiv erwacht",
     "stepDetectiveDescription": "Der Detektiv wählt zwei Spieler und erfährt, ob sie im gleichen Team sind.",
+    "stepDoctor": "Doktor erwacht",
+    "stepDoctorDescription": "Der Doktor darf das Werwolf-Opfer einmal pro Spiel retten.",
     "stepWitch": "Hexe erwacht",
     "stepWitchDescription": "Die Hexe entscheidet über Heil- und Gifttrank.",
     "stepToughGuyInfo": "Harten Burschen informieren",
@@ -204,6 +206,13 @@ export const werewolfDe = {
     "wolfVictimAttacked": "{name} wurde angegriffen.",
     "healVictim": "{name} heilen",
     "healVictimHint": "Heiltrank für das Werwolf-Opfer benutzen.",
+    "doctorTreatment": "Behandlung des Doktors",
+    "doctorTarget": "Werwolf-Opfer",
+    "doctorHealUsed": "Behandlung eingesetzt",
+    "doctorHealSpent": "Behandlung bereits eingesetzt",
+    "doctorHealUnavailable": "Keine Behandlung möglich",
+    "doctorHealAlreadyUsed": "Der Doktor hat in diesem Spiel bereits einmal geheilt.",
+    "doctorNoHealTarget": "Es gibt diese Nacht kein heilbares Werwolf-Opfer für den Doktor.",
     "witchNoHealTarget": "Es gibt diese Nacht kein heilbares Werwolf-Opfer.",
     "witchPoisonUsed": "Der Gifttrank wurde bereits benutzt.",
     "poisonTarget": "Einen Spieler vergiften?",
@@ -320,6 +329,10 @@ export const werewolfDe = {
       "name": "Hexe",
       "description": "Du hast einen Heiltrank und einen Gifttrank für das gesamte Spiel."
     },
+    "doctor": {
+      "name": "Doktor",
+      "description": "Rette einmal pro Spiel das Werwolf-Opfer."
+    },
     "hunter": {
       "name": "Jäger",
       "description": "Wenn du stirbst, darfst du nach Tischregel sofort noch einen Spieler mitnehmen."
@@ -416,6 +429,16 @@ export const werewolfDe = {
       "poison": {
         "title": "Gifttrank",
         "text": "Wähle einmal pro Spiel nachts einen lebenden Spieler, der ausscheidet."
+      }
+    },
+    "doctor": {
+      "heal": {
+        "title": "Behandlung",
+        "text": "Rette einmal pro Spiel das Hauptopfer des Werwolf-Angriffs."
+      },
+      "limits": {
+        "title": "Nur echte Angriffe",
+        "text": "Die Behandlung ist nur verfügbar, wenn das Hauptopfer durch den Werwolf-Angriff sterben würde."
       }
     },
     "hunter": {
@@ -593,6 +616,8 @@ export const werewolfDe = {
     "titleWitchHealed": "heilt",
     "titleWitchPoisoned": "vergiftet",
     "titleWitchNoPotion": "nutzt keinen Trank",
+    "titleDoctorHealed": "behandelt",
+    "titleDoctorNoHeal": "behandelt niemanden",
     "titleRoleAction": "führt Aktion aus",
     "titleNightDeath": "scheidet nachts aus",
     "titleNoNightDeath": "niemand scheidet nachts aus",
@@ -624,6 +649,8 @@ export const werewolfDe = {
     "roleActionWitchHealed": "{actor} heilt {target}.",
     "roleActionWitchPoisoned": "{actor} vergiftet {target}.",
     "roleActionWitchNoPotion": "{actor} nutzt keinen Trank.",
+    "roleActionDoctorHealed": "{actor} behandelt {target}.",
+    "roleActionDoctorNoHeal": "{actor} behandelt niemanden.",
     "detectiveSameTeamResult": "gleiches Team",
     "detectiveDifferentTeamResult": "verschiedene Teams",
     "nightDeath": "{name} wurde in der Nacht ausgeschaltet.",

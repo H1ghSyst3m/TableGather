@@ -553,6 +553,7 @@ describe("room manager", () => {
     activeRoom.gameState = createWerewolfGameFromAssignments(
       [
         { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
         { id: "witch", name: "Witch", roleId: "witch" },
         { id: "seer", name: "Seer", roleId: "seer" },
         { id: "villager", name: "Villager", roleId: "villager" },
@@ -563,6 +564,10 @@ describe("room manager", () => {
 
     manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: "villager" });
     expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.wolfTargetId).toBe("villager");
+    manager.applyHostCommand(room.code, hostToken, { type: "setDoctorHealTonight", value: true });
+    expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.doctorHealTonight).toBe(true);
+    manager.applyHostCommand(room.code, hostToken, { type: "setDoctorHealTonight", value: false });
+    expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.doctorHealTonight).toBe(false);
     manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: null });
     expect(asWerewolfRoom(manager.getRoom(room.code)).gameState?.wolfTargetId).toBeNull();
 
@@ -579,7 +584,7 @@ describe("room manager", () => {
   it("keeps undo host-only and does not capture reversible target selections", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
-    const joined = ["Wolf", "Seer", "Witch", "Villager", "Hunter"].map((name, index) =>
+    const joined = ["Wolf", "Seer", "Witch", "Doctor", "Villager", "Hunter"].map((name, index) =>
       manager.joinRoom(room.code, name, `player-${index}`),
     );
 
@@ -591,13 +596,15 @@ describe("room manager", () => {
         { id: joined[0].player.id, name: "Wolf", roleId: "werewolf" },
         { id: joined[1].player.id, name: "Seer", roleId: "seer" },
         { id: joined[2].player.id, name: "Witch", roleId: "witch" },
-        { id: joined[3].player.id, name: "Villager", roleId: "villager" },
-        { id: joined[4].player.id, name: "Hunter", roleId: "hunter" },
+        { id: joined[3].player.id, name: "Doctor", roleId: "doctor" },
+        { id: joined[4].player.id, name: "Villager", roleId: "villager" },
+        { id: joined[5].player.id, name: "Hunter", roleId: "hunter" },
       ],
       { winMode: "standard", revealMode: "role", roleReveal: false },
     );
 
-    manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: joined[3].player.id });
+    manager.applyHostCommand(room.code, hostToken, { type: "setWolfTarget", playerId: joined[4].player.id });
+    manager.applyHostCommand(room.code, hostToken, { type: "setDoctorHealTonight", value: true });
 
     const hostView = werewolfHostSnapshot(manager, activeRoom);
     const playerView = werewolfPlayerSnapshot(manager, activeRoom, joined[1].clientToken);
@@ -606,13 +613,16 @@ describe("room manager", () => {
     const stageJson = JSON.stringify(stageView);
 
     expect(hostView.canUndo).toBe(false);
-    expect(hostView.gameState?.wolfTargetId).toBe(joined[3].player.id);
+    expect(hostView.gameState?.wolfTargetId).toBe(joined[4].player.id);
+    expect(hostView.gameState?.doctorHealTonight).toBe(true);
     expect(playerJson).not.toContain("canUndo");
     expect(playerJson).not.toContain("undoState");
     expect(playerJson).not.toContain("wolfTargetId");
+    expect(playerJson).not.toContain("doctorHealTonight");
     expect(stageJson).not.toContain("canUndo");
     expect(stageJson).not.toContain("undoState");
     expect(stageJson).not.toContain("wolfTargetId");
+    expect(stageJson).not.toContain("doctorHealTonight");
   });
 
   it("undoes one committed room step and clears the undo slot", () => {
