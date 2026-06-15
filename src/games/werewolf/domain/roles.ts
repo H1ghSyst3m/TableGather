@@ -68,7 +68,7 @@ export const roleDefinitions: Record<RoleId, RoleDefinition> = {
     id: "doctor",
     nameKey: "roles.doctor.name",
     descriptionKey: "roles.doctor.description",
-    ruleKeys: ["heal", "timing"],
+    ruleKeys: ["heal", "limits"],
     team: "village",
     category: "classic",
     group: "village",

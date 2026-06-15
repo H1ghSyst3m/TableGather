@@ -331,7 +331,7 @@ export const werewolfDe = {
     },
     "doctor": {
       "name": "Doktor",
-      "description": "Rette einmal pro Spiel das Werwolf-Opfer, bevor die Hexe entscheidet."
+      "description": "Rette einmal pro Spiel das Werwolf-Opfer."
     },
     "hunter": {
       "name": "Jäger",
@@ -434,11 +434,11 @@ export const werewolfDe = {
     "doctor": {
       "heal": {
         "title": "Behandlung",
-        "text": "Rette einmal pro Spiel das Hauptopfer des Werwolf-Angriffs während des Doktor-Schritts."
+        "text": "Rette einmal pro Spiel das Hauptopfer des Werwolf-Angriffs."
       },
-      "timing": {
-        "title": "Vor der Hexe",
-        "text": "Der Doktor handelt nach den Prüfrollen und direkt vor der Hexe. Heilt der Doktor, kann die Hexe ihren Heiltrank nicht für denselben Angriff ausgeben."
+      "limits": {
+        "title": "Nur echte Angriffe",
+        "text": "Die Behandlung ist nur verfügbar, wenn das Hauptopfer durch den Werwolf-Angriff sterben würde."
       }
     },
     "hunter": {

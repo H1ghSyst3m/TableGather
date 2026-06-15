@@ -331,7 +331,7 @@ export const werewolfEn = {
     },
     "doctor": {
       "name": "Doctor",
-      "description": "Once per game, save the werewolf victim before the Witch decides."
+      "description": "Once per game, save the werewolf victim."
     },
     "hunter": {
       "name": "Hunter",
@@ -434,11 +434,11 @@ export const werewolfEn = {
     "doctor": {
       "heal": {
         "title": "Treatment",
-        "text": "Once per game, save the main werewolf victim during the Doctor step."
+        "text": "Once per game, save the main victim of the werewolf attack."
       },
-      "timing": {
-        "title": "Before the Witch",
-        "text": "The Doctor acts after the investigation roles and directly before the Witch. If the Doctor heals, the Witch cannot spend her healing potion on the same attack."
+      "limits": {
+        "title": "Real attacks only",
+        "text": "Treatment is only available when the main victim would die from the werewolf attack."
       }
     },
     "hunter": {

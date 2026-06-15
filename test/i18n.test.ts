@@ -72,6 +72,29 @@ describe("i18n", () => {
       }
     }
   });
+
+  it("keeps doctor role copy focused on doctor rules", () => {
+    const doctor = roleDefinitions.doctor;
+    expect(doctor.ruleKeys).toEqual(["heal", "limits"]);
+
+    const deCopy = [
+      translate("de", doctor.descriptionKey),
+      ...doctor.ruleKeys.flatMap((ruleKey) => [
+        translate("de", `roleRules.doctor.${ruleKey}.title` as TranslationKey),
+        translate("de", `roleRules.doctor.${ruleKey}.text` as TranslationKey),
+      ]),
+    ].join("\n");
+    const enCopy = [
+      translate("en", doctor.descriptionKey),
+      ...doctor.ruleKeys.flatMap((ruleKey) => [
+        translate("en", `roleRules.doctor.${ruleKey}.title` as TranslationKey),
+        translate("en", `roleRules.doctor.${ruleKey}.text` as TranslationKey),
+      ]),
+    ].join("\n");
+
+    expect(deCopy).not.toMatch(/Hexe|Hexen/);
+    expect(enCopy).not.toContain("Witch");
+  });
 });
 
 function storageWithLocale(locale: string | null) {
