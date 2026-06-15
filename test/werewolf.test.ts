@@ -43,6 +43,7 @@ import type { RoleCounts, WerewolfOptions, WerewolfPlayer } from "../src/games/w
 
 const names = ["Alex", "Sam", "Jordan", "Taylor", "Morgan"];
 const counts: RoleCounts = { werewolf: 1, seer: 1, protector: 1, hunter: 0, villager: 2 };
+const hostOptionsStorageKey = "tablegather-werewolf-host-options";
 
 describe("werewolf domain", () => {
   it("creates valid default role counts for a table", () => {
@@ -386,6 +387,54 @@ describe("werewolf domain", () => {
     const nextAttempt = setWolfTarget({ ...game, nightResolved: false }, "villager");
     expect(canDoctorHealWolfTarget(nextAttempt)).toBe(false);
     expect(setDoctorHealTonight(nextAttempt, true).doctorHealTonight).toBe(false);
+  });
+
+  it("requires living healers for doctor and witch heals", () => {
+    let doctorGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "doctor", name: "Doctor", roleId: "doctor" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "villager-1", name: "Villager 1", roleId: "villager" },
+        { id: "villager-2", name: "Villager 2", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    doctorGame = setWolfTarget(doctorGame, "target");
+    doctorGame = {
+      ...doctorGame,
+      players: doctorGame.players.map((item) => (item.id === "doctor" ? { ...item, alive: false } : item)),
+    };
+
+    expect(canDoctorHealWolfTarget(doctorGame)).toBe(false);
+    expect(setDoctorHealTonight(doctorGame, true).doctorHealTonight).toBe(false);
+
+    const resolvedDoctorGame = resolveNight({ ...doctorGame, doctorHealTonight: true });
+    expect(resolvedDoctorGame.players.find((item) => item.id === "target")?.alive).toBe(false);
+    expect(resolvedDoctorGame.doctorHealUsed).toBe(false);
+
+    let witchGame = createWerewolfGameFromAssignments(
+      [
+        { id: "wolf", name: "Wolf", roleId: "werewolf" },
+        { id: "witch", name: "Witch", roleId: "witch" },
+        { id: "target", name: "Target", roleId: "villager" },
+        { id: "villager-1", name: "Villager 1", roleId: "villager" },
+        { id: "villager-2", name: "Villager 2", roleId: "villager" },
+      ],
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
+    witchGame = setWolfTarget(witchGame, "target");
+    witchGame = {
+      ...witchGame,
+      players: witchGame.players.map((item) => (item.id === "witch" ? { ...item, alive: false } : item)),
+    };
+
+    expect(canWitchHealWolfTarget(witchGame)).toBe(false);
+    expect(setWitchHealTonight(witchGame, true).witchHealTonight).toBe(false);
+
+    const resolvedWitchGame = resolveNight({ ...witchGame, witchHealTonight: true });
+    expect(resolvedWitchGame.players.find((item) => item.id === "target")?.alive).toBe(false);
+    expect(resolvedWitchGame.witchHealUsed).toBe(false);
   });
 
   it("doctor heal prevents tough guy wounds and infected wolf-skip", () => {
@@ -1689,23 +1738,24 @@ function player(id: string, roleId: WerewolfPlayer["roleId"], alive = true): Wer
 
 function withMockStorage(initialValue: string | null, run: (readStorage: () => string) => void) {
   const previousStorage = globalThis.localStorage;
-  let stored = initialValue;
+  const values = new Map<string, string>();
+  if (initialValue !== null) values.set(hostOptionsStorageKey, initialValue);
 
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: {
-      getItem: () => stored,
-      removeItem: () => {
-        stored = null;
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => {
+        values.delete(key);
       },
-      setItem: (_key: string, value: string) => {
-        stored = value;
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
       },
     },
   });
 
   try {
-    run(() => stored ?? "");
+    run(() => values.get(hostOptionsStorageKey) ?? "");
   } finally {
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,

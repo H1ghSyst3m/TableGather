@@ -275,11 +275,13 @@ export function advanceNightStep(state: WerewolfState): WerewolfState {
 
 export function canDoctorHealWolfTarget(state: WerewolfState): boolean {
   if (state.doctorHealUsed) return false;
+  if (!hasAliveRole(state.players, "doctor")) return false;
   return canHealWolfTarget(state);
 }
 
 export function canWitchHealWolfTarget(state: WerewolfState): boolean {
   if (state.witchHealUsed) return false;
+  if (!hasAliveRole(state.players, "witch")) return false;
   if (doctorHealApplies(state)) return false;
   return canHealWolfTarget(state);
 }

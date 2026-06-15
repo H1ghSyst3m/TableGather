@@ -22,6 +22,7 @@ import { submitAdminTokenInput } from "../src/online/adminToken";
 import { hasDuplicatePlayerName, normalizePlayerName } from "../src/playerNames";
 
 const previousSessionStorage = globalThis.sessionStorage;
+const localWerewolfStorageKey = "tablegather-werewolf-local";
 
 const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
   setProtectedPlayer: () => undefined,
@@ -1736,12 +1737,19 @@ function activeStageHtml(html: string) {
 
 function renderWithStorage(node: ReactNode, initialValue: string | null = null) {
   const previousStorage = globalThis.localStorage;
+  const values = new Map<string, string>();
+  if (initialValue !== null) values.set(localWerewolfStorageKey, initialValue);
+
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: {
-      getItem: () => initialValue,
-      removeItem: () => undefined,
-      setItem: () => undefined,
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
     },
   });
 
