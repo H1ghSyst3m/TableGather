@@ -159,7 +159,7 @@ Common host commands:
 - `closeRoom`
 - `resetToLobby`
 
-`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. The server applies simple in-memory limits to repeated room lookups and failed joins. Game-specific host/player commands are defined in each game module.
+`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. The server allows 60 room lookup requests (`inspectRoom` or `inspectRoomSession`) and 20 failed `joinRoom` attempts per rate-limit key in each 60,000 ms window. Game-specific host/player commands are defined in each game module.
 
 ## Server Messages
 

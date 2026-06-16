@@ -1068,6 +1068,13 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain("add-player-form");
   });
 
+  it("keeps partial invite-link codes idle on the join screen", () => {
+    const html = renderWithI18n(<WerewolfRoomPlayerScreen code="G5K" navigate={() => undefined} />);
+
+    expect(html).toContain('value="G5K"');
+    expect(html).not.toContain(translate("de", "werewolf.roomChecking"));
+  });
+
   it("renders host stage language controls in the stage link panel", () => {
     const html = renderWithI18n(
       <StageLinkPanel

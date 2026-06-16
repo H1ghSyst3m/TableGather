@@ -16,6 +16,7 @@ const ROOM_EXPIRY_SWEEP_INTERVAL_MS = 60_000;
 const ROOM_LOOKUP_LIMIT = 60;
 const FAILED_JOIN_LIMIT = 20;
 const ROOM_RATE_LIMIT_WINDOW_MS = 60_000;
+const ROOM_RATE_LIMIT_MAX_KEYS = 10_000;
 const TOO_MANY_ROOM_REQUESTS_ERROR = "Too many room requests.";
 
 interface RoomServerOptions {
@@ -23,6 +24,7 @@ interface RoomServerOptions {
   serveStatic?: boolean | null;
   staticDir?: string;
   now?: () => number;
+  trustedProxies?: Iterable<string>;
 }
 
 export function createRoomServer(manager = new RoomManager(), options: RoomServerOptions = {}) {
@@ -31,6 +33,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
   const now = options.now ?? Date.now;
   const lookupLimiter = createFixedWindowLimiter(ROOM_LOOKUP_LIMIT, ROOM_RATE_LIMIT_WINDOW_MS, now);
   const failedJoinLimiter = createFixedWindowLimiter(FAILED_JOIN_LIMIT, ROOM_RATE_LIMIT_WINDOW_MS, now);
+  const trustedProxies = readTrustedProxies(options.trustedProxies);
   const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
   const adminToken = readAdminToken(options.adminToken);
   const adminAllowedOrigins = readAdminAllowedOrigins();
@@ -64,7 +67,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
 
   wss.on("connection", (socket, request) => {
     const clientId = createClientId();
-    const roomRequestKey = roomRateLimitKey(request);
+    const roomRequestKey = roomRateLimitKey(request, trustedProxies);
     clients.set(clientId, socket);
 
     socket.on("message", (data) => {
@@ -434,15 +437,23 @@ function createFixedWindowLimiter(limit: number, windowMs: number, now: () => nu
 
   return {
     isBlocked(key: string) {
+      const currentTime = now();
       const current = entries.get(key);
-      if (!current || now() - current.windowStart >= windowMs) return false;
+      if (!current) return false;
+      if (isRateLimitWindowExpired(current, currentTime, windowMs)) {
+        entries.delete(key);
+        return false;
+      }
+
       return current.count >= limit;
     },
     record(key: string) {
       const currentTime = now();
       const current = entries.get(key);
-      if (!current || currentTime - current.windowStart >= windowMs) {
+      if (!current || isRateLimitWindowExpired(current, currentTime, windowMs)) {
+        if (current) entries.delete(key);
         entries.set(key, { windowStart: currentTime, count: 1 });
+        evictRateLimitEntries(entries, currentTime, windowMs);
         return true;
       }
 
@@ -452,18 +463,56 @@ function createFixedWindowLimiter(limit: number, windowMs: number, now: () => nu
   };
 }
 
-function roomRateLimitKey(request: http.IncomingMessage) {
+function isRateLimitWindowExpired(entry: { windowStart: number }, currentTime: number, windowMs: number) {
+  return currentTime - entry.windowStart >= windowMs;
+}
+
+function evictRateLimitEntries(entries: Map<string, { windowStart: number; count: number }>, currentTime: number, windowMs: number) {
+  for (const [key, entry] of entries.entries()) {
+    if (isRateLimitWindowExpired(entry, currentTime, windowMs)) entries.delete(key);
+  }
+
+  while (entries.size > ROOM_RATE_LIMIT_MAX_KEYS) {
+    const oldest = entries.keys().next();
+    if (oldest.done) return;
+    entries.delete(oldest.value);
+  }
+}
+
+function roomRateLimitKey(request: http.IncomingMessage, trustedProxies: ReadonlySet<string>) {
+  const peerAddress = normalizeRateLimitAddress(request.socket.remoteAddress) ?? "unknown";
+  if (!trustedProxies.has(peerAddress)) return peerAddress;
+
   return (
-    firstHeaderValue(request.headers["cf-connecting-ip"]) ??
-    forwardedForClient(firstHeaderValue(request.headers["x-forwarded-for"])) ??
-    request.socket.remoteAddress ??
-    "unknown"
+    normalizeRateLimitAddress(firstHeaderValue(request.headers["cf-connecting-ip"])) ??
+    normalizeRateLimitAddress(forwardedForClient(firstHeaderValue(request.headers["x-forwarded-for"]))) ??
+    peerAddress
   );
 }
 
 function forwardedForClient(header: string | null) {
   const clientAddress = header?.split(",")[0]?.trim();
   return clientAddress || null;
+}
+
+function readTrustedProxies(configured: Iterable<string> | undefined) {
+  const rawProxies = configured ?? (process.env.TABLEGATHER_TRUSTED_PROXIES ?? "").split(",");
+  const proxies = new Set<string>();
+
+  for (const rawProxy of rawProxies) {
+    const proxy = normalizeRateLimitAddress(rawProxy);
+    if (proxy) proxies.add(proxy);
+  }
+
+  return proxies;
+}
+
+function normalizeRateLimitAddress(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (trimmed === "::1") return "127.0.0.1";
+  if (trimmed.startsWith("::ffff:")) return trimmed.slice("::ffff:".length);
+  return trimmed;
 }
 
 function firstHeaderValue(value: string | string[] | undefined) {

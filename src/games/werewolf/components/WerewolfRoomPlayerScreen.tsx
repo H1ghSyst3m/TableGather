@@ -28,13 +28,14 @@ const werewolfAssets = resolveGameTheme({ theme: werewolfTheme }).assets;
 export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: { code?: string; navigate: (path: string) => void }) {
   const { t } = useI18n();
   const initialRoomCode = normalizeRoomCodeInput(initialCode);
+  const hasInitialRoomCode = isCompleteRoomCode(initialRoomCode);
   const [roomCodeInput, setRoomCodeInput] = useState(initialRoomCode);
   const [name, setName] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<WerewolfPlayerRoomSnapshot | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [pendingCode, setPendingCode] = useState<string | null>(initialRoomCode || null);
-  const [roomStatus, setRoomStatus] = useState<JoinRoomStatus>(initialRoomCode ? "checking" : "idle");
+  const [pendingCode, setPendingCode] = useState<string | null>(hasInitialRoomCode ? initialRoomCode : null);
+  const [roomStatus, setRoomStatus] = useState<JoinRoomStatus>(hasInitialRoomCode ? "checking" : "idle");
   const [roomPlayerCount, setRoomPlayerCount] = useState<number | null>(null);
   const [staleInspectKey, setStaleInspectKey] = useState(0);
   const [roleCardOpen, setRoleCardOpen] = useState(false);
