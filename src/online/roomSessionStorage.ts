@@ -1,3 +1,5 @@
+import { normalizeRoomCode, ROOM_CODE_LENGTH } from "./roomCodes";
+
 export type StoredRoomSessionRole = "host" | "player";
 
 export interface StoredRoomSession {
@@ -7,7 +9,7 @@ export interface StoredRoomSession {
 }
 
 const currentHostRoomKey = "tablegather-current-host-room";
-const roomSessionKeyPattern = /^tablegather-room-([A-Z0-9]{4})-(host|player)$/;
+const roomSessionKeyPattern = new RegExp(`^tablegather-room-([A-Z0-9]{${ROOM_CODE_LENGTH}})-(host|player)$`);
 const roleSortOrder: Record<StoredRoomSessionRole, number> = {
   host: 0,
   player: 1,
@@ -112,10 +114,6 @@ function hostRoomStorageKey(code: string) {
 
 function playerRoomStorageKey(code: string) {
   return `tablegather-room-${normalizeRoomCode(code)}-player`;
-}
-
-function normalizeRoomCode(code: string) {
-  return code.trim().toUpperCase();
 }
 
 function sortStoredSessions(sessions: StoredRoomSession[]) {

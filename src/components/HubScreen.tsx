@@ -74,7 +74,7 @@ export function HubScreen({ navigate, initialTab = "games", initialMode = "room"
 
       clearPendingSessionTimer(pendingSessionTimersRef.current, message.requestId);
       pendingSessionsRef.current.delete(message.requestId);
-      setSessionServerError(message.message);
+      setSessionServerError(translateHubRoomServerError(message.message, t));
       if (pendingSessionsRef.current.size === 0) setSessionLoading(false);
     }
   });
@@ -408,6 +408,11 @@ function mergeSessionCard(cards: HubSessionCard[], nextCard: HubSessionCard) {
 
 function sortSessionCards(cards: HubSessionCard[]) {
   return [...cards].sort((first, second) => second.lastActivityAt - first.lastActivityAt);
+}
+
+function translateHubRoomServerError(message: string, t: ReturnType<typeof useI18n>["t"]) {
+  if (message === "Too many room requests.") return t("errors.roomTooManyRequests");
+  return message;
 }
 
 function clearPendingSessionTimer(timers: Map<string, ReturnType<typeof setTimeout>>, requestId: string) {

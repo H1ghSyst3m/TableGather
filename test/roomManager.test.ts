@@ -6,6 +6,8 @@ import type { RoleCounts, WerewolfState } from "../src/games/werewolf/domain/typ
 import type { WerewolfHostRoomSnapshot, WerewolfPlayerRoomSnapshot, WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { ADMIN_INACTIVE_ACTIVITY_MS } from "../src/online/admin";
 import type { HostCommand } from "../src/online/messages";
+import { ROOM_CODE_LENGTH } from "../src/online/roomCodes";
+import { MAX_PLAYER_NAME_LENGTH } from "../src/playerNames";
 
 const counts: RoleCounts = { werewolf: 1, seer: 1, protector: 1, hunter: 0, villager: 2 };
 type WerewolfRoom = Room & { gameState: WerewolfState | null };
@@ -52,7 +54,7 @@ describe("room manager", () => {
       const activeRoom = manager.getRoom(room.code);
       const roomTokenPattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{18}$/;
 
-      expect(room.code).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/);
+      expect(room.code).toMatch(new RegExp(`^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{${ROOM_CODE_LENGTH}}$`));
       expect(hostToken).toMatch(roomTokenPattern);
       expect(joined.clientToken).toMatch(roomTokenPattern);
       expect(joined.player.id).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/);
@@ -74,6 +76,16 @@ describe("room manager", () => {
     expect(() => manager.joinRoom(room.code, "ALEX STONE", "player-3")).toThrow("Name is already taken.");
     expect(manager.resumeRoom(room.code, joined.clientToken, "player-4")).toMatchObject({ role: "player" });
     expect(manager.getRoom(room.code)?.players.find((player) => player.name === "Alex Stone")?.connected).toBe(true);
+  });
+
+  it("enforces the central player name length limit when joining", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room } = manager.createRoom("host-1", "werewolf");
+    const maxLengthName = "A".repeat(MAX_PLAYER_NAME_LENGTH);
+    const tooLongName = "B".repeat(MAX_PLAYER_NAME_LENGTH + 1);
+
+    expect(manager.joinRoom(room.code, maxLengthName, "player-1").player.name).toBe(maxLengthName);
+    expect(() => manager.joinRoom(room.code, tooLongName, "player-2")).toThrow("Name is too long.");
   });
 
   it("reports room lookup status without joining", () => {

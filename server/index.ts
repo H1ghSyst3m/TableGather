@@ -13,16 +13,24 @@ const roomServerInfo = {
 } satisfies RoomServerInfo;
 
 const ROOM_EXPIRY_SWEEP_INTERVAL_MS = 60_000;
+const ROOM_LOOKUP_LIMIT = 60;
+const FAILED_JOIN_LIMIT = 20;
+const ROOM_RATE_LIMIT_WINDOW_MS = 60_000;
+const TOO_MANY_ROOM_REQUESTS_ERROR = "Too many room requests.";
 
 interface RoomServerOptions {
   adminToken?: string | null;
   serveStatic?: boolean | null;
   staticDir?: string;
+  now?: () => number;
 }
 
 export function createRoomServer(manager = new RoomManager(), options: RoomServerOptions = {}) {
   const clients = new Map<string, WebSocket>();
   const clientSessions = new Map<string, { roomCode: string; token: string; role: "host" | "player" | "stage" }>();
+  const now = options.now ?? Date.now;
+  const lookupLimiter = createFixedWindowLimiter(ROOM_LOOKUP_LIMIT, ROOM_RATE_LIMIT_WINDOW_MS, now);
+  const failedJoinLimiter = createFixedWindowLimiter(FAILED_JOIN_LIMIT, ROOM_RATE_LIMIT_WINDOW_MS, now);
   const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
   const adminToken = readAdminToken(options.adminToken);
   const adminAllowedOrigins = readAdminAllowedOrigins();
@@ -54,8 +62,9 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
   server.on("close", () => clearInterval(expirySweep));
   wss.on("close", () => clearInterval(expirySweep));
 
-  wss.on("connection", (socket) => {
+  wss.on("connection", (socket, request) => {
     const clientId = createClientId();
+    const roomRequestKey = roomRateLimitKey(request);
     clients.set(clientId, socket);
 
     socket.on("message", (data) => {
@@ -86,6 +95,11 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
         }
 
         if (message.type === "inspectRoom") {
+          if (!lookupLimiter.record(roomRequestKey)) {
+            send(socket, { type: "error", requestId: message.requestId, message: TOO_MANY_ROOM_REQUESTS_ERROR });
+            return;
+          }
+
           send(socket, {
             type: "roomStatus",
             requestId: message.requestId,
@@ -96,6 +110,11 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
         }
 
         if (message.type === "inspectRoomSession") {
+          if (!lookupLimiter.record(roomRequestKey)) {
+            send(socket, { type: "error", requestId: message.requestId, message: TOO_MANY_ROOM_REQUESTS_ERROR });
+            return;
+          }
+
           send(socket, {
             type: "roomSessionStatus",
             requestId: message.requestId,
@@ -106,6 +125,8 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
         }
 
         if (message.type === "joinRoom") {
+          if (failedJoinLimiter.isBlocked(roomRequestKey)) throw new Error(TOO_MANY_ROOM_REQUESTS_ERROR);
+
           const { room, clientToken } = manager.joinRoom(message.roomCode, message.payload.name, clientId);
           clientSessions.set(clientId, { roomCode: room.code, token: clientToken, role: "player" });
           send(socket, {
@@ -209,10 +230,15 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
           broadcastRoom(room.code);
         }
       } catch (error) {
+        let messageText = error instanceof Error ? error.message : "Unexpected room error.";
+        if (message.type === "joinRoom" && messageText !== TOO_MANY_ROOM_REQUESTS_ERROR && !failedJoinLimiter.record(roomRequestKey)) {
+          messageText = TOO_MANY_ROOM_REQUESTS_ERROR;
+        }
+
         send(socket, {
           type: "error",
           requestId: message.requestId,
-          message: error instanceof Error ? error.message : "Unexpected room error.",
+          message: messageText,
         });
       }
     });
@@ -401,6 +427,49 @@ function readServeStatic(configured: boolean | null | undefined) {
   const value = process.env.TABLEGATHER_SERVE_STATIC?.trim().toLowerCase();
   if (value) return ["1", "true", "yes", "on"].includes(value);
   return process.env.NODE_ENV === "production";
+}
+
+function createFixedWindowLimiter(limit: number, windowMs: number, now: () => number) {
+  const entries = new Map<string, { windowStart: number; count: number }>();
+
+  return {
+    isBlocked(key: string) {
+      const current = entries.get(key);
+      if (!current || now() - current.windowStart >= windowMs) return false;
+      return current.count >= limit;
+    },
+    record(key: string) {
+      const currentTime = now();
+      const current = entries.get(key);
+      if (!current || currentTime - current.windowStart >= windowMs) {
+        entries.set(key, { windowStart: currentTime, count: 1 });
+        return true;
+      }
+
+      current.count += 1;
+      return current.count <= limit;
+    },
+  };
+}
+
+function roomRateLimitKey(request: http.IncomingMessage) {
+  return (
+    firstHeaderValue(request.headers["cf-connecting-ip"]) ??
+    forwardedForClient(firstHeaderValue(request.headers["x-forwarded-for"])) ??
+    request.socket.remoteAddress ??
+    "unknown"
+  );
+}
+
+function forwardedForClient(header: string | null) {
+  const clientAddress = header?.split(",")[0]?.trim();
+  return clientAddress || null;
+}
+
+function firstHeaderValue(value: string | string[] | undefined) {
+  const header = Array.isArray(value) ? value[0] : value;
+  const trimmed = header?.trim();
+  return trimmed || null;
 }
 
 function bearerToken(header: string | undefined) {

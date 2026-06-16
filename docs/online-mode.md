@@ -75,6 +75,8 @@ Room expires
   -> active host/player/stage clients receive roomClosed
 ```
 
+Room codes are six characters from the server token alphabet. Player names are whitespace-normalized and capped at 32 characters server-side before a join is accepted.
+
 Meaningful activity refreshes `lastActivityAt`: create, join, resume, stage join, leave, disconnect, host commands, and player commands. Passive lookups such as `inspectRoom` and `inspectRoomSession` do not refresh expiry.
 
 ## Stage Lifecycle
@@ -157,7 +159,7 @@ Common host commands:
 - `closeRoom`
 - `resetToLobby`
 
-`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. Game-specific host/player commands are defined in each game module.
+`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. The server applies simple in-memory limits to repeated room lookups and failed joins. Game-specific host/player commands are defined in each game module.
 
 ## Server Messages
 

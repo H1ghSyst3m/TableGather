@@ -496,6 +496,86 @@ describe("room websocket server", () => {
     } satisfies Partial<RoomSessionStatusMessage>);
   });
 
+  it("rate-limits room lookups and allows them again after the window", async () => {
+    let now = 1_000;
+    const url = await startServer(new RoomManager(), { now: () => now });
+    const guest = await openSocket(url);
+
+    for (let index = 0; index < 60; index += 1) {
+      const requestId = `lookup-${index}`;
+      guest.send({ type: "inspectRoom", requestId, roomCode: "MISS01" });
+      await expect(guest.next((message) => message.type === "roomStatus" && message.requestId === requestId)).resolves.toMatchObject({
+        type: "roomStatus",
+        requestId,
+        roomCode: "MISS01",
+        exists: false,
+        joinable: false,
+      } satisfies Partial<RoomStatusMessage>);
+    }
+
+    guest.send({ type: "inspectRoom", requestId: "lookup-limited", roomCode: "MISS01" });
+    await expect(guest.next((message) => message.type === "error" && message.requestId === "lookup-limited")).resolves.toMatchObject({
+      type: "error",
+      requestId: "lookup-limited",
+      message: "Too many room requests.",
+    });
+
+    now += 60_000;
+    guest.send({ type: "inspectRoom", requestId: "lookup-reset", roomCode: "MISS01" });
+    await expect(guest.next((message) => message.type === "roomStatus" && message.requestId === "lookup-reset")).resolves.toMatchObject({
+      type: "roomStatus",
+      requestId: "lookup-reset",
+      roomCode: "MISS01",
+      exists: false,
+      joinable: false,
+    } satisfies Partial<RoomStatusMessage>);
+  });
+
+  it("rate-limits abusive failed joins and allows valid joins after the window", async () => {
+    let now = 1_000;
+    const url = await startServer(new RoomManager(), { now: () => now });
+    const host = await openSocket(url);
+
+    host.send({ type: "createRoom", payload: { gameId: "werewolf" } });
+    const created = (await host.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    const roomCode = created.roomCode;
+    await host.next((message) => message.type === "snapshot");
+
+    const guest = await openSocket(url);
+    for (let index = 0; index < 20; index += 1) {
+      const requestId = `join-missing-${index}`;
+      guest.send({ type: "joinRoom", requestId, roomCode: "MISS01", payload: { name: `Guest ${index}` } });
+      await expect(guest.next((message) => message.type === "error" && message.requestId === requestId)).resolves.toMatchObject({
+        type: "error",
+        requestId,
+        message: "Room not found.",
+      });
+    }
+
+    guest.send({ type: "joinRoom", requestId: "join-limited", roomCode: "MISS01", payload: { name: "Blocked" } });
+    await expect(guest.next((message) => message.type === "error" && message.requestId === "join-limited")).resolves.toMatchObject({
+      type: "error",
+      requestId: "join-limited",
+      message: "Too many room requests.",
+    });
+
+    guest.send({ type: "joinRoom", requestId: "join-valid-blocked", roomCode, payload: { name: "Alex" } });
+    await expect(guest.next((message) => message.type === "error" && message.requestId === "join-valid-blocked")).resolves.toMatchObject({
+      type: "error",
+      requestId: "join-valid-blocked",
+      message: "Too many room requests.",
+    });
+
+    now += 60_000;
+    guest.send({ type: "joinRoom", requestId: "join-valid-reset", roomCode, payload: { name: "Alex" } });
+    await expect(guest.next((message) => message.type === "connected" && message.requestId === "join-valid-reset")).resolves.toMatchObject({
+      type: "connected",
+      requestId: "join-valid-reset",
+      role: "player",
+      roomCode,
+    });
+  });
+
   it("closes expired rooms before websocket requests and health responses", async () => {
     let now = 1_000;
     const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now, roomTtlMs: 100 });

@@ -4,6 +4,7 @@ import { roleDefinitions } from "../domain/roles";
 import type { RoleId } from "../domain/types";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
+import { isCompleteRoomCode, normalizeRoomCodeInput, ROOM_CODE_LENGTH } from "../../../online/roomCodes";
 import { useRoomSocket, type RoomSocketControls } from "../../../online/useRoomSocket";
 import {
   getStoredPlayerRoomToken,
@@ -12,7 +13,7 @@ import {
   saveHostRoomSession,
   savePlayerRoomSession,
 } from "../../../online/roomSessionStorage";
-import { normalizePlayerName } from "../../../playerNames";
+import { MAX_PLAYER_NAME_LENGTH, validatePlayerName } from "../../../playerNames";
 import { resolveGameTheme } from "../../theme";
 import type { WerewolfPlayerRoomSnapshot } from "../roomTypes";
 import { werewolfTheme } from "../theme";
@@ -26,7 +27,7 @@ const werewolfAssets = resolveGameTheme({ theme: werewolfTheme }).assets;
 
 export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: { code?: string; navigate: (path: string) => void }) {
   const { t } = useI18n();
-  const initialRoomCode = normalizeRoomCode(initialCode);
+  const initialRoomCode = normalizeRoomCodeInput(initialCode);
   const [roomCodeInput, setRoomCodeInput] = useState(initialRoomCode);
   const [name, setName] = useState("");
   const [token, setToken] = useState<string | null>(null);
@@ -37,11 +38,11 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
   const [roomPlayerCount, setRoomPlayerCount] = useState<number | null>(null);
   const [staleInspectKey, setStaleInspectKey] = useState(0);
   const [roleCardOpen, setRoleCardOpen] = useState(false);
-  const roomCode = normalizeRoomCode(roomCodeInput);
+  const roomCode = normalizeRoomCodeInput(roomCodeInput);
 
   const inspectOrResumeRoom = useCallback(
     (sendMessage: RoomSocketControls["send"]) => {
-      if (roomCode.length !== 4) return;
+      if (!isCompleteRoomCode(roomCode)) return;
       const storedToken = getStoredPlayerRoomToken(roomCode);
       if (storedToken) sendMessage({ type: "resumeRoom", roomCode, clientToken: storedToken });
       else sendMessage({ type: "inspectRoom", roomCode });
@@ -102,24 +103,45 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
 
   useEffect(() => {
     if (staleInspectKey === 0) return;
-    if (roomCode.length !== 4) return;
+    if (!isCompleteRoomCode(roomCode)) return;
     send({ type: "inspectRoom", roomCode });
   }, [roomCode, send, staleInspectKey]);
 
   useEffect(() => {
-    if (roomCode.length !== 4) return;
+    if (!isCompleteRoomCode(roomCode)) return;
 
     const socket = connect();
     if (socket.readyState === WebSocket.OPEN) inspectOrResumeRoom(send);
   }, [connect, inspectOrResumeRoom, roomCode, send]);
 
+  const updateRoomCodeInput = (value: string) => {
+    const nextCode = normalizeRoomCodeInput(value);
+    setRoomCodeInput(nextCode);
+    setServerError(null);
+
+    if (isCompleteRoomCode(nextCode)) {
+      setPendingCode(nextCode);
+      setRoomStatus("checking");
+      setRoomPlayerCount(null);
+      return;
+    }
+
+    setPendingCode(null);
+    setRoomStatus("idle");
+    setRoomPlayerCount(null);
+  };
+
   const join = () => {
-    const trimmedName = normalizePlayerName(name);
-    if (!trimmedName) {
+    const { name: trimmedName, error: nameError } = validatePlayerName(name);
+    if (nameError === "required") {
       setServerError(t("errors.nameRequired"));
       return;
     }
-    if (roomCode.length !== 4) return;
+    if (nameError === "tooLong") {
+      setServerError(t("errors.nameTooLong"));
+      return;
+    }
+    if (!isCompleteRoomCode(roomCode)) return;
     if (roomStatus !== "joinable") return;
     send({ type: "joinRoom", roomCode, payload: { name: trimmedName } });
   };
@@ -127,8 +149,8 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
   const displayError =
     serverError ? translateRoomServerError(serverError, t) : error ? t(error === "roomProtocolMismatch" ? "errors.roomProtocolMismatch" : "errors.roomConnection") : null;
   const canJoin = roomStatus === "joinable" && !error;
-  const hasName = Boolean(normalizePlayerName(name));
-  const canSubmit = roomCode.length === 4 && canJoin && hasName;
+  const hasName = validatePlayerName(name).error === null;
+  const canSubmit = isCompleteRoomCode(roomCode) && canJoin && hasName;
 
   if (!snapshot) {
     return (
@@ -167,21 +189,12 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
                 <QrCode />
                 <input
                   value={roomCodeInput}
-                  onChange={(event) => {
-                    const nextCode = normalizeRoomCode(event.target.value);
-                    setRoomCodeInput(nextCode);
-                    setServerError(null);
-
-                    if (nextCode.length === 4) {
-                      setPendingCode(nextCode);
-                      setRoomStatus("checking");
-                      setRoomPlayerCount(null);
-                      return;
-                    }
-
-                    setPendingCode(null);
-                    setRoomStatus("idle");
-                    setRoomPlayerCount(null);
+                  onChange={(event) => updateRoomCodeInput(event.target.value)}
+                  onPaste={(event) => {
+                    const pastedText = event.clipboardData.getData("text");
+                    if (!/(^|\/)room\//i.test(pastedText) || !isCompleteRoomCode(normalizeRoomCodeInput(pastedText))) return;
+                    event.preventDefault();
+                    updateRoomCodeInput(pastedText);
                   }}
                   placeholder={t("werewolf.roomCodePlaceholder")}
                   aria-label={t("werewolf.roomCode")}
@@ -189,7 +202,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
                   autoCapitalize="characters"
                   autoComplete="off"
                   spellCheck={false}
-                  maxLength={4}
+                  maxLength={ROOM_CODE_LENGTH}
                 />
               </span>
             </label>
@@ -203,6 +216,7 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
                 }}
                 placeholder={t("common.name")}
                 autoComplete="name"
+                maxLength={MAX_PLAYER_NAME_LENGTH}
               />
             </label>
             {roomStatus !== "idle" && (
@@ -320,12 +334,6 @@ function isStalePlayerSessionError(message: string) {
   return message === "Session not found." || message === "Player session not found." || message === "Room not found.";
 }
 
-function normalizeRoomCode(value: string) {
-  const roomMatch = value.toUpperCase().match(/ROOM\/([A-Z0-9]{1,4})/);
-  if (roomMatch) return roomMatch[1];
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
-}
-
 function roomStatusText(status: JoinRoomStatus, playerCount: number | null, t: ReturnType<typeof useI18n>["t"]) {
   if (status === "checking") return t("werewolf.roomChecking");
   if (status === "notFound") return t("errors.roomNotFoundClosed");
@@ -340,8 +348,10 @@ function isPreparationPhase(phase: WerewolfPlayerRoomSnapshot["phase"] | undefin
 
 function translateRoomServerError(message: string, t: ReturnType<typeof useI18n>["t"]) {
   if (message === "Name is required.") return t("errors.nameRequired");
+  if (message === "Name is too long.") return t("errors.nameTooLong");
   if (message === "Name is already taken.") return t("errors.nameAlreadyTaken");
   if (message === "Room not found.") return t("errors.roomNotFoundClosed");
   if (message === "The room is already in game.") return t("errors.roomAlreadyStarted");
+  if (message === "Too many room requests.") return t("errors.roomTooManyRequests");
   return message;
 }

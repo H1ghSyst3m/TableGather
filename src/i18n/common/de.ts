@@ -44,7 +44,9 @@ export const commonDe = {
     "roomNotFoundClosed": "Dieser Raum wurde nicht gefunden oder ist bereits geschlossen.",
     "roomAlreadyStarted": "Diese Runde läuft bereits. Bitte frage die Spielleitung nach einem neuen Raum.",
     "nameRequired": "Bitte gib einen Namen ein.",
+    "nameTooLong": "Namen dürfen höchstens 32 Zeichen lang sein.",
     "nameAlreadyTaken": "Dieser Name wird in diesem Raum bereits verwendet.",
+    "roomTooManyRequests": "Zu viele Raumanfragen. Bitte versuche es gleich erneut.",
     "gameUnavailable": "Dieses Spiel ist noch nicht spielbar.",
     "screenCrashed": "Diese Ansicht braucht einen Reset.",
     "screenCrashedHint": "Der Raum bleibt bestehen. Setze diese Ansicht zurück und fahre mit dem neuesten Raumstand fort."

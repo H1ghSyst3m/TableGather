@@ -44,7 +44,9 @@ export const commonEn = {
     "roomNotFoundClosed": "This room was not found or has already been closed.",
     "roomAlreadyStarted": "This round has already started. Ask the host for a new room.",
     "nameRequired": "Please enter a name.",
+    "nameTooLong": "Name can be at most 32 characters.",
     "nameAlreadyTaken": "This name is already used in this room.",
+    "roomTooManyRequests": "Too many room requests. Try again in a moment.",
     "gameUnavailable": "This game is not playable yet.",
     "screenCrashed": "This screen needs a reset.",
     "screenCrashedHint": "The room is still there. Reset this view and continue from the latest room state."
