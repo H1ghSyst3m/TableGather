@@ -53,7 +53,7 @@ export function HeaderBar({
           </button>
         ) : (
           <div className="app-brand">
-            <img className="app-brand-mark" src="/icon.svg" alt="" aria-hidden="true" />
+            <img className="app-brand-mark" src="/icon-192.png" alt="" aria-hidden="true" />
             <h1>{t("common.appName")}</h1>
           </div>
         )}
