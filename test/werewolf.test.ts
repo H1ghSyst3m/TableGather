@@ -37,6 +37,7 @@ import {
 import { playerTeam } from "../src/games/werewolf/domain/alignment";
 import { getNightStepActors, getValidTargets, isNightStepActive } from "../src/games/werewolf/domain/targets";
 import { createDefaultRoleCounts, validateRoleCounts } from "../src/games/werewolf/domain/setup";
+import { roleIds, roleOrder, selectableRoleOrder } from "../src/games/werewolf/domain/roles";
 import { dayTimerRemainingSeconds } from "../src/games/werewolf/domain/timer";
 import { loadWerewolfHostOptions, saveWerewolfHostOptionsPatch } from "../src/games/werewolf/hostOptionsStorage";
 import type { RoleCounts, WerewolfOptions, WerewolfPlayer } from "../src/games/werewolf/domain/types";
@@ -54,6 +55,17 @@ describe("werewolf domain", () => {
     expect(defaults.seer ?? 0).toBe(0);
     expect(defaults.protector ?? 0).toBe(0);
     expect(defaults.hunter ?? 0).toBe(0);
+  });
+
+  it("keeps the role catalog order exhaustive", () => {
+    const selectableSet = new Set(selectableRoleOrder);
+    const orderedRoleSet = new Set(roleOrder);
+
+    expect(roleOrder).toHaveLength(roleIds.length);
+    expect(orderedRoleSet).toEqual(new Set(roleIds));
+    expect(selectableRoleOrder).toHaveLength(roleIds.length - 1);
+    expect(selectableSet).toEqual(new Set(roleIds.filter((roleId) => roleId !== "villager")));
+    expect(selectableSet.has("villager")).toBe(false);
   });
 
   it("persists host-selected werewolf options", () => {

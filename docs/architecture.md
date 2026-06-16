@@ -10,7 +10,7 @@ TableGather Hub is a React + TypeScript browser app with a small in-memory WebSo
 | Game registry | `src/games/registry.ts` registers Werewolf, Imposter, and Undercover. Werewolf is the only playable V1 game. |
 | Game contract | `src/games/types.ts` defines `GameDefinition`, `GameRoomAdapter`, setup slots, theme tokens, and i18n bundles. |
 | Generic frontend | `src/components/`, `src/i18n/`, `src/online/`, `src/styles.css`, and `src/pwa.ts`. |
-| Werewolf module | `src/games/werewolf/` contains the playable game's definition, domain, room adapter, components, i18n, theme, and styles. |
+| Game modules | `src/games/<gameId>/` contains each game's definition, domain behavior, room adapter, components, i18n, theme, and styles. |
 | Room server | `server/index.ts`, `server/roomManager.ts`, and `server/roomStore.ts`. |
 | Tests | `test/` covers domain logic, room manager/server, UI rendering, i18n, registry, and clipboard. |
 
@@ -42,24 +42,21 @@ Important fields:
 
 Werewolf's definition lives in `src/games/werewolf/definition.ts`. Imposter and Undercover are registered as coming-soon modules with definitions only.
 
-## Werewolf Module
+## Game Modules
 
-The Werewolf module is split by responsibility:
+Each playable game should keep game-specific behavior inside its own `src/games/<gameId>/` module and game-specific documentation inside `docs/games/<gameId>/`. Werewolf is the current complete example; its detailed flow, role, room, Stage, and styling docs live in `docs/games/werewolf/`.
+
+A complete game module is split by responsibility:
 
 | Area | Files | Responsibility |
 | --- | --- | --- |
 | Definition and commands | `definition.ts`, `commands.ts` | Game registration and room command type lists. |
-| Domain model | `domain/types.ts` | Role ids, phases, state shape, options, logs, and validation result types. |
-| Role catalog | `domain/roles.ts`, `components/WerewolfIcons.tsx` | Role metadata, role order, categories, groups, role icon ids/fallbacks, action/status icon chips, and `handledByApp`. |
-| Setup helpers | `domain/setup.ts` | Minimum players, default options, default role counts, villager autofill, validation. |
-| Alignment helpers | `domain/alignment.ts` | Effective role/team logic, including Alpha Wolf hidden alignment overlays. |
-| Target helpers | `domain/targets.ts` | Valid targets and active/inactive night-step checks. |
-| Engine | `domain/engine.ts` | Game creation, role reveal, night/day progression, effects, hunter queues, wins, logs. |
-| Room adapter | `roomAdapter.ts`, `roomTypes.ts`, `stage.ts` | Host/player/stage snapshots, assignment drafts, command routing, privacy filtering. |
-| React screens | `components/*.tsx` | Local setup and restored-game normalization, role reveal, play surface, room host/player/stage, rules/info modals. |
-| Text and theme | `i18n/en.ts`, `i18n/de.ts`, `theme.ts`, `styles.css` | Copy, role rule text, theme tokens, and Werewolf-specific CSS. |
+| Domain model | `domain/*.ts` | Game-specific state, phases, validation, rules, reducers, and derived helpers. |
+| Room adapter | `roomAdapter.ts`, `roomTypes.ts`, optional `stage.ts` | Host/player/stage snapshots, command routing, setup normalization, and privacy filtering. |
+| React screens | `components/*.tsx` | Local, host, player, setup, play, and optional Stage surfaces. |
+| Text and theme | `i18n/en.ts`, `i18n/de.ts`, `theme.ts`, `styles.css` | Game copy, theme tokens, game-specific CSS, and optional assets. |
 
-The domain engine owns behavior. UI components should send commands or call engine functions; they should not duplicate game rules.
+Game domain code owns behavior. UI components should send commands or call domain functions; they should not duplicate game rules.
 
 ## Room Runtime
 
@@ -81,7 +78,7 @@ The Hub Session tab is not a matchmaking or account feature. It scans only host/
 
 ## Styling Architecture
 
-Global styles in `src/styles.css` define app defaults and reusable UI primitives. Werewolf-specific styles live in `src/games/werewolf/styles.css` and are imported after global styles in `src/main.tsx`.
+Global styles in `src/styles.css` define app defaults and reusable UI primitives. Game-specific styles live under each game module, for example `src/games/werewolf/styles.css`, and are imported after global styles in `src/main.tsx`.
 
 The order matters:
 
@@ -90,7 +87,7 @@ import "./styles.css";
 import "./games/werewolf/styles.css";
 ```
 
-Werewolf screens use `.game-theme-werewolf` and `WerewolfFlowShell` for the dark, blue, playful Werewolf visual system. Future games should keep their own game-specific CSS under their game folder and override global defaults through their own game theme class.
+Game screens use `.game-theme-<gameId>` and optional game-specific shell components for their visual system. Future games should keep their own game-specific CSS under their game folder and override global defaults through their own game theme class.
 
 ## I18n
 
