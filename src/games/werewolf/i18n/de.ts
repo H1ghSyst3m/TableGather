@@ -3,7 +3,7 @@ export const werewolfDe = {
     "setupTitle": "Werwolf vorbereiten",
     "setupSubtitle": "Spieler hinzufügen, Rollen einstellen und Rollen geheim aufdecken.",
     "playerLobbyTitle": "Spieler-Lobby",
-    "playerLobbySubtitle": "Versammelt den Tisch, teilt den Raumcode und wartet, bis alle dabei sind.",
+    "playerLobbySubtitle": "Versammelt den Tisch, fügt alle Spieler hinzu und bereitet die lokale Runde vor.",
     "gameSettingsTitle": "Spieleinstellungen",
     "gameSettingsSubtitle": "Wähle Rollenmix und Tischregeln, bevor die geheimen Rollen verteilt werden.",
     "setupPlayersTitle": "Spieler",

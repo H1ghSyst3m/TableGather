@@ -3,7 +3,7 @@ export const werewolfEn = {
     "setupTitle": "Set up Werewolf",
     "setupSubtitle": "Add players, tune roles, then reveal roles privately.",
     "playerLobbyTitle": "Player Lobby",
-    "playerLobbySubtitle": "Gather the table, share the room code, and wait until everyone is in.",
+    "playerLobbySubtitle": "Gather the table, add every player, and get the local round ready.",
     "gameSettingsTitle": "Game Settings",
     "gameSettingsSubtitle": "Choose the role mix and table rules before assigning secret roles.",
     "setupPlayersTitle": "Players",
