@@ -35,6 +35,7 @@ Configuration:
 - Copy `.env.example` to `.env` for local defaults or `.env.production.local` for production secrets. `npm run server:start` loads `.env`, `.env.local`, `.env.production`, and `.env.production.local` in that order.
 - `PORT` or `TABLEGATHER_PORT` changes the room server port.
 - `TABLEGATHER_ADMIN_TOKEN` enables the protected admin room overview API and `/admin` dashboard. Open `/admin#token=<token>` only as a transient way to load the token; the client immediately stores it in `sessionStorage` and removes it from the fragment so it is not kept in the address bar. Subsequent admin visits should use `/admin` without the token.
+- `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` optionally allows comma-separated cross-origin admin UI origins. Production defaults to same-origin admin access; set this only for split-origin admin deployments.
 - `TABLEGATHER_SERVE_STATIC` controls whether the room server serves the built `dist/` frontend. It defaults to enabled when `NODE_ENV=production` and disabled otherwise.
 - `VITE_WS_URL` overrides the browser WebSocket URL. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S). In production, leave it empty for a same-origin `/ws` endpoint behind your reverse proxy.
 - For phone/tablet testing on the same local network, run `npm run dev:all`, open the Vite URL from the host machine's LAN address, and make sure the room server port is reachable from the other devices.
@@ -48,6 +49,7 @@ Use `.env.example` as the reference for production values. The usual production 
 - `NODE_ENV=production` so the room server serves the built `dist/` frontend by default.
 - `PORT` or `TABLEGATHER_PORT` for the room server listen port.
 - `TABLEGATHER_ADMIN_TOKEN` when the protected `/admin` dashboard should be enabled.
+- `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` only when `/admin` is served from a different origin than `/admin/rooms`.
 - `TABLEGATHER_SERVE_STATIC=false` only for split deployments where another service serves `dist/`.
 
 Build and start with the repository scripts:

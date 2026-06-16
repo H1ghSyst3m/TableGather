@@ -34,6 +34,8 @@ The `/admin` browser route reads the admin token from `#token=...`, stores it in
 
 When `NODE_ENV=production`, the room server serves the built `dist/` frontend by default. This lets a production reverse proxy forward every request to the same Node process: `/` and SPA routes serve the app shell, `/ws` handles WebSocket upgrades, `/health` returns health JSON, and `/admin/rooms` stays the protected admin API. `TABLEGATHER_SERVE_STATIC=false` disables this static serving for split deployments.
 
+Production admin access defaults to same-origin requests. If `/admin` is intentionally served from a different origin than `/admin/rooms`, set `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` to a comma-separated list of exact `http(s)` origins allowed to call the admin API.
+
 ## Room Lifecycle
 
 ```text
