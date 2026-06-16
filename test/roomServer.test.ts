@@ -19,6 +19,12 @@ type RoomSessionStatusMessage = Extract<ServerMessage, { type: "roomSessionStatu
 
 const openSockets: TestSocket[] = [];
 let closeServer: (() => Promise<void>) | null = null;
+const expectedSecurityHeaders = {
+  "content-security-policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+};
 
 describe("room websocket server", () => {
   afterEach(async () => {
@@ -89,6 +95,8 @@ describe("room websocket server", () => {
     const url = await startServer();
     const response = await fetch(toHealthUrl(url));
 
+    expectSecurityHeaders(response);
+    expect(response.headers.get("content-type")).toContain("application/json");
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
       rooms: 0,
@@ -122,28 +130,35 @@ describe("room websocket server", () => {
       const protectedAdminEndpoint = await fetch(toServerUrl(url, "/admin/rooms"));
 
       expect(adminRoute.status).toBe(200);
+      expectSecurityHeaders(adminRoute);
       expect(adminRoute.headers.get("content-type")).toContain("text/html");
       expect(adminRoute.headers.get("cache-control")).toBe("no-cache");
       await expect(adminRoute.text()).resolves.toContain("TableGather fixture");
 
       expect(nestedRoute.status).toBe(200);
+      expectSecurityHeaders(nestedRoute);
       await expect(nestedRoute.text()).resolves.toContain("TableGather fixture");
 
       expect(asset.status).toBe(200);
+      expectSecurityHeaders(asset);
       expect(asset.headers.get("content-type")).toContain("application/javascript");
       expect(asset.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
       await expect(asset.text()).resolves.toContain("fixture asset");
 
       expect(serviceWorker.status).toBe(200);
+      expectSecurityHeaders(serviceWorker);
       expect(serviceWorker.headers.get("cache-control")).toBe("no-store, no-cache, must-revalidate, proxy-revalidate");
       expect(serviceWorker.headers.get("pragma")).toBe("no-cache");
       expect(serviceWorker.headers.get("expires")).toBe("0");
 
       expect(manifest.status).toBe(200);
+      expectSecurityHeaders(manifest);
       expect(manifest.headers.get("content-type")).toContain("application/manifest+json");
       expect(manifest.headers.get("cache-control")).toBe("no-cache");
 
       expect(protectedAdminEndpoint.status).toBe(401);
+      expectSecurityHeaders(protectedAdminEndpoint);
+      expect(protectedAdminEndpoint.headers.get("access-control-allow-origin")).toBeNull();
       await expect(protectedAdminEndpoint.json()).resolves.toEqual({ ok: false, error: "unauthorized" });
     } finally {
       await rm(staticDir, { recursive: true, force: true });
@@ -166,6 +181,8 @@ describe("room websocket server", () => {
 
     expect(missing.status).toBe(401);
     expect(wrong.status).toBe(401);
+    expectSecurityHeaders(missing);
+    expectSecurityHeaders(wrong);
     expect(missing.headers.get("access-control-allow-origin")).toBe(origin);
     expect(missing.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
     expect(missing.headers.get("access-control-allow-headers")).toContain("Authorization");
@@ -199,6 +216,7 @@ describe("room websocket server", () => {
     const serializedBody = JSON.stringify(body);
 
     expect(response.status).toBe(200);
+    expectSecurityHeaders(response);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
     expect(body).toMatchObject({
@@ -244,12 +262,122 @@ describe("room websocket server", () => {
     });
 
     expect(response.status).toBe(204);
+    expectSecurityHeaders(response);
     expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173");
     expect(response.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
     expect(response.headers.get("access-control-allow-headers")).toContain("Authorization");
     expect(response.headers.get("access-control-max-age")).toBe("600");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("vary")).toBe("Origin");
+  });
+
+  it("defaults production admin access to same-origin requests", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousAllowedOrigins = process.env.TABLEGATHER_ADMIN_ALLOWED_ORIGINS;
+    process.env.NODE_ENV = "production";
+    Reflect.deleteProperty(process.env, "TABLEGATHER_ADMIN_ALLOWED_ORIGINS");
+
+    try {
+      const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token" });
+      const sameOrigin = await fetch(toAdminRoomsUrl(url), {
+        headers: { Authorization: "Bearer secret-admin-token" },
+      });
+      const devOrigin = await fetch(toAdminRoomsUrl(url), {
+        headers: {
+          Authorization: "Bearer secret-admin-token",
+          Origin: "http://127.0.0.1:5173",
+        },
+      });
+
+      expect(sameOrigin.status).toBe(200);
+      expect(devOrigin.status).toBe(403);
+      expectSecurityHeaders(sameOrigin);
+      expectSecurityHeaders(devOrigin);
+      expect(sameOrigin.headers.get("access-control-allow-origin")).toBeNull();
+      expect(devOrigin.headers.get("access-control-allow-origin")).toBeNull();
+      await expect(sameOrigin.json()).resolves.toMatchObject({ ok: true, rooms: [] });
+      await expect(devOrigin.json()).resolves.toEqual({ ok: false, error: "origin_not_allowed" });
+    } finally {
+      if (previousNodeEnv === undefined) {
+        Reflect.deleteProperty(process.env, "NODE_ENV");
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+
+      if (previousAllowedOrigins === undefined) {
+        Reflect.deleteProperty(process.env, "TABLEGATHER_ADMIN_ALLOWED_ORIGINS");
+      } else {
+        process.env.TABLEGATHER_ADMIN_ALLOWED_ORIGINS = previousAllowedOrigins;
+      }
+    }
+  });
+
+  it("rejects unconfigured admin CORS origins without reflecting them", async () => {
+    const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token" });
+    const origin = "https://untrusted.example";
+    const request = await fetch(toAdminRoomsUrl(url), {
+      headers: {
+        Authorization: "Bearer secret-admin-token",
+        Origin: origin,
+      },
+    });
+    const preflight = await fetch(toAdminRoomsUrl(url), {
+      method: "OPTIONS",
+      headers: {
+        Origin: origin,
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "authorization",
+      },
+    });
+
+    expect(request.status).toBe(403);
+    expect(preflight.status).toBe(403);
+    expectSecurityHeaders(request);
+    expectSecurityHeaders(preflight);
+    expect(request.headers.get("access-control-allow-origin")).toBeNull();
+    expect(preflight.headers.get("access-control-allow-origin")).toBeNull();
+    expect(request.headers.get("vary")).toBe("Origin");
+    expect(preflight.headers.get("vary")).toBe("Origin");
+    await expect(request.json()).resolves.toEqual({ ok: false, error: "origin_not_allowed" });
+    await expect(preflight.json()).resolves.toEqual({ ok: false, error: "origin_not_allowed" });
+  });
+
+  it("allows configured admin CORS origins", async () => {
+    const origin = "https://admin.tablegather.example";
+    const previousAllowedOrigins = process.env.TABLEGATHER_ADMIN_ALLOWED_ORIGINS;
+    process.env.TABLEGATHER_ADMIN_ALLOWED_ORIGINS = origin;
+
+    try {
+      const url = await startServer(new RoomManager(), { adminToken: "secret-admin-token" });
+      const response = await fetch(toAdminRoomsUrl(url), {
+        headers: {
+          Authorization: "Bearer secret-admin-token",
+          Origin: origin,
+        },
+      });
+      const preflight = await fetch(toAdminRoomsUrl(url), {
+        method: "OPTIONS",
+        headers: {
+          Origin: origin,
+          "Access-Control-Request-Method": "GET",
+          "Access-Control-Request-Headers": "authorization",
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(preflight.status).toBe(204);
+      expectSecurityHeaders(response);
+      expectSecurityHeaders(preflight);
+      expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+      expect(preflight.headers.get("access-control-allow-origin")).toBe(origin);
+      await expect(response.json()).resolves.toMatchObject({ ok: true, rooms: [] });
+    } finally {
+      if (previousAllowedOrigins === undefined) {
+        Reflect.deleteProperty(process.env, "TABLEGATHER_ADMIN_ALLOWED_ORIGINS");
+      } else {
+        process.env.TABLEGATHER_ADMIN_ALLOWED_ORIGINS = previousAllowedOrigins;
+      }
+    }
   });
 
   it("reports room lookup status before players join", async () => {
@@ -731,6 +859,17 @@ function toServerUrl(wsUrl: string, path: string) {
   url.protocol = "http:";
   url.pathname = path;
   return url;
+}
+
+function expectSecurityHeaders(response: Response) {
+  for (const [header, value] of Object.entries(expectedSecurityHeaders)) {
+    expect(response.headers.get(header)).toBe(value);
+  }
+  expect(response.headers.get("permissions-policy")).toContain("camera=()");
+  expect(response.headers.get("permissions-policy")).toContain("geolocation=()");
+  expect(response.headers.get("permissions-policy")).toContain("microphone=()");
+  expect(response.headers.get("permissions-policy")).toContain("payment=()");
+  expect(response.headers.get("permissions-policy")).toContain("usb=()");
 }
 
 async function createStaticFixture() {

@@ -25,6 +25,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
   const clientSessions = new Map<string, { roomCode: string; token: string; role: "host" | "player" | "stage" }>();
   const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
   const adminToken = readAdminToken(options.adminToken);
+  const adminAllowedOrigins = readAdminAllowedOrigins();
   const serveStatic = readServeStatic(options.serveStatic);
   const staticDir = resolve(options.staticDir ?? "dist");
 
@@ -33,7 +34,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
 
     if (requestUrl.pathname === "/health") {
       closeExpiredRooms();
-      response.writeHead(200, { "Content-Type": "application/json" });
+      response.writeHead(200, jsonResponseHeaders());
       response.end(JSON.stringify({ ok: true, rooms: manager.listRooms().length, ...roomServerInfo }));
       return;
     }
@@ -45,7 +46,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
 
     if (serveStatic && serveStaticRequest(request, response, staticDir)) return;
 
-    response.writeHead(404);
+    response.writeHead(404, plainTextResponseHeaders());
     response.end("Not found");
   });
 
@@ -233,31 +234,37 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
 
   function handleAdminRoomsRequest(request: http.IncomingMessage, response: http.ServerResponse, token: string) {
     if (!token) {
-      response.writeHead(404);
+      response.writeHead(404, plainTextResponseHeaders());
       response.end("Not found");
       return;
     }
 
+    if (!isAdminCorsRequestAllowed(request, adminAllowedOrigins)) {
+      response.writeHead(403, adminResponseHeaders(request, adminAllowedOrigins));
+      response.end(JSON.stringify({ ok: false, error: "origin_not_allowed" }));
+      return;
+    }
+
     if (request.method === "OPTIONS") {
-      response.writeHead(204, adminResponseHeaders(request));
+      response.writeHead(204, adminResponseHeaders(request, adminAllowedOrigins));
       response.end();
       return;
     }
 
     if (request.method !== "GET") {
-      response.writeHead(405, { ...adminResponseHeaders(request), Allow: "GET, OPTIONS" });
+      response.writeHead(405, { ...adminResponseHeaders(request, adminAllowedOrigins), Allow: "GET, OPTIONS" });
       response.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
       return;
     }
 
     if (bearerToken(request.headers.authorization) !== token) {
-      response.writeHead(401, adminResponseHeaders(request));
+      response.writeHead(401, adminResponseHeaders(request, adminAllowedOrigins));
       response.end(JSON.stringify({ ok: false, error: "unauthorized" }));
       return;
     }
 
     closeExpiredRooms();
-    response.writeHead(200, adminResponseHeaders(request));
+    response.writeHead(200, adminResponseHeaders(request, adminAllowedOrigins));
     response.end(JSON.stringify({ ok: true, ...manager.adminRoomsSummary(), ...roomServerInfo }));
   }
 
@@ -383,6 +390,12 @@ function readAdminToken(configuredToken: string | null | undefined) {
   return process.env.TABLEGATHER_ADMIN_TOKEN?.trim() ?? "";
 }
 
+function readAdminAllowedOrigins() {
+  const configuredOrigins = parseAllowedOrigins(process.env.TABLEGATHER_ADMIN_ALLOWED_ORIGINS);
+  if (process.env.NODE_ENV === "production") return configuredOrigins;
+  return new Set([...configuredOrigins, "http://localhost:5173", "http://127.0.0.1:5173"]);
+}
+
 function readServeStatic(configured: boolean | null | undefined) {
   if (configured !== undefined && configured !== null) return configured;
   const value = process.env.TABLEGATHER_SERVE_STATIC?.trim().toLowerCase();
@@ -396,15 +409,79 @@ function bearerToken(header: string | undefined) {
   return match?.[1]?.trim() ?? null;
 }
 
-function adminResponseHeaders(request: http.IncomingMessage): http.OutgoingHttpHeaders {
+function adminResponseHeaders(request: http.IncomingMessage, allowedOrigins: ReadonlySet<string>): http.OutgoingHttpHeaders {
+  const origin = allowedAdminCorsOrigin(request, allowedOrigins);
+  const headers: http.OutgoingHttpHeaders = {
+    ...jsonResponseHeaders(),
+    "Cache-Control": "no-store",
+    Vary: "Origin",
+  };
+
+  if (!origin) return headers;
   return {
-    "Access-Control-Allow-Origin": request.headers.origin ?? "*",
+    ...headers,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Max-Age": "600",
-    "Cache-Control": "no-store",
+  };
+}
+
+function isAdminCorsRequestAllowed(request: http.IncomingMessage, allowedOrigins: ReadonlySet<string>) {
+  return !request.headers.origin || Boolean(allowedAdminCorsOrigin(request, allowedOrigins));
+}
+
+function allowedAdminCorsOrigin(request: http.IncomingMessage, allowedOrigins: ReadonlySet<string>) {
+  const origin = normalizeAllowedOrigin(request.headers.origin);
+  return origin && allowedOrigins.has(origin) ? origin : null;
+}
+
+function parseAllowedOrigins(value: string | null | undefined) {
+  const rawOrigins = (value ?? "").split(",");
+  const origins = new Set<string>();
+
+  for (const rawOrigin of rawOrigins) {
+    const origin = normalizeAllowedOrigin(rawOrigin);
+    if (origin) origins.add(origin);
+  }
+
+  return origins;
+}
+
+function normalizeAllowedOrigin(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return trimmed === url.origin ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+function jsonResponseHeaders(): http.OutgoingHttpHeaders {
+  return {
+    ...securityHeaders(),
     "Content-Type": "application/json",
-    Vary: "Origin",
+  };
+}
+
+function plainTextResponseHeaders(): http.OutgoingHttpHeaders {
+  return {
+    ...securityHeaders(),
+    "Content-Type": "text/plain; charset=utf-8",
+  };
+}
+
+function securityHeaders(): http.OutgoingHttpHeaders {
+  return {
+    "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+    "Permissions-Policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
   };
 }
 
@@ -420,14 +497,14 @@ function serveStaticRequest(request: http.IncomingMessage, response: http.Server
   try {
     pathname = decodeURIComponent(requestUrl.pathname);
   } catch {
-    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+    response.writeHead(400, plainTextResponseHeaders());
     response.end("Bad request");
     return true;
   }
 
   const filePath = resolveStaticFilePath(staticDir, pathname);
   if (!filePath) {
-    response.writeHead(404);
+    response.writeHead(404, plainTextResponseHeaders());
     response.end("Not found");
     return true;
   }
@@ -471,7 +548,7 @@ function isInsideDirectory(parent: string, child: string) {
 
 function staticHeaders(filePath: string, pathname: string): http.OutgoingHttpHeaders {
   const contentType = contentTypeForPath(filePath);
-  const headers: http.OutgoingHttpHeaders = { "Content-Type": contentType };
+  const headers: http.OutgoingHttpHeaders = { ...securityHeaders(), "Content-Type": contentType };
 
   if (pathname === "/sw.js") {
     headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate";
