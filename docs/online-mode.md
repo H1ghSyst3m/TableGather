@@ -1,6 +1,6 @@
 # Room Mode
 
-Room mode lets people sitting together at one physical table use their own phones while one host runs the game. It is not remote matchmaking, chat, or distributed decision-making. The host owns setup, role assignment, night/day decisions, and game progression. Werewolf rooms can also create a read-only Stage mode link for a TV, projector, or second screen.
+Room mode lets people sitting together at one physical table use their own phones while one host runs the game. It is not remote matchmaking, chat, or distributed decision-making. The host owns setup, role assignment, game decisions, and progression. Games can optionally expose a read-only Stage mode link for a TV, projector, or second screen.
 
 ## Runtime Overview
 
@@ -11,10 +11,10 @@ Browser host/player/stage UI
   -> server/index.ts
   -> RoomManager
   -> GameRoomAdapter
-  -> Werewolf domain engine
+  -> game domain engine
 ```
 
-The WebSocket server is generic. Werewolf-specific behavior enters through `werewolfRoomAdapter`.
+The WebSocket server is generic. Game-specific behavior enters through each game's `GameRoomAdapter`. Werewolf-specific room and Stage details live in `docs/games/werewolf/room-and-stage.md`.
 
 ## Server Endpoints
 
@@ -60,8 +60,8 @@ Host starts role reveal
   -> host sees ready/waiting status
 
 Host runs play
-  -> host sends Werewolf host commands
-  -> player snapshots stay role-filtered
+  -> host sends game-specific host commands
+  -> player snapshots stay privacy-filtered
   -> optional stage snapshots show public state only
 
 Game ends or host resets
@@ -105,14 +105,7 @@ Room phases are defined in `src/types.ts`:
 - `playing`
 - `ended`
 
-Werewolf game phases inside `WerewolfState` are separate:
-
-- `roleReveal`
-- `night`
-- `day`
-- `ended`
-
-Do not confuse room phase with game phase. A room can be in `playing` while the Werewolf game phase is `night`, `day`, or `ended`. Only `lobby` accepts new joins; `setup`, `assignment`, and `roleReveal` keep already connected clients in preparation/status views and are counted as waiting in admin summaries.
+Game modules may define their own internal game phases separately from the generic room phases. Do not confuse room phase with game phase. A room can be in `playing` while the game state is in any game-specific active phase. Only `lobby` accepts new joins; `setup`, `assignment`, and `roleReveal` keep already connected clients in preparation/status views and are counted as waiting in admin summaries.
 
 ## Tokens And Reconnect
 
@@ -162,7 +155,7 @@ Common host commands:
 - `closeRoom`
 - `resetToLobby`
 
-`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. Werewolf host/player commands are defined in `src/games/werewolf/commands.ts`.
+`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. Game-specific host/player commands are defined in each game module.
 
 ## Server Messages
 
@@ -203,99 +196,76 @@ The room protocol advertises room lookup, Session tab support, expiry, and Stage
 
 The manager should stay game-agnostic. If a new game needs custom setup or command behavior, implement it in that game's `GameRoomAdapter`. Stage support is detected through the optional `adapter.stageSnapshot` function; non-stage-capable adapters cannot create or accept stage links.
 
-## Werewolf Room Adapter
+## Game Adapter Responsibilities
 
-`src/games/werewolf/roomAdapter.ts` is the bridge between generic room state and Werewolf behavior.
+Each `GameRoomAdapter` is the bridge between generic room state and one game's behavior.
 
-It owns:
+Adapters own:
 
-- initial setup state from player count;
-- lobby reset;
-- host command routing to engine functions;
-- player command routing for `markRoleSeen`;
-- role assignment drafts;
-- random and manual assignment normalization;
-- room role count normalization;
+- initial setup state;
+- lobby reset behavior;
+- game-specific host and player command routing;
+- setup, assignment, or preparation state normalization;
 - host snapshot shape;
 - player snapshot privacy filtering;
-- stage snapshot shape and public reveal events;
+- optional stage snapshot shape and public reveal events;
 - public player status.
 
-The adapter is the correct place to add room-mode support for new Werewolf role state or commands.
+The adapter is the correct place to add room-mode support for game-specific state or commands. Document game-specific commands, snapshot fields, and privacy rules under `docs/games/<gameId>/`.
 
 ## Snapshot Privacy
 
-Host snapshots include:
+Host snapshots may include:
 
 - room code, phase, game id;
-- `serverTime` for synchronized host-side timer display;
+- `serverTime` for synchronized host-side display where needed;
 - public player list;
-- role counts and options;
-- assignment mode and assignment draft;
-- full Werewolf game state when started.
+- game setup/options;
+- game assignment or preparation drafts;
+- full game state when the adapter intentionally exposes it to the host.
 
-Player snapshots include:
+Player snapshots may include:
 
 - room code, phase, game id;
 - public player list;
 - the requesting player's own public status;
-- the requesting player's own `roleId`, `originalRoleId`, and `alphaWolfInfected` only when visible;
+- the requesting player's own private game data only when visible;
 - winner when ended.
 
 Player snapshots must not expose:
 
-- assignment drafts before role reveal;
-- role counts/options during setup or assignment;
-- other players' roles;
-- GM log details;
-- target selections;
-- day timer state;
-- pending Hunter queue data;
-- another player's hidden Alpha Wolf infection status.
+- host-only setup or assignment drafts;
+- other players' hidden roles, cards, choices, or private state;
+- host logs or adjudication details;
+- target selections or pending hidden queues;
+- host tooling state unless it is explicitly player-facing.
 
-Stage snapshots include only public display data:
+Stage snapshots include only public display data, such as:
 
 - room code, phase, game id;
 - public player list and alive/ready-style status where relevant;
-- current stage scene and round;
-- public `dayTimer` data typed as `WerewolfDayTimerPublicSnapshot` on the `day` scene only;
-- active public event, past public events, and the full public event queue;
+- current public scene or round;
+- public timers where the game exposes them;
+- active public event, past public events, or public event queues;
 - winner when ended.
 
 Stage snapshots must not expose:
 
 - host tokens, player tokens, or private client sessions;
-- assignment drafts or role tables;
-- full game state or GM logs;
-- target selections, potion state, night-step private data, or Hunter queues;
-- another player's hidden role/alignment unless the public reveal rules explicitly reveal it.
+- setup drafts, assignment drafts, hidden cards, or role tables;
+- full game state or host logs;
+- target selections, private step data, or hidden queues;
+- another player's hidden role/alignment/card data unless public reveal rules explicitly reveal it.
 
-Room-mode day timer sync uses server timestamps in host and stage snapshots. Clients count down locally between snapshots instead of receiving per-second WebSocket broadcasts.
+Room-mode timer sync should use server timestamps in host and stage snapshots. Clients count down locally between snapshots instead of receiving per-second WebSocket broadcasts.
 
 Privacy expectations are covered by `test/roomManager.test.ts` and `test/roomServer.test.ts`.
 
-## Host Commands In Werewolf
+## Game-Specific Commands
 
-Werewolf host commands include:
+Common room commands cover lifecycle actions such as kicking players, transferring host, Stage link management, closing rooms, and resetting to lobby. Gameplay commands belong to each game module and must be listed in that game's `hostCommands` and `playerCommands`.
 
-- setup/assignment: `beginSetup`, `updateSetup`, `returnToPlayerLobby`, `prepareAssignment`, `returnToGameSettings`, `setAssignMode`, `shuffleRoles`, `setManualAssignment`, `startGame`;
-- night targets: `setProtectedPlayer`, `setNightGuestHost`, `setWildChildModel`, `setCupidTargets`, `setInspectedPlayer`, `setAuraTarget`, `setDetectiveTargets`, `setWolfTarget`, `setAlphaWolfTransform`, `setWitchHealTonight`, `setWitchPoisonTarget`;
-- explicit reveals and progression: `revealNightResult`, `advanceNightStep`, `resolveNight`, `startDay`, `startNextNight`;
-- public reveal queue: `advancePublicEvent`;
-- day timer controls: `setDayTimerDuration`, `startDayTimer`, `pauseDayTimer`, `resetDayTimer`;
-- day/hunter resolution: `eliminateByVote`, `resolveHunterShot`;
-- host safety: `undoStep` restores the one most recent committed play step.
-
-Nullable target commands are used for clear/undo while a step is still reversible.
-`undoStep` is different: it is host-only, server-side, one-step deep, and captures only committed Werewolf play progression such as night-step advance, night/day resolution, public reveal advance, day vote, Hunter shot, and starting the next phase. It does not capture target selection, result reveal, assignment, stage-link, room management, or day timer controls. Player and Stage snapshots never expose the private undo state; host snapshots expose only `canUndo`.
-
-## Player Commands In Werewolf
-
-Players send only:
-
-- `markRoleSeen`
-
-Players do not submit night actions, day votes, or role choices. The host records those decisions on the host device.
+Document game-specific commands under `docs/games/<gameId>/`, including which audience can send them, what state they can mutate, whether they are reversible, and which snapshot fields must stay private.
 
 ## Persistence Limits
 

@@ -2,6 +2,15 @@
 
 Use this guide when adding, changing, or debugging Werewolf roles. The goal is to keep local pass-and-play, room mode, role reveal, i18n, UI, and tests aligned.
 
+## Companion Docs
+
+Read these Werewolf docs with this guide:
+
+- `flow.md` for player/host flow, night/day order, public events, and Stage scenes;
+- `role-parity-matrix.md` for cross-role invariants and role-by-role behavior;
+- `room-and-stage.md` for room commands, snapshots, privacy, and Stage reveal rules;
+- `styling.md` for Werewolf shell, footer, modal, Stage, and browser QA expectations.
+
 ## Rule Of Thumb
 
 Do not start in React UI. Start with the domain model:
@@ -24,6 +33,17 @@ Every role in `roleDefinitions` has `handledByApp`.
 - `handledByApp: false` means the role can be selected and documented, but the table handles its behavior physically. Current example: Little Girl.
 
 For a new role, decide this first. If a role is table-only, avoid adding engine state, night steps, commands, or hidden snapshot fields. Add role metadata, copy, setup availability, and tests that it does not create automated behavior.
+
+## Definition Of Done For New Roles
+
+A new Werewolf role is not done until all relevant surfaces are aligned:
+
+- role id, metadata, selection order, icon, uniqueness, `handledByApp`, description, rule keys, and EN/DE copy are present;
+- setup defaults, villager autofill, validation, target rules, night-step activity, engine behavior, and win checks are updated where the role needs them;
+- room commands, host/player snapshots, Stage snapshots, privacy filtering, and local restored-game defaults are updated for any new state or private status;
+- `flow.md`, `role-parity-matrix.md`, and `room-and-stage.md` are updated when the role changes flow, timing, public events, privacy, room behavior, or Stage reveals;
+- `styling.md` is updated when the role adds new visual states, icons, modals, cards, or layout expectations;
+- focused tests cover behavior, room privacy, i18n copy, UI contracts, Stage public events, and restored local state where applicable.
 
 ## Add A New Role Checklist
 
@@ -206,6 +226,17 @@ Prefer focused tests over broad snapshots. Tests should cover:
 - stage public event order and privacy when public deaths/reveals change;
 - restored local pass-and-play defaults when adding persisted state fields;
 - current UI placement for primary action/results.
+
+### 12. Documentation
+
+Update Werewolf docs in the same change when behavior changes:
+
+- `flow.md` when setup, reveal, night/day, public event, room, player, or Stage flow changes;
+- `role-parity-matrix.md` when role timing, targets, interactions, visibility, invariants, or test coverage changes;
+- `room-and-stage.md` when host/player commands, snapshot fields, privacy filtering, Stage scenes, or Stage reveal rules change;
+- `styling.md` when visual states, layout contracts, modal behavior, icons, or browser QA expectations change.
+
+Do not put new Werewolf-only guidance in top-level shared docs unless it changes a shared platform rule.
 
 ## Common Role Patterns
 

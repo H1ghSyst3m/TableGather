@@ -86,12 +86,11 @@ Main routes:
 
 ## Documentation Map
 
-- `docs/architecture.md` - project architecture, game registry, runtime, tests, and extension boundaries.
-- `docs/game-flow.md` - Werewolf local/room flow and UI behavior.
-- `docs/online-mode.md` - room lifecycle, WebSocket protocol, snapshots, tokens, and persistence.
-- `docs/werewolf-role-parity-matrix.md` - role behavior matrix and cross-role invariants.
-- `docs/werewolf-development-guide.md` - checklist for adding or changing Werewolf roles.
-- `docs/styling-and-theming.md` - global styles, game-specific theme overrides, Werewolf shell, and future-game styling guidance.
+- `docs/architecture.md` - shared project architecture, game registry, runtime, tests, and extension boundaries.
+- `docs/online-mode.md` - shared room lifecycle, WebSocket protocol, snapshots, tokens, and adapter responsibilities.
+- `docs/styling-and-theming.md` - shared styling layers, theme tokens, and future-game styling guidance.
+- `docs/games/README.md` - game documentation ownership and per-game doc set expectations.
+- `docs/games/werewolf/README.md` - Werewolf-specific flow, role, room, Stage, and styling docs.
 - `CONTRIBUTING.md` - contribution workflow and local verification expectations.
 - `NOTICE.md` - project branding and attribution notice.
 - `SECURITY.md` - supported scope and private vulnerability reporting guidance.

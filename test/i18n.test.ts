@@ -54,13 +54,15 @@ describe("i18n", () => {
     expect(translationKeys(werewolfDe)).toEqual(translationKeys(werewolfEn));
   });
 
-  it("covers visible werewolf role rules in English and German", () => {
+  it("covers visible werewolf role names, descriptions, and rules in English and German", () => {
     const visibleRoleIds = [...selectableRoleOrder, "villager"] as RoleId[];
 
     for (const roleId of visibleRoleIds) {
       const role = roleDefinitions[roleId];
       expect(translate("en", role.nameKey)).not.toContain("roles.");
       expect(translate("de", role.nameKey)).not.toContain("roles.");
+      expect(translate("en", role.descriptionKey)).not.toContain("roles.");
+      expect(translate("de", role.descriptionKey)).not.toContain("roles.");
 
       for (const ruleKey of role.ruleKeys) {
         const titleKey = `roleRules.${roleId}.${ruleKey}.title` as TranslationKey;

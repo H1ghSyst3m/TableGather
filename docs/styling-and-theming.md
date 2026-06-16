@@ -12,9 +12,8 @@ The app has two CSS layers:
    - reusable controls such as `.primary-action`, `.secondary-button`, `.text-button`, `.icon-button`;
    - shared panels, forms, player tables, modals, and generic game-flow styles.
 2. `src/games/werewolf/styles.css`
-   - Werewolf-specific shell/layout;
-   - Werewolf setup, role reveal, night/day, room, stage, modal, and theme overrides;
-   - Sleek Night visual system;
+   - current game-specific stylesheet example;
+   - game shell/layout, setup, play, room, stage, modal, and theme overrides;
    - overrides scoped to `.game-theme-werewolf` or Werewolf-specific classes.
 
 Import order in `src/main.tsx` is intentional:
@@ -45,14 +44,14 @@ The resolver produces CSS variables:
 - `--danger`
 - `--shadow`
 
-Werewolf tokens live in `src/games/werewolf/theme.ts`.
+Game tokens live in each game module, for example `src/games/werewolf/theme.ts`.
 
 `gameThemeClassName(game)` adds:
 
 - `.game-theme-<gameId>`
 - `.game-mood-<mood>`
 
-Werewolf renders with `.game-theme-werewolf` and `game-mood-sleek-night`.
+Werewolf currently renders with `.game-theme-werewolf` and `game-mood-sleek-night`.
 
 ## Global Styles vs Game Overrides
 
@@ -68,116 +67,21 @@ Keep reusable structure global:
 
 Keep game personality and game-specific layout in the game stylesheet:
 
-- `.werewolf-flow-*`;
-- Werewolf setup role editor;
-- Role Reveal card and interactions;
-- Werewolf night/day cards;
-- Werewolf room header/QR/copy controls;
-- Werewolf stage display, reveal panels, and event timeline;
-- Werewolf modal sheet overrides;
-- Werewolf dark theme colors and borders.
+- game shell classes;
+- game setup controls;
+- game-specific reveal, play, room, and stage surfaces;
+- game-specific modal sheet overrides;
+- game-specific colors, borders, mood, and assets.
 
-Do not move global styles into Werewolf CSS just because Werewolf currently uses them. Future games should be able to reuse global defaults and then override them through their own `.game-theme-*` class.
+Do not move global styles into one game's CSS just because that game currently uses them. Future games should be able to reuse global defaults and then override them through their own `.game-theme-*` class.
 
-## WerewolfFlowShell
+## Game-Specific Styling Docs
 
-`src/games/werewolf/components/WerewolfFlowShell.tsx` is the Werewolf screen chrome for interactive local, host, and player screens.
+Keep detailed visual direction, game-shell contracts, Stage display rules, portal modal notes, and browser QA scenarios in `docs/games/<gameId>/`.
 
-It provides:
+Current game-specific styling notes:
 
-- compact header;
-- optional Back button;
-- centered title;
-- header icon actions;
-- settings icon;
-- one scrollable body;
-- reserved bottom footer/action bar.
-
-Layout contract:
-
-```css
-grid-template-rows: auto minmax(0, 1fr) auto;
-```
-
-The body has `overflow-y: auto` and `min-height: 0`. The footer is a normal grid row, not fixed/sticky overlay. This prevents mobile content from being hidden under footer actions.
-
-Primary flow actions belong in the footer:
-
-- Start game / next setup step;
-- Next player / begin night;
-- Show result / next step;
-- Begin night;
-- Eliminate selected player;
-- Continue/reset actions.
-
-Contextual body actions stay in the body:
-
-- add/remove players;
-- copy room link;
-- stage link creation/copy/disable controls;
-- role count steppers;
-- Game rules options;
-- manual assignment selectors.
-
-## Footer Height Contract
-
-The Werewolf footer avoids uncapped dynamic safe-area padding in normal browser mode. Mobile browsers can change dynamic viewport and safe-area values when address bars show/hide, so the footer keeps stable content height.
-
-Keep future footer edits aligned with:
-
-- fixed button height around the existing action size;
-- no extra informational text in the footer unless it is essential to the immediate action;
-- result cards can appear above the button in a small stack;
-- footer must remain a reserved layout row;
-- body content must scroll behind neither header nor footer.
-
-## Current Werewolf Visual Direction
-
-Werewolf uses a Sleek Night command-surface style:
-
-- dark blue/graphite background;
-- teal primary actions;
-- burgundy danger/selection accents;
-- off-white text;
-- muted blue-gray secondary text;
-- flat command surfaces with thin cyan dividers;
-- restrained elevation and reserved outlines instead of hard 3D shadows;
-- compact role rows, player cells, and rules cards that avoid a chunky card-in-card look.
-
-Keep the Werewolf UI atmospheric but readable. Avoid reintroducing heavy text shadows, hard offset button shadows, dense glow stacks, or decorative effects that compete with the game flow.
-
-The design does not use placeholder SVG images. Role art/assets can be added later through theme assets, but the app should not add fake placeholder art just to fill slots.
-
-## Stage Screen Styling
-
-`WerewolfStageScreen` is separate from `WerewolfFlowShell`. It is a public TV/projector surface, not a host or player control surface.
-
-Stage styling should prioritize:
-
-- large rem-based text that is readable from table distance;
-- stable widths for reveal panels, player tiles, and the event timeline;
-- no host/player actions or operational controls;
-- clear day/night mood shifts without leaking private night-role context;
-- visual player tiles instead of comma-separated name lists;
-- role and team reveal badges that reuse Werewolf role/team icon components.
-
-The Stage event timeline is context only. It should stay secondary to the active reveal, but it must remain readable on a TV. Single timeline entries should not stretch across the full stage width.
-
-## Portal Modals
-
-Some modal sheets are rendered through portals outside the `.game-theme-werewolf` subtree. Werewolf-specific classes are added where needed so the dark theme still applies:
-
-- `.werewolf-settings-sheet`
-- `.game-confirm-sheet`
-- `.role-info-modal`
-- `.role-rules-modal`
-- `.player-overview-sheet`
-- `.game-log-sheet`
-
-When adding a new portal for Werewolf, either:
-
-- render it inside the Werewolf theme subtree, or
-- add a stable Werewolf-specific class and include it in the game stylesheet variable/theme override group.
+- `docs/games/werewolf/styling.md`
 
 ## Future Game Styling Guidance
 
@@ -201,24 +105,17 @@ Avoid:
 
 ## Browser QA Checklist
 
-For Werewolf styling changes, check:
+For game styling changes, check the relevant game-specific QA doc plus shared UI basics:
 
-- `/play/werewolf` setup with many players;
-- Role Setup with Game rules open;
-- Role Reveal at 375x667 and 430x932;
-- Night Seer/Aura/Detective result footer;
-- Day Vote selection and footer action;
-- Host day timer idle, running, paused, expired, and reset states;
-- Room host screen with QR/copy/assignment;
-- Room host screen with stage link create/copy/rotate/disable;
-- Room player role reveal;
-- Stage route `/stage/<CODE>/<TOKEN>` for lobby, day timer, night report, Hunter prompt, vote reveal, and ended scenes;
-- Settings, Role Info, Role Rules, Game Log, Players Overview;
+- setup screens with many players/options;
+- reveal or private-information screens at narrow mobile sizes;
+- primary action footer/body layout;
+- room host/player screens when room mode is supported;
+- Stage routes when public display is supported;
+- settings, role/rule info, logs, and overview modals;
 - no horizontal overflow;
 - footer does not overlap body content;
 - readable disabled, selected, good, evil, danger, and muted states.
-
-Timer panels and controls should stay visually consistent with the dark Werewolf command-surface style. Avoid introducing light generic panels inside the Werewolf play surface unless the whole surrounding surface uses that treatment.
 
 Run:
 

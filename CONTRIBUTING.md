@@ -28,7 +28,8 @@ npm run build
 
 ## Contribution Guidelines
 
-- Start from the relevant docs in `README.md` and `docs/`.
+- Start from the relevant shared docs in `README.md` and `docs/`, then read the matching game docs under `docs/games/<gameId>/` for game-specific behavior.
+- For Werewolf role or flow changes, follow `docs/games/werewolf/development-guide.md` and update the Werewolf flow/parity docs when behavior changes.
 - Keep changes scoped to the requested behavior or documentation issue.
 - Add or update tests when behavior, room privacy, i18n, or UI contracts change.
 - Keep user-facing text in the English and German i18n bundles.
