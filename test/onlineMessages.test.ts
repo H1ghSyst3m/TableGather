@@ -56,6 +56,7 @@ describe("online messages", () => {
   it("rejects invalid stage inspection messages", () => {
     expect(parseClientMessage({ type: "inspectStage", stageToken: "TOKEN123" })).toBeNull();
     expect(parseClientMessage({ type: "inspectStage", roomCode: "ABCD" })).toBeNull();
+    expect(parseClientMessage({ type: "inspectStage", roomCode: 1234, stageToken: "TOKEN123" })).toBeNull();
     expect(parseClientMessage({ type: "inspectStage", roomCode: "ABCD", stageToken: 123 })).toBeNull();
     expect(parseClientMessage({ type: "inspectStage", requestId: 123, roomCode: "ABCD", stageToken: "TOKEN123" })).toBeNull();
   });

@@ -262,8 +262,14 @@ describe("room manager", () => {
       playerCount: 0,
     });
     expect(manager.getRoom(room.code)?.lastActivityAt).toBe(lastActivityAt);
+
+    const beforeBadTokenActivity = manager.getRoom(room.code)?.lastActivityAt;
     expect(manager.inspectStage(room.code, "BADTOKEN")).toMatchObject({ roomCode: room.code, valid: false });
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(beforeBadTokenActivity);
+
+    const beforeMissingRoomActivity = manager.getRoom(room.code)?.lastActivityAt;
     expect(manager.inspectStage("MISS01", stageToken)).toMatchObject({ roomCode: "MISS01", valid: false });
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(beforeMissingRoomActivity);
   });
 
   it("stores and exposes the host-controlled stage locale", () => {
