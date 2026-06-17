@@ -36,6 +36,7 @@ Configuration:
 - `PORT` or `TABLEGATHER_PORT` changes the room server port.
 - `TABLEGATHER_ADMIN_TOKEN` enables the protected admin room overview API and `/admin` dashboard. Open `/admin#token=<token>` only as a transient way to load the token; the client immediately stores it in `sessionStorage` and removes it from the fragment so it is not kept in the address bar. Subsequent admin visits should use `/admin` without the token.
 - `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` optionally allows comma-separated cross-origin admin UI origins. Production defaults to same-origin admin access; set this only for split-origin admin deployments.
+- `TABLEGATHER_WS_ALLOWED_ORIGINS` optionally allows comma-separated browser WebSocket origins for split frontend/server deployments. Production accepts same-origin browser WebSocket requests by default; development also allows the local Vite origins.
 - `TABLEGATHER_SERVE_STATIC` controls whether the room server serves the built `dist/` frontend. It defaults to enabled when `NODE_ENV=production` and disabled otherwise.
 - `TABLEGATHER_TRUSTED_PROXIES` optionally allows comma-separated exact proxy peer IPs whose `CF-Connecting-IP` or `X-Forwarded-For` headers may identify room rate-limit clients. Leave it empty unless the room server is behind a trusted reverse proxy.
 - `VITE_WS_URL` overrides the browser WebSocket URL. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S). In production, leave it empty for a same-origin `/ws` endpoint behind your reverse proxy.
@@ -51,6 +52,7 @@ Use `.env.example` as the reference for production values. The usual production 
 - `PORT` or `TABLEGATHER_PORT` for the room server listen port.
 - `TABLEGATHER_ADMIN_TOKEN` when the protected `/admin` dashboard should be enabled.
 - `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` only when `/admin` is served from a different origin than `/admin/rooms`.
+- `TABLEGATHER_WS_ALLOWED_ORIGINS` only when the browser app is intentionally served from a different origin than `/ws`.
 - `TABLEGATHER_SERVE_STATIC=false` only for split deployments where another service serves `dist/`.
 - `TABLEGATHER_TRUSTED_PROXIES` only when a trusted reverse proxy overwrites forwarding headers before traffic reaches the room server.
 
@@ -66,7 +68,7 @@ The current scripts build and start from TypeScript, so install the full depende
 
 For same-origin production deployments, leave `VITE_WS_URL` empty. The built browser app connects to `/ws` on the current origin, and the room server exposes the matching WebSocket endpoint. In the single-process setup, route `/`, SPA routes, `/ws`, `/health`, and `/admin/rooms` to the same TableGather server. No separate static host or admin API location is required.
 
-Set `VITE_WS_URL` only when the browser app and room server are intentionally split across different origins or path prefixes. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S).
+Set `VITE_WS_URL` only when the browser app and room server are intentionally split across different origins or path prefixes. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S). For split-origin browser deployments, add the frontend origin to `TABLEGATHER_WS_ALLOWED_ORIGINS` on the room server.
 
 Main routes:
 
@@ -104,7 +106,7 @@ Main routes:
 - `src/App.tsx` owns route parsing and delegates game screen selection to the route component registry.
 - `src/games/registry.ts` registers games and exposes playable game adapters.
 - `src/games/routeComponents.tsx` maps playable game definitions to client-only route screens.
-- `src/games/types.ts` defines `GameDefinition`, theme tokens, and the room adapter contract, including optional stage snapshots.
+- `src/games/types.ts` defines `GameDefinition`, structured player constraints, theme tokens, and the room adapter contract, including command validators and optional stage snapshots.
 - `src/games/werewolf/` contains the Werewolf definition, domain engine, room adapter, stage snapshot builder, components, i18n, theme, and game-specific CSS.
 - `src/online/` contains client-side WebSocket message types, room session storage helpers, and the room socket hook.
 - `server/` contains the in-memory WebSocket room runtime.

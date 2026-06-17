@@ -17,6 +17,14 @@ describe("game registry", () => {
     expect(() => requireRoomAdapter("undercover")).toThrow("not playable");
   });
 
+  it("exposes numeric player constraints for every registered game", () => {
+    expect(games.map((game) => [game.id, game.playerConstraints])).toEqual([
+      ["werewolf", { min: 5, default: 5 }],
+      ["imposter", { min: 4, default: 4, max: 12 }],
+      ["undercover", { min: 4, default: 4, max: 20 }],
+    ]);
+  });
+
   it("falls back to the hub theme for games without custom theme tokens", () => {
     const imposter = games.find((game) => game.id === "imposter");
     const werewolf = games.find((game) => game.id === "werewolf");

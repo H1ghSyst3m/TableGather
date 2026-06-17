@@ -106,6 +106,62 @@ describe("room websocket server", () => {
     });
   });
 
+  it("allows websocket clients from local development origins", async () => {
+    const url = await startServer();
+    const guest = await openSocket(url, { Origin: "http://127.0.0.1:5173" });
+
+    guest.send({ type: "inspectRoom", requestId: "dev-origin", roomCode: "MISS01" });
+
+    await expect(guest.next((message) => message.type === "roomStatus" && message.requestId === "dev-origin")).resolves.toMatchObject({
+      type: "roomStatus",
+      roomCode: "MISS01",
+      exists: false,
+      joinable: false,
+    } satisfies Partial<RoomStatusMessage>);
+  });
+
+  it("rejects websocket clients from untrusted origins", async () => {
+    const url = await startServer();
+
+    await expect(rejectedSocketStatus(url, "https://evil.example")).resolves.toBe(403);
+  });
+
+  it("allows configured websocket origins for split deployments", async () => {
+    const url = await startServer(new RoomManager(), { wsAllowedOrigins: ["https://app.tablegather.example"] });
+    const guest = await openSocket(url, { Origin: "https://app.tablegather.example" });
+
+    guest.send({ type: "inspectRoom", requestId: "configured-origin", roomCode: "MISS01" });
+
+    await expect(guest.next((message) => message.type === "roomStatus" && message.requestId === "configured-origin")).resolves.toMatchObject({
+      type: "roomStatus",
+      roomCode: "MISS01",
+    } satisfies Partial<RoomStatusMessage>);
+  });
+
+  it("does not allow development websocket origins by default in production", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const url = await startServer();
+      const sameOrigin = await openSocket(url, { Origin: httpOriginForWsUrl(url) });
+
+      sameOrigin.send({ type: "inspectRoom", requestId: "same-origin", roomCode: "MISS01" });
+
+      await expect(sameOrigin.next((message) => message.type === "roomStatus" && message.requestId === "same-origin")).resolves.toMatchObject({
+        type: "roomStatus",
+        roomCode: "MISS01",
+      } satisfies Partial<RoomStatusMessage>);
+      await expect(rejectedSocketStatus(url, "http://127.0.0.1:5173")).resolves.toBe(403);
+    } finally {
+      if (previousNodeEnv === undefined) {
+        Reflect.deleteProperty(process.env, "NODE_ENV");
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    }
+  });
+
   it("does not serve static app files by default in tests", async () => {
     const staticDir = await createStaticFixture();
     try {
@@ -803,6 +859,57 @@ describe("room websocket server", () => {
     });
   });
 
+  it("rejects host commands that do not match the game command schema", async () => {
+    const url = await startServer();
+    const host = await openSocket(url);
+
+    host.send({ type: "createRoom", payload: { gameId: "werewolf" } });
+    const created = (await host.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    await host.next((message) => message.type === "snapshot");
+
+    host.send({
+      type: "hostCommand",
+      requestId: "invalid-game-command",
+      roomCode: created.roomCode,
+      clientToken: created.clientToken,
+      payload: { type: "setCupidTargets", playerIds: "p1" },
+    });
+
+    await expect(host.next((message) => message.type === "error" && message.requestId === "invalid-game-command")).resolves.toMatchObject({
+      type: "error",
+      requestId: "invalid-game-command",
+      message: "Invalid host command.",
+    });
+  });
+
+  it("rejects player commands that do not match the game command schema", async () => {
+    const url = await startServer();
+    const host = await openSocket(url);
+
+    host.send({ type: "createRoom", payload: { gameId: "werewolf" } });
+    const created = (await host.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    await host.next((message) => message.type === "snapshot");
+
+    const player = await openSocket(url);
+    player.send({ type: "joinRoom", roomCode: created.roomCode, payload: { name: "Alex" } });
+    const joined = (await player.next((message) => message.type === "connected" && message.role === "player")) as ConnectedMessage;
+    await player.next((message) => message.type === "snapshot");
+
+    player.send({
+      type: "playerCommand",
+      requestId: "invalid-player-command",
+      roomCode: created.roomCode,
+      clientToken: joined.clientToken,
+      payload: { type: "markRoleSeen", extra: true },
+    });
+
+    await expect(player.next((message) => message.type === "error" && message.requestId === "invalid-player-command")).resolves.toMatchObject({
+      type: "error",
+      requestId: "invalid-player-command",
+      message: "Invalid player command.",
+    });
+  });
+
   it("closes websocket connections when payloads exceed the room message limit", async () => {
     const url = await startServer();
     const guest = await openSocket(url);
@@ -1015,6 +1122,30 @@ async function openSocket(url: string, headers?: Record<string, string>) {
   return socket;
 }
 
+function rejectedSocketStatus(url: string, origin: string) {
+  return new Promise<number>((resolve, reject) => {
+    const socket = new WebSocket(url, { headers: { Origin: origin } });
+    const timer = setTimeout(() => {
+      socket.close();
+      reject(new Error("Timed out waiting for WebSocket rejection."));
+    }, 4000);
+
+    socket.once("unexpected-response", (_request, response) => {
+      clearTimeout(timer);
+      resolve(response.statusCode ?? 0);
+    });
+    socket.once("open", () => {
+      clearTimeout(timer);
+      socket.close();
+      reject(new Error("WebSocket unexpectedly opened."));
+    });
+    socket.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
 function hostSnapshot(message: ServerMessage) {
   if (message.type !== "snapshot") throw new Error(`Expected snapshot, received ${message.type}.`);
   return (message as SnapshotMessage).snapshot as WerewolfHostRoomSnapshot;
@@ -1035,6 +1166,15 @@ function toHealthUrl(wsUrl: string) {
   url.protocol = "http:";
   url.pathname = "/health";
   return url;
+}
+
+function httpOriginForWsUrl(wsUrl: string) {
+  const url = new URL(wsUrl);
+  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  url.pathname = "";
+  url.search = "";
+  url.hash = "";
+  return url.origin;
 }
 
 function toAdminRoomsUrl(wsUrl: string) {

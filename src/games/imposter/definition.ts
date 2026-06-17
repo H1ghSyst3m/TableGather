@@ -8,6 +8,7 @@ export const imposterDefinition = {
   icon: "mask",
   supportedModes: ["room", "pass-and-play"],
   playerRange: "4-12",
+  playerConstraints: { min: 4, default: 4, max: 12 },
   duration: "10-20 min",
   difficultyKey: "games.easy",
   setup: {

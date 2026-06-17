@@ -36,6 +36,8 @@ When `NODE_ENV=production`, the room server serves the built `dist/` frontend by
 
 Production admin access defaults to same-origin requests. If `/admin` is intentionally served from a different origin than `/admin/rooms`, set `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` to a comma-separated list of exact `http(s)` origins allowed to call the admin API.
 
+Browser WebSocket access is origin-gated. Production accepts same-origin browser WebSocket requests by default, and split frontend/server deployments must set `TABLEGATHER_WS_ALLOWED_ORIGINS` to exact `http(s)` origins allowed to connect to `/ws`. Development also allows the local Vite origins and same-host Vite LAN origins for phone/tablet testing.
+
 ## Room Lifecycle
 
 ```text
@@ -75,7 +77,7 @@ Room expires
   -> active host/player/stage clients receive roomClosed
 ```
 
-Room codes are six characters from the server token alphabet. Player names are whitespace-normalized and capped at 32 characters server-side before a join is accepted.
+Room codes are six characters from the server token alphabet. Player names are whitespace-normalized and capped at 32 characters server-side before a join is accepted. Registered game definitions also provide numeric player constraints; the room manager uses the default count for initial setup and rejects joins that exceed a game's configured maximum.
 
 Meaningful activity refreshes `lastActivityAt`: create, join, resume, stage join, leave, disconnect, host commands, and player commands. Passive lookups such as `inspectRoom` and `inspectRoomSession` do not refresh expiry.
 
@@ -161,7 +163,7 @@ Common host commands:
 - `closeRoom`
 - `resetToLobby`
 
-`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. `inspectStage` validates a stage token enough to resolve the room's game id before the browser mounts the game-specific Stage UI; it does not join the stage session or extend room expiry. The server allows 60 room lookup requests (`inspectRoom`, `inspectRoomSession`, or `inspectStage`) and 20 failed `joinRoom` attempts per rate-limit key in each 60,000 ms window. Game-specific host/player commands are defined in each game module.
+`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. `inspectStage` validates a stage token enough to resolve the room's game id before the browser mounts the game-specific Stage UI; it does not join the stage session or extend room expiry. The server allows 60 room lookup requests (`inspectRoom`, `inspectRoomSession`, or `inspectStage`) and 20 failed `joinRoom` attempts per rate-limit key in each 60,000 ms window. Game-specific host/player commands are defined and runtime-validated in each game module before they can mutate room state.
 
 ## Server Messages
 
@@ -211,6 +213,7 @@ Each `GameRoomAdapter` is the bridge between generic room state and one game's b
 Adapters own:
 
 - initial setup state;
+- command payload validation for that game's host and player commands;
 - lobby reset behavior;
 - game-specific host and player command routing;
 - setup, assignment, or preparation state normalization;
@@ -271,7 +274,7 @@ Privacy expectations are covered by `test/roomManager.test.ts` and `test/roomSer
 
 ## Game-Specific Commands
 
-Common room commands cover lifecycle actions such as kicking players, transferring host, Stage link management, closing rooms, and resetting to lobby. Gameplay commands belong to each game module and must be listed in that game's `hostCommands` and `playerCommands`.
+Common room commands cover lifecycle actions such as kicking players, transferring host, Stage link management, closing rooms, and resetting to lobby. Gameplay commands belong to each game module and must be listed in that game's `hostCommands` and `playerCommands`. The adapter must also reject malformed command payloads before applying them, including wrong field types, missing required fields, and command types that are not part of the game.
 
 Document game-specific commands under `docs/games/<gameId>/`, including which audience can send them, what state they can mutate, whether they are reversible, and which snapshot fields must stay private.
 

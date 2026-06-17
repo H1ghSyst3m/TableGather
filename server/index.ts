@@ -26,6 +26,7 @@ interface RoomServerOptions {
   staticDir?: string;
   now?: () => number;
   trustedProxies?: Iterable<string>;
+  wsAllowedOrigins?: Iterable<string>;
 }
 
 export function createRoomServer(manager = new RoomManager(), options: RoomServerOptions = {}) {
@@ -35,6 +36,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
   const lookupLimiter = createFixedWindowLimiter(ROOM_LOOKUP_LIMIT, ROOM_RATE_LIMIT_WINDOW_MS, now);
   const failedJoinLimiter = createFixedWindowLimiter(FAILED_JOIN_LIMIT, ROOM_RATE_LIMIT_WINDOW_MS, now);
   const trustedProxies = readTrustedProxies(options.trustedProxies);
+  const wsAllowedOrigins = readWsAllowedOrigins(options.wsAllowedOrigins);
   const expirySweep = setInterval(closeExpiredRooms, ROOM_EXPIRY_SWEEP_INTERVAL_MS);
   const adminToken = readAdminToken(options.adminToken);
   const adminAllowedOrigins = readAdminAllowedOrigins();
@@ -62,7 +64,19 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
     response.end("Not found");
   });
 
-  const wss = new WebSocketServer({ server, path: "/ws", maxPayload: ROOM_WS_MAX_PAYLOAD_BYTES });
+  const wss = new WebSocketServer({
+    server,
+    path: "/ws",
+    maxPayload: ROOM_WS_MAX_PAYLOAD_BYTES,
+    verifyClient: (info, done) => {
+      if (isWebSocketOriginAllowed(info.req, wsAllowedOrigins)) {
+        done(true);
+        return;
+      }
+
+      done(false, 403, "Forbidden");
+    },
+  });
   server.on("close", () => clearInterval(expirySweep));
   wss.on("close", () => clearInterval(expirySweep));
 
@@ -193,7 +207,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
 
         if (message.type === "hostCommand") {
           assertActiveHostSession(message.roomCode, message.clientToken, clientId);
-          if (message.payload.type === "transferHost") {
+          if (message.payload.type === "transferHost" && typeof message.payload.playerId === "string") {
             assertTransferTargetOnline(message.roomCode, message.clientToken, message.payload.playerId);
           }
 
@@ -442,6 +456,15 @@ function readAdminAllowedOrigins() {
   return new Set([...configuredOrigins, "http://localhost:5173", "http://127.0.0.1:5173"]);
 }
 
+function readWsAllowedOrigins(configured: Iterable<string> | undefined) {
+  const configuredOrigins =
+    configured === undefined
+      ? parseAllowedOrigins(process.env.TABLEGATHER_WS_ALLOWED_ORIGINS)
+      : parseAllowedOriginValues(configured);
+  if (process.env.NODE_ENV === "production") return configuredOrigins;
+  return new Set([...configuredOrigins, "http://localhost:5173", "http://127.0.0.1:5173"]);
+}
+
 function readServeStatic(configured: boolean | null | undefined) {
   if (configured !== undefined && configured !== null) return configured;
   const value = process.env.TABLEGATHER_SERVE_STATIC?.trim().toLowerCase();
@@ -529,6 +552,18 @@ function readTrustedProxies(configured: Iterable<string> | undefined) {
   return proxies;
 }
 
+function isWebSocketOriginAllowed(request: http.IncomingMessage, allowedOrigins: ReadonlySet<string>) {
+  const rawOrigin = firstHeaderValue(request.headers.origin);
+  if (!rawOrigin) return true;
+
+  const origin = normalizeAllowedOrigin(rawOrigin);
+  if (!origin) return false;
+  if (allowedOrigins.has(origin)) return true;
+  if (isSameHostOrigin(origin, request)) return true;
+
+  return process.env.NODE_ENV !== "production" && isSameHostViteDevOrigin(origin, request);
+}
+
 function normalizeRateLimitAddress(value: string | null | undefined) {
   const trimmed = value?.trim();
   if (!trimmed) return null;
@@ -577,10 +612,13 @@ function allowedAdminCorsOrigin(request: http.IncomingMessage, allowedOrigins: R
 }
 
 function parseAllowedOrigins(value: string | null | undefined) {
-  const rawOrigins = (value ?? "").split(",");
+  return parseAllowedOriginValues((value ?? "").split(","));
+}
+
+function parseAllowedOriginValues(values: Iterable<string>) {
   const origins = new Set<string>();
 
-  for (const rawOrigin of rawOrigins) {
+  for (const rawOrigin of values) {
     const origin = normalizeAllowedOrigin(rawOrigin);
     if (origin) origins.add(origin);
   }
@@ -598,6 +636,31 @@ function normalizeAllowedOrigin(value: string | undefined) {
     return trimmed === url.origin ? url.origin : null;
   } catch {
     return null;
+  }
+}
+
+function isSameHostOrigin(origin: string, request: http.IncomingMessage) {
+  const requestHost = firstHeaderValue(request.headers.host)?.toLowerCase();
+  if (!requestHost) return false;
+
+  try {
+    return new URL(origin).host.toLowerCase() === requestHost;
+  } catch {
+    return false;
+  }
+}
+
+function isSameHostViteDevOrigin(origin: string, request: http.IncomingMessage) {
+  const requestHost = firstHeaderValue(request.headers.host);
+  if (!requestHost) return false;
+
+  try {
+    const originUrl = new URL(origin);
+    const requestHostname = requestHost.split(":")[0]?.toLowerCase();
+    const originHostname = originUrl.hostname.toLowerCase();
+    return originUrl.protocol === "http:" && originUrl.port === "5173" && originHostname === requestHostname;
+  } catch {
+    return false;
   }
 }
 

@@ -54,6 +54,12 @@ export interface GameSetupDefinition {
   schema?: unknown;
 }
 
+export interface GamePlayerConstraints {
+  min: number;
+  default: number;
+  max?: number;
+}
+
 export interface GameRoomPlayer {
   id: string;
   name: string;
@@ -79,6 +85,8 @@ export interface GameCommand {
 
 export interface GameRoomAdapter {
   createInitialSetupState: (playerCount: number) => unknown;
+  isHostCommand: (command: GameCommand) => boolean;
+  isPlayerCommand: (command: GameCommand) => boolean;
   resetRoom: (room: GameRoomRuntime) => void;
   applyHostCommand: (room: GameRoomRuntime, command: GameCommand) => void;
   applyPlayerCommand: (room: GameRoomRuntime, player: GameRoomPlayer, command: GameCommand) => void;
@@ -96,6 +104,7 @@ export interface GameDefinition {
   icon: GameIconId;
   supportedModes: SessionMode[];
   playerRange: string;
+  playerConstraints: GamePlayerConstraints;
   duration: string;
   difficultyKey: string;
   setup: GameSetupDefinition;

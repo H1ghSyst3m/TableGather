@@ -9,6 +9,7 @@ Read this with `../../online-mode.md`. The top-level room doc owns generic WebSo
 It owns:
 
 - initial setup state from player count;
+- host and player command payload validation;
 - lobby reset;
 - host command routing to engine functions;
 - player command routing for `markRoleSeen`;
@@ -102,7 +103,7 @@ Room-mode day timer sync uses server timestamps in host and stage snapshots. Cli
 Werewolf host commands include:
 
 - setup/assignment: `beginSetup`, `updateSetup`, `returnToPlayerLobby`, `prepareAssignment`, `returnToGameSettings`, `setAssignMode`, `shuffleRoles`, `setManualAssignment`, `startGame`;
-- night targets: `setProtectedPlayer`, `setNightGuestHost`, `setWildChildModel`, `setCupidTargets`, `setInspectedPlayer`, `setAuraTarget`, `setDetectiveTargets`, `setWolfTarget`, `setAlphaWolfTransform`, `setWitchHealTonight`, `setWitchPoisonTarget`;
+- night targets: `setProtectedPlayer`, `setNightGuestHost`, `setWildChildModel`, `setCupidTargets`, `setInspectedPlayer`, `setAuraTarget`, `setDetectiveTargets`, `setWolfTarget`, `setAlphaWolfTransform`, `setDoctorHealTonight`, `setWitchHealTonight`, `setWitchPoisonTarget`;
 - explicit reveals and progression: `revealNightResult`, `advanceNightStep`, `resolveNight`, `startDay`, `startNextNight`;
 - public reveal queue: `advancePublicEvent`;
 - day timer controls: `setDayTimerDuration`, `startDayTimer`, `pauseDayTimer`, `resetDayTimer`;
@@ -110,6 +111,8 @@ Werewolf host commands include:
 - host safety: `undoStep` restores the one most recent committed play step.
 
 Nullable target commands are used for clear/undo while a step is still reversible.
+
+Werewolf command payloads are runtime-validated by the adapter before they are applied. Required IDs, role counts, manual assignments, options, reveal steps, and day timer durations must match the command schema; unknown command types, missing fields, wrong field types, and extra fields are rejected.
 
 `undoStep` is host-only, server-side, one-step deep, and captures only committed Werewolf play progression such as night-step advance, night/day resolution, public reveal advance, day vote, Hunter shot, and starting the next phase. It does not capture target selection, result reveal, assignment, stage-link, room management, or day timer controls. Player and Stage snapshots never expose the private undo state; host snapshots expose only `canUndo`.
 
