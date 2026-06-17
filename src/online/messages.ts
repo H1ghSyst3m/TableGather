@@ -6,6 +6,7 @@ export type ClientMessage =
   | { type: "createRoom"; requestId?: string; payload: { gameId: GameId } }
   | { type: "inspectRoom"; requestId?: string; roomCode: string }
   | { type: "inspectRoomSession"; requestId?: string; roomCode: string; clientToken: string }
+  | { type: "inspectStage"; requestId?: string; roomCode: string; stageToken: string }
   | { type: "joinStage"; requestId?: string; roomCode: string; stageToken: string }
   | { type: "joinRoom"; requestId?: string; roomCode: string; payload: { name: string } }
   | { type: "resumeRoom"; requestId?: string; roomCode: string; clientToken: string }
@@ -58,6 +59,21 @@ export type ServerMessage =
       expiresAt: number;
       playerName?: string;
     } & RoomServerInfo)
+  | ({
+      type: "stageStatus";
+      requestId?: string;
+      roomCode: string;
+      valid: false;
+    } & RoomServerInfo)
+  | ({
+      type: "stageStatus";
+      requestId?: string;
+      roomCode: string;
+      valid: true;
+      gameId: GameId;
+      phase: RoomPhase;
+      playerCount: number;
+    } & RoomServerInfo)
   | { type: "snapshot"; roomCode: string; snapshot: unknown }
   | { type: "roomClosed"; roomCode: string }
   | { type: "hostTransferred"; roomCode: string; toPlayerId?: string }
@@ -78,6 +94,7 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
     case "playerCommand":
     case "leaveRoom":
       return raw as ClientMessage;
+    case "inspectStage":
     case "joinStage": {
       const message = raw as { requestId?: unknown; roomCode?: unknown; stageToken?: unknown };
       if (typeof message.roomCode !== "string") return null;

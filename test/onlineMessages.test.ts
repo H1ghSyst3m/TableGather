@@ -39,6 +39,27 @@ describe("online messages", () => {
     expect(parseClientMessage({ type: "inspectRoomSession", requestId: 1, roomCode: "ABCD", clientToken: "TOKEN123" })).toBeNull();
   });
 
+  it("parses valid stage inspection messages", () => {
+    expect(parseClientMessage({ type: "inspectStage", roomCode: "ABCD", stageToken: "TOKEN123" })).toEqual({
+      type: "inspectStage",
+      roomCode: "ABCD",
+      stageToken: "TOKEN123",
+    });
+    expect(parseClientMessage({ type: "inspectStage", requestId: "stage-lookup-1", roomCode: "ABCD", stageToken: "TOKEN123" })).toEqual({
+      type: "inspectStage",
+      requestId: "stage-lookup-1",
+      roomCode: "ABCD",
+      stageToken: "TOKEN123",
+    });
+  });
+
+  it("rejects invalid stage inspection messages", () => {
+    expect(parseClientMessage({ type: "inspectStage", stageToken: "TOKEN123" })).toBeNull();
+    expect(parseClientMessage({ type: "inspectStage", roomCode: "ABCD" })).toBeNull();
+    expect(parseClientMessage({ type: "inspectStage", roomCode: "ABCD", stageToken: 123 })).toBeNull();
+    expect(parseClientMessage({ type: "inspectStage", requestId: 123, roomCode: "ABCD", stageToken: "TOKEN123" })).toBeNull();
+  });
+
   it("parses valid stage join messages", () => {
     expect(parseClientMessage({ type: "joinStage", roomCode: "ABCD", stageToken: "TOKEN123" })).toEqual({
       type: "joinStage",

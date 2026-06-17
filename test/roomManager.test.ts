@@ -242,6 +242,30 @@ describe("room manager", () => {
     expect(() => manager.joinStage(room.code, rotatedToken ?? "")).toThrow("Stage link is not valid.");
   });
 
+  it("inspects stage links without refreshing room activity", () => {
+    let now = 1_000;
+    const manager = new RoomManager(new InMemoryRoomStore(), { now: () => now });
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+
+    now = 2_000;
+    manager.applyHostCommand(room.code, hostToken, { type: "createStageLink" });
+    const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
+    const stageToken = activeRoom.stageToken!;
+    const lastActivityAt = activeRoom.lastActivityAt;
+
+    now = 3_000;
+    expect(manager.inspectStage(room.code.toLowerCase(), stageToken)).toMatchObject({
+      roomCode: room.code,
+      valid: true,
+      gameId: "werewolf",
+      phase: "lobby",
+      playerCount: 0,
+    });
+    expect(manager.getRoom(room.code)?.lastActivityAt).toBe(lastActivityAt);
+    expect(manager.inspectStage(room.code, "BADTOKEN")).toMatchObject({ roomCode: room.code, valid: false });
+    expect(manager.inspectStage("MISS01", stageToken)).toMatchObject({ roomCode: "MISS01", valid: false });
+  });
+
   it("stores and exposes the host-controlled stage locale", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
@@ -300,6 +324,7 @@ describe("room manager", () => {
     expect(manager.getRoom(room.code)?.stageToken).toBeNull();
 
     room.stageToken = "STAGETOKEN";
+    expect(manager.inspectStage(room.code, "STAGETOKEN")).toMatchObject({ roomCode: room.code, valid: false });
     expect(() => manager.joinStage(room.code, "STAGETOKEN")).toThrow("Game imposter is not playable.");
   });
 

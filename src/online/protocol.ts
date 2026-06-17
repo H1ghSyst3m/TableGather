@@ -1,4 +1,4 @@
-export const ROOM_PROTOCOL_VERSION = 17;
+export const ROOM_PROTOCOL_VERSION = 18;
 
 export const ROOM_PROTOCOL_FEATURES = [
   "transferHost",
@@ -12,6 +12,7 @@ export const ROOM_PROTOCOL_FEATURES = [
   "werewolfSetupPhase",
   "roomLookup",
   "stageMode",
+  "stageLookup",
   "stageLocaleControl",
   "roomExpiry",
   "roomSessions",

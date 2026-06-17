@@ -89,6 +89,7 @@ Host creates or rotates stage link
   -> host snapshot exposes the token so the host can copy the link or show QR
 
 Stage client opens /stage/<CODE>/<TOKEN>
+  -> browser asks inspectStage to resolve the game id for the stage link
   -> client sends joinStage
   -> server records role "stage"
   -> server sends StageRoomSnapshot only
@@ -142,6 +143,7 @@ Stage tokens are not stored as host or player sessions. They are copied from the
 - `createRoom`
 - `inspectRoom`
 - `inspectRoomSession`
+- `inspectStage`
 - `joinStage`
 - `joinRoom`
 - `resumeRoom`
@@ -159,7 +161,7 @@ Common host commands:
 - `closeRoom`
 - `resetToLobby`
 
-`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. The server allows 60 room lookup requests (`inspectRoom` or `inspectRoomSession`) and 20 failed `joinRoom` attempts per rate-limit key in each 60,000 ms window. Game-specific host/player commands are defined in each game module.
+`inspectRoom` returns joinability and public room status before a player submits a name. `inspectRoomSession` validates a stored host/player token without resuming the client or extending room expiry. `inspectStage` validates a stage token enough to resolve the room's game id before the browser mounts the game-specific Stage UI; it does not join the stage session or extend room expiry. The server allows 60 room lookup requests (`inspectRoom`, `inspectRoomSession`, or `inspectStage`) and 20 failed `joinRoom` attempts per rate-limit key in each 60,000 ms window. Game-specific host/player commands are defined in each game module.
 
 ## Server Messages
 
@@ -168,6 +170,7 @@ The server sends:
 - `connected` with role, room code, client token, and server info;
 - `roomStatus` with `exists`, `joinable`, game id, phase, and player count when available;
 - `roomSessionStatus` with validity, role, game id, phase, player count, activity timestamps, expiry, and player name when available;
+- `stageStatus` with validity, game id, phase, and player count when the stage token is valid;
 - `snapshot` with a host, player, or stage snapshot;
 - `roomClosed`;
 - `hostTransferred`;
@@ -177,7 +180,7 @@ The server sends:
 
 Snapshots are the main data channel. UI components render from snapshots rather than assuming local server state.
 
-The room protocol advertises room lookup, Session tab support, expiry, and Stage support through feature flags in `src/online/protocol.ts`, including `roomLookup`, `roomSessions`, `roomExpiry`, `stageMode`, and `stageLocaleControl`.
+The room protocol advertises room lookup, Session tab support, expiry, and Stage support through feature flags in `src/online/protocol.ts`, including `roomLookup`, `roomSessions`, `roomExpiry`, `stageMode`, `stageLookup`, and `stageLocaleControl`.
 
 ## RoomManager Responsibilities
 
@@ -189,6 +192,7 @@ The room protocol advertises room lookup, Session tab support, expiry, and Stage
 - mark disconnects;
 - validate host/player tokens;
 - inspect host/player sessions without resuming them;
+- inspect stage links without joining or refreshing activity;
 - transfer host;
 - create, rotate, validate, localize, and disable stage links;
 - kick players;
