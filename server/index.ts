@@ -485,14 +485,19 @@ function roomRateLimitKey(request: http.IncomingMessage, trustedProxies: Readonl
 
   return (
     normalizeRateLimitAddress(firstHeaderValue(request.headers["cf-connecting-ip"])) ??
-    normalizeRateLimitAddress(forwardedForClient(firstHeaderValue(request.headers["x-forwarded-for"]))) ??
+    forwardedForClient(firstHeaderValue(request.headers["x-forwarded-for"]), trustedProxies) ??
     peerAddress
   );
 }
 
-function forwardedForClient(header: string | null) {
-  const clientAddress = header?.split(",")[0]?.trim();
-  return clientAddress || null;
+function forwardedForClient(header: string | null, trustedProxies: ReadonlySet<string>) {
+  const addresses = header?.split(",").map(normalizeRateLimitAddress).filter((address) => address !== null) ?? [];
+  for (let index = addresses.length - 1; index >= 0; index -= 1) {
+    const address = addresses[index];
+    if (!trustedProxies.has(address)) return address;
+  }
+
+  return null;
 }
 
 function readTrustedProxies(configured: Iterable<string> | undefined) {
