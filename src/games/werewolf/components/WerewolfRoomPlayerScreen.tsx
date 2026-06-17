@@ -2,6 +2,7 @@ import { Eye, QrCode } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { roleDefinitions } from "../domain/roles";
 import type { RoleId } from "../domain/types";
+import { translateCommonRoomServerError } from "../../../i18n/roomServerErrors";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
 import { isCompleteRoomCode, normalizeRoomCodeInput, ROOM_CODE_LENGTH } from "../../../online/roomCodes";
@@ -348,11 +349,13 @@ function isPreparationPhase(phase: WerewolfPlayerRoomSnapshot["phase"] | undefin
 }
 
 function translateRoomServerError(message: string, t: ReturnType<typeof useI18n>["t"]) {
+  const commonMessage = translateCommonRoomServerError(message, t);
+  if (commonMessage !== message) return commonMessage;
+
   if (message === "Name is required.") return t("errors.nameRequired");
   if (message === "Name is too long.") return t("errors.nameTooLong");
   if (message === "Name is already taken.") return t("errors.nameAlreadyTaken");
   if (message === "Room not found.") return t("errors.roomNotFoundClosed");
   if (message === "The room is already in game.") return t("errors.roomAlreadyStarted");
-  if (message === "Too many room requests.") return t("errors.roomTooManyRequests");
   return message;
 }

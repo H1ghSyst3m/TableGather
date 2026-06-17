@@ -566,10 +566,16 @@ describe("room websocket server", () => {
 
   it("uses forwarding headers from trusted proxy peers for room lookup limits", async () => {
     const url = await startServer(new RoomManager(), { trustedProxies: ["127.0.0.1", "198.51.100.10"] });
-    const first = await openSocket(url, { "x-forwarded-for": "203.0.113.99, 203.0.113.20, 198.51.100.10" });
+    const first = await openSocket(url, {
+      "cf-connecting-ip": "203.0.113.200",
+      "x-forwarded-for": "203.0.113.99, 203.0.113.20, 198.51.100.10",
+    });
     await exhaustRoomLookups(first, "trusted-first");
 
-    const sameForwardedClient = await openSocket(url, { "x-forwarded-for": "203.0.113.100, 203.0.113.20, 198.51.100.10" });
+    const sameForwardedClient = await openSocket(url, {
+      "cf-connecting-ip": "203.0.113.201",
+      "x-forwarded-for": "203.0.113.100, 203.0.113.20, 198.51.100.10",
+    });
     sameForwardedClient.send({ type: "inspectRoom", requestId: "trusted-same-client", roomCode: "MISS01" });
     await expect(sameForwardedClient.next((message) => message.type === "error" && message.requestId === "trusted-same-client")).resolves.toMatchObject({
       type: "error",
@@ -577,7 +583,10 @@ describe("room websocket server", () => {
       message: "Too many room requests.",
     });
 
-    const differentForwardedClient = await openSocket(url, { "x-forwarded-for": "203.0.113.99, 203.0.113.21, 198.51.100.10" });
+    const differentForwardedClient = await openSocket(url, {
+      "cf-connecting-ip": "203.0.113.202",
+      "x-forwarded-for": "203.0.113.99, 203.0.113.21, 198.51.100.10",
+    });
     differentForwardedClient.send({ type: "inspectRoom", requestId: "trusted-other-client", roomCode: "MISS01" });
     await expect(differentForwardedClient.next((message) => message.type === "roomStatus" && message.requestId === "trusted-other-client")).resolves.toMatchObject({
       type: "roomStatus",

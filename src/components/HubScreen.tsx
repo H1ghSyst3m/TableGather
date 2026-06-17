@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { games } from "../games/registry";
 import { gameThemeStyle, hubDefaultTheme } from "../games/theme";
+import { translateCommonRoomServerError } from "../i18n/roomServerErrors";
 import { useI18n } from "../i18n/useI18n";
 import type { GameId, RoomPhase, SessionMode } from "../types";
 import { GameIcon } from "./GameIcon";
@@ -74,7 +75,7 @@ export function HubScreen({ navigate, initialTab = "games", initialMode = "room"
 
       clearPendingSessionTimer(pendingSessionTimersRef.current, message.requestId);
       pendingSessionsRef.current.delete(message.requestId);
-      setSessionServerError(translateHubRoomServerError(message.message, t));
+      setSessionServerError(translateCommonRoomServerError(message.message, t));
       if (pendingSessionsRef.current.size === 0) setSessionLoading(false);
     }
   });
@@ -408,11 +409,6 @@ function mergeSessionCard(cards: HubSessionCard[], nextCard: HubSessionCard) {
 
 function sortSessionCards(cards: HubSessionCard[]) {
   return [...cards].sort((first, second) => second.lastActivityAt - first.lastActivityAt);
-}
-
-function translateHubRoomServerError(message: string, t: ReturnType<typeof useI18n>["t"]) {
-  if (message === "Too many room requests.") return t("errors.roomTooManyRequests");
-  return message;
 }
 
 function clearPendingSessionTimer(timers: Map<string, ReturnType<typeof setTimeout>>, requestId: string) {

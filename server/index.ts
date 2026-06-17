@@ -484,8 +484,8 @@ function roomRateLimitKey(request: http.IncomingMessage, trustedProxies: Readonl
   if (!trustedProxies.has(peerAddress)) return peerAddress;
 
   return (
-    normalizeRateLimitAddress(firstHeaderValue(request.headers["cf-connecting-ip"])) ??
     forwardedForClient(firstHeaderValue(request.headers["x-forwarded-for"]), trustedProxies) ??
+    normalizeRateLimitAddress(firstHeaderValue(request.headers["cf-connecting-ip"])) ??
     peerAddress
   );
 }
