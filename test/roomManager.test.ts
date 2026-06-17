@@ -164,6 +164,12 @@ describe("room manager", () => {
     expect(() =>
       manager.applyHostCommand(room.code, hostToken, { type: "setCupidTargets", playerIds: "p1" } as unknown as HostCommand),
     ).toThrow("Invalid host command.");
+    expect(() =>
+      manager.applyHostCommand(room.code, hostToken, {
+        type: "beginSetup",
+        options: { winMode: "standard", revealMode: "hidden", roleReveal: false, debug: true },
+      } as unknown as HostCommand),
+    ).toThrow("Invalid host command.");
   });
 
   it("starts a game and keeps player snapshots role-filtered", () => {

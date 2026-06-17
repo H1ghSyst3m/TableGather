@@ -18,11 +18,16 @@ describe("game registry", () => {
   });
 
   it("exposes numeric player constraints for every registered game", () => {
-    expect(games.map((game) => [game.id, game.playerConstraints])).toEqual([
-      ["werewolf", { min: 5, default: 5 }],
-      ["imposter", { min: 4, default: 4, max: 12 }],
-      ["undercover", { min: 4, default: 4, max: 20 }],
-    ]);
+    const expectedConstraints = {
+      werewolf: { min: 5, default: 5 },
+      imposter: { min: 4, default: 4, max: 12 },
+      undercover: { min: 4, default: 4, max: 20 },
+    } satisfies Record<string, GameDefinition["playerConstraints"]>;
+
+    expect(games).toHaveLength(Object.keys(expectedConstraints).length);
+    for (const [gameId, playerConstraints] of Object.entries(expectedConstraints)) {
+      expect(games.find((game) => game.id === gameId)?.playerConstraints).toEqual(playerConstraints);
+    }
   });
 
   it("falls back to the hub theme for games without custom theme tokens", () => {

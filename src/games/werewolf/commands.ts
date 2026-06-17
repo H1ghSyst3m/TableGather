@@ -170,6 +170,7 @@ function isOptionalWerewolfOptions(value: unknown) {
 function isWerewolfOptions(value: unknown): value is WerewolfOptions {
   if (!isRecord(value)) return false;
   return (
+    hasOnlyKeys(value, "winMode", "revealMode", "roleReveal") &&
     (value.winMode === "standard" || value.winMode === "extended") &&
     (value.revealMode === "hidden" || value.revealMode === "team" || value.revealMode === "role") &&
     typeof value.roleReveal === "boolean"
