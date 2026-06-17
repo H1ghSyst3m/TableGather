@@ -779,7 +779,7 @@ describe("room websocket server", () => {
     expect(stageSnapshotFromMessage(await stage.next((message) => message.type === "snapshot")).stageLocale).toBe("en");
   });
 
-  it("rejects room creation without an explicit game id", async () => {
+  it("rejects room creation without a valid message envelope", async () => {
     const url = await startServer();
     const host = await openSocket(url);
 
@@ -787,9 +787,30 @@ describe("room websocket server", () => {
 
     await expect(host.next((message) => message.type === "error")).resolves.toMatchObject({
       type: "error",
-      requestId: "missing-game",
-      message: "Game id is required.",
+      message: "Invalid message.",
     });
+  });
+
+  it("rejects invalid command envelopes before room logic", async () => {
+    const url = await startServer();
+    const host = await openSocket(url);
+
+    host.send({ type: "hostCommand", requestId: "invalid-command", roomCode: "ABCD", clientToken: "TOKEN123", payload: null });
+
+    await expect(host.next((message) => message.type === "error")).resolves.toMatchObject({
+      type: "error",
+      message: "Invalid message.",
+    });
+  });
+
+  it("closes websocket connections when payloads exceed the room message limit", async () => {
+    const url = await startServer();
+    const guest = await openSocket(url);
+    const closed = guest.closed();
+
+    guest.sendRaw(JSON.stringify({ type: "inspectRoom", requestId: "too-large", roomCode: "A".repeat(70 * 1024) }));
+
+    expect([1006, 1009]).toContain(await closed);
   });
 
   it("rejects commands from stale host and player sockets after reconnect", async () => {
@@ -1080,6 +1101,7 @@ class TestSocket {
 
   constructor(url: string, headers?: Record<string, string>) {
     this.socket = new WebSocket(url, { headers });
+    this.socket.on("error", () => undefined);
     this.socket.addEventListener("message", (event) => {
       this.queue.push(JSON.parse(event.data.toString()) as ServerMessage);
       for (const waiter of [...this.waiters]) waiter();
@@ -1095,6 +1117,24 @@ class TestSocket {
 
   send(message: unknown) {
     this.socket.send(JSON.stringify(message));
+  }
+
+  sendRaw(message: string) {
+    this.socket.send(message);
+  }
+
+  closed(timeout = 4000) {
+    return new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error("Timed out waiting for WebSocket close."));
+      }, timeout);
+      const onClose = (code: number) => {
+        clearTimeout(timer);
+        resolve(code);
+      };
+
+      this.socket.once("close", onClose);
+    });
   }
 
   next(predicate: (message: ServerMessage) => boolean, timeout = 4000) {
