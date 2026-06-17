@@ -63,8 +63,8 @@ export function WerewolfRoomPlayerScreen({
 
   const { connect, send, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "roomStatus" && message.roomCode === pendingCode) {
-      if (message.exists && message.gameId && message.gameId !== "werewolf") {
-        onResolvedGameId?.(message.gameId, message.roomCode);
+      if (message.exists && message.gameId && message.gameId !== "werewolf" && onResolvedGameId) {
+        onResolvedGameId(message.gameId, message.roomCode);
         return;
       }
 

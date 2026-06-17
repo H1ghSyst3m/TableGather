@@ -168,7 +168,11 @@ function StageRoute({ code, token, navigate }: { code: string; token: string; na
     return () => socket.removeEventListener("open", inspect);
   }, [code, connect, error, gameId, requestId, send, token, useDefaultStage]);
 
-  const route = gameId ? resolveStageRouteComponent(gameId) : useDefaultStage || error ? resolveDefaultStageRouteComponent() : null;
+  const route = gameId
+    ? (resolveStageRouteComponent(gameId) ?? resolveDefaultStageRouteComponent())
+    : useDefaultStage || error
+      ? resolveDefaultStageRouteComponent()
+      : null;
   if (!route) return <GameThemeFrame />;
 
   const { game, Component } = route;
