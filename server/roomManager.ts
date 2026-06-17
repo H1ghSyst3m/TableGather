@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
-import { requirePlayableGame, requireRoomAdapter } from "../src/games/registry";
-import type { GameCommand, GameRoomAdapter } from "../src/games/types";
+import { getGameDefinition, requirePlayableGame, requireRoomAdapter } from "../src/games/registry";
+import type { GameCommand, GamePlayerConstraints, GameRoomAdapter } from "../src/games/types";
 import type { GameId, HostRoomSnapshot, Locale, PlayerRoomSnapshot, RoomPlayerPublic, StageRoomSnapshot } from "../src/types";
 import {
   ADMIN_INACTIVE_ACTIVITY_MS,
@@ -11,7 +11,7 @@ import {
   type AdminProgressStatus,
   type AdminRoomsSummary,
 } from "../src/online/admin";
-import type { HostCommand, PlayerCommand } from "../src/online/messages";
+import type { CommonHostCommand, HostCommand, PlayerCommand } from "../src/online/messages";
 import { normalizeRoomCode, ROOM_CODE_LENGTH } from "../src/online/roomCodes";
 import { playerNameKey, validatePlayerName } from "../src/playerNames";
 import { InMemoryRoomStore, type Room, type RoomPlayer, type RoomStore } from "./roomStore";
@@ -50,7 +50,7 @@ export class RoomManager {
       stageLocale: null,
       phase: "lobby",
       players: [],
-      setupState: game.roomAdapter.createInitialSetupState(5),
+      setupState: game.roomAdapter.createInitialSetupState(game.playerConstraints.default),
       assignment: [],
       gameState: null,
       undoState: null,
@@ -65,6 +65,7 @@ export class RoomManager {
   joinRoom(code: string, name: string, clientId: string) {
     const room = this.requireRoom(code);
     if (room.phase !== "lobby") throw new Error("The room is already in game.");
+    this.requireJoinCapacity(room);
 
     const { name: trimmedName, error } = validatePlayerName(name);
     if (error === "required") throw new Error("Name is required.");
@@ -232,31 +233,34 @@ export class RoomManager {
 
   applyHostCommand(code: string, token: string, command: HostCommand) {
     const room = this.requireHost(code, token);
+    const commonCommand = validCommonHostCommand(command);
 
-    switch (command.type) {
+    if (!commonCommand && isCommonHostCommandType(command.type)) throw new Error("Invalid host command.");
+
+    switch (commonCommand?.type) {
       case "transferHost": {
-        const target = this.transferHost(room, command.playerId);
+        const target = this.transferHost(room, commonCommand.playerId);
         this.touchRoom(room);
         this.store.save(room);
         return { room, closed: false, transferred: target };
       }
       case "createStageLink": {
         this.requireStageAdapter(room);
-        const stageLocale = command.stageLocale === undefined ? undefined : normalizeStageLocale(command.stageLocale);
+        const stageLocale = commonCommand.stageLocale === undefined ? undefined : normalizeStageLocale(commonCommand.stageLocale);
         room.stageToken = createToken();
         if (stageLocale !== undefined) room.stageLocale = stageLocale;
         break;
       }
       case "setStageLocale":
         this.requireStageAdapter(room);
-        room.stageLocale = normalizeStageLocale(command.stageLocale);
+        room.stageLocale = normalizeStageLocale(commonCommand.stageLocale);
         break;
       case "disableStageLink":
         room.stageToken = null;
         break;
       case "kickPlayer": {
-        const kicked = room.players.find((player) => player.id === command.playerId);
-        room.players = room.players.filter((player) => player.id !== command.playerId);
+        const kicked = room.players.find((player) => player.id === commonCommand.playerId);
+        room.players = room.players.filter((player) => player.id !== commonCommand.playerId);
         this.touchRoom(room);
         this.store.save(room);
         return {
@@ -271,9 +275,12 @@ export class RoomManager {
       case "resetToLobby":
         this.adapterForRoom(room).resetRoom(room);
         break;
-      default:
-        this.adapterForRoom(room).applyHostCommand(room, command as GameCommand);
+      case undefined: {
+        const adapter = this.adapterForRoom(room);
+        if (!adapter.isHostCommand(command as GameCommand)) throw new Error("Invalid host command.");
+        adapter.applyHostCommand(room, command as GameCommand);
         break;
+      }
     }
 
     this.touchRoom(room);
@@ -286,7 +293,9 @@ export class RoomManager {
     const player = room.players.find((candidate) => candidate.token === token);
     if (!player) throw new Error("Player session not found.");
 
-    this.adapterForRoom(room).applyPlayerCommand(room, player, command as GameCommand);
+    const adapter = this.adapterForRoom(room);
+    if (!adapter.isPlayerCommand(command as GameCommand)) throw new Error("Invalid player command.");
+    adapter.applyPlayerCommand(room, player, command as GameCommand);
     this.touchRoom(room);
     this.store.save(room);
     return { room, player };
@@ -452,6 +461,11 @@ export class RoomManager {
     room.lastActivityAt = this.now();
   }
 
+  private requireJoinCapacity(room: Room) {
+    const maxPlayers = playerConstraintsForRoom(room.gameId).max;
+    if (maxPlayers !== undefined && room.players.length >= maxPlayers) throw new Error("Room is full.");
+  }
+
   private inactiveReasons(room: Room, serverTime: number): AdminInactiveReason[] {
     const reasons: AdminInactiveReason[] = [];
     if (!room.hostClientId) reasons.push("hostOffline");
@@ -501,4 +515,54 @@ function createToken(length = 18) {
 function normalizeStageLocale(locale: unknown): Locale {
   if (locale === "de" || locale === "en") return locale;
   throw new Error("Invalid stage locale.");
+}
+
+function playerConstraintsForRoom(gameId: GameId): GamePlayerConstraints {
+  return getGameDefinition(gameId)?.playerConstraints ?? { min: 0, default: 0 };
+}
+
+function validCommonHostCommand(command: HostCommand): CommonHostCommand | null {
+  if (!isRecord(command) || typeof command.type !== "string") return null;
+
+  switch (command.type) {
+    case "kickPlayer":
+    case "transferHost":
+      return hasOnlyKeys(command, "type", "playerId") && typeof command.playerId === "string" ? (command as CommonHostCommand) : null;
+    case "createStageLink":
+      return hasOnlyKeys(command, "type", "stageLocale") &&
+        (command.stageLocale === undefined || command.stageLocale === "de" || command.stageLocale === "en")
+        ? (command as CommonHostCommand)
+        : null;
+    case "setStageLocale":
+      return hasOnlyKeys(command, "type", "stageLocale") && (command.stageLocale === "de" || command.stageLocale === "en")
+        ? (command as CommonHostCommand)
+        : null;
+    case "disableStageLink":
+    case "closeRoom":
+    case "resetToLobby":
+      return hasOnlyKeys(command, "type") ? (command as CommonHostCommand) : null;
+    default:
+      return null;
+  }
+}
+
+function isCommonHostCommandType(type: unknown) {
+  return (
+    type === "kickPlayer" ||
+    type === "transferHost" ||
+    type === "createStageLink" ||
+    type === "setStageLocale" ||
+    type === "disableStageLink" ||
+    type === "closeRoom" ||
+    type === "resetToLobby"
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, ...keys: string[]) {
+  const allowed = new Set(keys);
+  return Object.keys(value).every((key) => allowed.has(key));
 }

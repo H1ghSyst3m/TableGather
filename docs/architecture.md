@@ -34,9 +34,10 @@ Important fields:
 
 - `id`, `titleKey`, `descriptionKey`, `status`, `icon`, and metadata drive the hub.
 - `supportedModes` controls whether room and/or pass-and-play are exposed.
+- `playerConstraints` provides numeric min/default/max player counts for setup initialization and generic room capacity checks; `playerRange` remains the human-readable hub label.
 - `setup.createInitialState` gives the room server a game-specific initial setup state.
 - `hostCommands` and `playerCommands` list the commands the game accepts in room mode.
-- `roomAdapter` bridges generic room runtime state to game-specific logic. It may expose `stageSnapshot` when the game can safely deliver a public stage view.
+- `roomAdapter` bridges generic room runtime state to game-specific logic. It validates game-specific host/player command payloads before applying them and may expose `stageSnapshot` when the game can safely deliver a public stage view.
 - `components` lists symbolic route component slots; the actual React imports live in the client-only route component registry so the server registry stays UI-free.
 - `i18n` registers bundled game translations.
 - `theme` and `assets` feed the theme resolver and optional visual assets.
@@ -53,7 +54,7 @@ A complete game module is split by responsibility:
 | --- | --- | --- |
 | Definition and commands | `definition.ts`, `commands.ts` | Game registration and room command type lists. |
 | Domain model | `domain/*.ts` | Game-specific state, phases, validation, rules, reducers, and derived helpers. |
-| Room adapter | `roomAdapter.ts`, `roomTypes.ts`, optional `stage.ts` | Host/player/stage snapshots, command routing, setup normalization, and privacy filtering. |
+| Room adapter | `roomAdapter.ts`, `roomTypes.ts`, optional `stage.ts` | Host/player/stage snapshots, command validation and routing, setup normalization, and privacy filtering. |
 | React screens | `components/*.tsx` | Local, host, player, setup, play, and optional Stage surfaces. |
 | Text and theme | `i18n/en.ts`, `i18n/de.ts`, `theme.ts`, `styles.css` | Game copy, theme tokens, game-specific CSS, and optional assets. |
 

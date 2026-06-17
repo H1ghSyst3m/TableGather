@@ -30,6 +30,10 @@ function werewolfStageSnapshot(manager: RoomManager, room: Room): WerewolfStageR
   return manager.stageSnapshot(room, room.stageToken) as WerewolfStageRoomSnapshot;
 }
 
+function sumRoleCounts(roleCounts: RoleCounts) {
+  return Object.values(roleCounts).reduce((total, count) => total + (count ?? 0), 0);
+}
+
 describe("room manager", () => {
   it("creates rooms and allows players to join by code", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
@@ -37,6 +41,25 @@ describe("room manager", () => {
     manager.joinRoom(room.code, "Alex", "player-1");
 
     expect(manager.getRoom(room.code)?.players).toHaveLength(1);
+  });
+
+  it("initializes rooms from the playable game's default player constraint", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room } = manager.createRoom("host-1", "werewolf");
+
+    expect(sumRoleCounts(werewolfHostSnapshot(manager, room).roleCounts)).toBe(5);
+  });
+
+  it("enforces registered max player constraints before future room adapters run", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room } = manager.createRoom("host-1", "werewolf");
+    room.gameId = "undercover";
+
+    for (let index = 0; index < 20; index += 1) {
+      manager.joinRoom(room.code, `Player ${index}`, `player-${index}`);
+    }
+
+    expect(() => manager.joinRoom(room.code, "Overflow", "player-overflow")).toThrow("Room is full.");
   });
 
   it("creates room, player, and stage tokens without Math.random", () => {
@@ -136,8 +159,17 @@ describe("room manager", () => {
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
 
     expect(() => manager.applyHostCommand(room.code, hostToken, { type: "notACommand" } as unknown as HostCommand)).toThrow(
-      "Unsupported werewolf host command: notACommand",
+      "Invalid host command.",
     );
+    expect(() =>
+      manager.applyHostCommand(room.code, hostToken, { type: "setCupidTargets", playerIds: "p1" } as unknown as HostCommand),
+    ).toThrow("Invalid host command.");
+    expect(() =>
+      manager.applyHostCommand(room.code, hostToken, {
+        type: "beginSetup",
+        options: { winMode: "standard", revealMode: "hidden", roleReveal: false, debug: true },
+      } as unknown as HostCommand),
+    ).toThrow("Invalid host command.");
   });
 
   it("starts a game and keeps player snapshots role-filtered", () => {
@@ -309,13 +341,13 @@ describe("room manager", () => {
 
     expect(() =>
       manager.applyHostCommand(room.code, hostToken, { type: "createStageLink", stageLocale: "fr" } as unknown as HostCommand),
-    ).toThrow("Invalid stage locale.");
+    ).toThrow("Invalid host command.");
     expect(manager.getRoom(room.code)?.stageToken).toBeNull();
 
     manager.applyHostCommand(room.code, hostToken, { type: "createStageLink", stageLocale: "de" });
     expect(() =>
       manager.applyHostCommand(room.code, hostToken, { type: "setStageLocale", stageLocale: "fr" } as unknown as HostCommand),
-    ).toThrow("Invalid stage locale.");
+    ).toThrow("Invalid host command.");
     expect(manager.getRoom(room.code)?.stageLocale).toBe("de");
   });
 

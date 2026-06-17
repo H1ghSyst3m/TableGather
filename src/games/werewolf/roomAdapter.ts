@@ -40,13 +40,21 @@ import {
 } from "./domain/setup";
 import { areWerewolfStatesEqual, cloneWerewolfState, resetRestoredDayTimer } from "./domain/state";
 import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "./domain/types";
-import type { WerewolfHostCommand, WerewolfPlayerCommand } from "./commands";
+import { isWerewolfHostCommand, isWerewolfPlayerCommand, type WerewolfHostCommand, type WerewolfPlayerCommand } from "./commands";
 import type { WerewolfHostRoomSnapshot, WerewolfRoomAssignmentEntry, WerewolfRoomUndoState, WerewolfSetupState } from "./roomTypes";
 import { createWerewolfStageSnapshot } from "./stage";
 
 export const werewolfRoomAdapter = {
   createInitialSetupState(playerCount: number) {
     return createWerewolfSetupState(playerCount);
+  },
+
+  isHostCommand(command) {
+    return isWerewolfHostCommand(command);
+  },
+
+  isPlayerCommand(command) {
+    return isWerewolfPlayerCommand(command);
   },
 
   resetRoom(room) {

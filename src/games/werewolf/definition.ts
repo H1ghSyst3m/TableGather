@@ -13,6 +13,7 @@ export const werewolfDefinition = {
   icon: "shield",
   supportedModes: ["room", "pass-and-play"],
   playerRange: "5+",
+  playerConstraints: { min: 5, default: 5 },
   duration: "20-40 min",
   difficultyKey: "games.medium",
   setup: {

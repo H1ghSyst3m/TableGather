@@ -54,7 +54,7 @@ describe("online messages", () => {
     }
   });
 
-  it("parses command envelopes without deep command validation", () => {
+  it("parses command envelopes for runtime command validation", () => {
     const hostCommand = {
       type: "hostCommand",
       requestId: "host-1",

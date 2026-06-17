@@ -8,6 +8,7 @@ export const undercoverDefinition = {
   icon: "spy",
   supportedModes: ["room", "pass-and-play"],
   playerRange: "4-20",
+  playerConstraints: { min: 4, default: 4, max: 20 },
   duration: "10-30 min",
   difficultyKey: "games.easy",
   setup: {
