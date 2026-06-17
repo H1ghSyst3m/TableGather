@@ -71,10 +71,10 @@ Set `VITE_WS_URL` only when the browser app and room server are intentionally sp
 Main routes:
 
 - `/` - hub game/mode selection and device-local room sessions.
-- `/play/werewolf` - local pass-and-play Werewolf.
-- `/room/create/werewolf` - create a Werewolf room as host.
-- `/room/<CODE>` - join or resume a room. A stored host token opens the host view; otherwise the player view opens.
-- `/stage/<CODE>/<TOKEN>` - open a Werewolf stage screen from a host-created stage link.
+- `/play/<gameId>` - local pass-and-play for a playable game.
+- `/room/create/<gameId>` - create a room for a playable game as host.
+- `/room/<CODE>` - join or resume a room. The app resolves the room's game id through the room server, then opens the registered host or player view.
+- `/stage/<CODE>/<TOKEN>` - open a registered stage screen from a host-created stage link.
 - `/admin` - protected room overview dashboard when `TABLEGATHER_ADMIN_TOKEN` is configured on the room server.
 
 ## V1 Scope
@@ -101,8 +101,9 @@ Main routes:
 
 ## Source Map
 
-- `src/App.tsx` owns route parsing and decides which screen to render.
+- `src/App.tsx` owns route parsing and delegates game screen selection to the route component registry.
 - `src/games/registry.ts` registers games and exposes playable game adapters.
+- `src/games/routeComponents.tsx` maps playable game definitions to client-only route screens.
 - `src/games/types.ts` defines `GameDefinition`, theme tokens, and the room adapter contract, including optional stage snapshots.
 - `src/games/werewolf/` contains the Werewolf definition, domain engine, room adapter, stage snapshot builder, components, i18n, theme, and game-specific CSS.
 - `src/online/` contains client-side WebSocket message types, room session storage helpers, and the room socket hook.

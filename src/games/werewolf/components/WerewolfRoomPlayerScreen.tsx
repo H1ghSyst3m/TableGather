@@ -14,6 +14,7 @@ import {
   saveHostRoomSession,
   savePlayerRoomSession,
 } from "../../../online/roomSessionStorage";
+import type { GameId } from "../../../types";
 import { MAX_PLAYER_NAME_LENGTH, validatePlayerName } from "../../../playerNames";
 import { resolveGameTheme } from "../../theme";
 import type { WerewolfPlayerRoomSnapshot } from "../roomTypes";
@@ -26,7 +27,15 @@ type JoinRoomStatus = "idle" | "checking" | "joinable" | "locked" | "notFound" |
 
 const werewolfAssets = resolveGameTheme({ theme: werewolfTheme }).assets;
 
-export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: { code?: string; navigate: (path: string) => void }) {
+export function WerewolfRoomPlayerScreen({
+  code: initialCode = "",
+  navigate,
+  onResolvedGameId,
+}: {
+  code?: string;
+  navigate: (path: string) => void;
+  onResolvedGameId?: (gameId: GameId, roomCode: string) => void;
+}) {
   const { t } = useI18n();
   const initialRoomCode = normalizeRoomCodeInput(initialCode);
   const hasInitialRoomCode = isCompleteRoomCode(initialRoomCode);
@@ -54,6 +63,11 @@ export function WerewolfRoomPlayerScreen({ code: initialCode = "", navigate }: {
 
   const { connect, send, error } = useRoomSocket((message: ServerMessage, socket) => {
     if (message.type === "roomStatus" && message.roomCode === pendingCode) {
+      if (message.exists && message.gameId && message.gameId !== "werewolf" && onResolvedGameId) {
+        onResolvedGameId(message.gameId, message.roomCode);
+        return;
+      }
+
       setRoomPlayerCount(message.playerCount ?? null);
       setRoomStatus(!message.exists ? "notFound" : message.joinable ? "joinable" : isPreparationPhase(message.phase) ? "locked" : "started");
       setServerError(null);

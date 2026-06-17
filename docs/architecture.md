@@ -6,7 +6,7 @@ TableGather Hub is a React + TypeScript browser app with a small in-memory WebSo
 
 | Area | Source |
 | --- | --- |
-| App routing | `src/App.tsx` parses `/`, `/play/:gameId`, `/room/create/:gameId`, `/room/:code`, and `/stage/:code/:token`. |
+| App routing | `src/App.tsx` parses `/`, `/play/:gameId`, `/room/create/:gameId`, `/room/:code`, and `/stage/:code/:token`; `src/games/routeComponents.tsx` maps playable games to client-only route screens. |
 | Game registry | `src/games/registry.ts` registers Werewolf, Imposter, and Undercover. Werewolf is the only playable V1 game. |
 | Game contract | `src/games/types.ts` defines `GameDefinition`, `GameRoomAdapter`, setup slots, theme tokens, and i18n bundles. |
 | Generic frontend | `src/components/`, `src/i18n/`, `src/online/`, `src/styles.css`, and `src/pwa.ts`. |
@@ -16,13 +16,13 @@ TableGather Hub is a React + TypeScript browser app with a small in-memory WebSo
 
 ## Application Routing
 
-`src/App.tsx` keeps routing simple. It derives a route from `window.location.pathname`, renders the matching screen, and uses `history.pushState` for navigation.
+`src/App.tsx` keeps routing simple. It derives a route from `window.location.pathname`, resolves the matching game route component through `src/games/routeComponents.tsx`, and uses `history.pushState` for navigation.
 
 - `/` renders `HubScreen` with game/mode selection and a device-local Session tab.
-- `/play/werewolf` renders `LocalWerewolfApp` inside `GameThemeFrame`.
-- `/room/create/werewolf` renders `WerewolfRoomHostScreen` without a room code so it creates a room.
-- `/room/<CODE>` renders host or player room UI depending on whether the room session storage helper finds a host token for that code.
-- `/stage/<CODE>/<TOKEN>` renders the Werewolf stage screen as a read-only public display client.
+- `/play/:gameId` renders the registered local pass-and-play screen for a playable game inside `GameThemeFrame`.
+- `/room/create/:gameId` renders the registered room host screen for a playable game without a room code so it creates a room.
+- `/room/<CODE>` first resolves the room's game id through `inspectRoomSession` for stored host/player tokens or `inspectRoom` without a token, then renders the registered host or player room UI.
+- `/stage/<CODE>/<TOKEN>` first resolves the stage link through `inspectStage`, then renders the registered stage screen as a read-only public display client.
 
 `GameThemeFrame` applies `gameThemeClassName(game)` and `gameThemeStyle(game)` so generic CSS variables and game-specific CSS can style the screen.
 
@@ -37,6 +37,7 @@ Important fields:
 - `setup.createInitialState` gives the room server a game-specific initial setup state.
 - `hostCommands` and `playerCommands` list the commands the game accepts in room mode.
 - `roomAdapter` bridges generic room runtime state to game-specific logic. It may expose `stageSnapshot` when the game can safely deliver a public stage view.
+- `components` lists symbolic route component slots; the actual React imports live in the client-only route component registry so the server registry stays UI-free.
 - `i18n` registers bundled game translations.
 - `theme` and `assets` feed the theme resolver and optional visual assets.
 

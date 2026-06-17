@@ -157,6 +157,26 @@ export class RoomManager {
     };
   }
 
+  inspectStage(code: string, token: string) {
+    const roomCode = normalizeRoomCode(code);
+    const room = this.getActiveRoom(roomCode);
+    if (!room || !room.stageToken || room.stageToken !== token) return { roomCode, valid: false as const };
+
+    try {
+      this.requireStageAdapter(room);
+    } catch {
+      return { roomCode: room.code, valid: false as const };
+    }
+
+    return {
+      roomCode: room.code,
+      valid: true as const,
+      gameId: room.gameId,
+      phase: room.phase,
+      playerCount: room.players.length,
+    };
+  }
+
   joinStage(code: string, token: string) {
     const room = this.requireRoom(code);
     if (!room.stageToken || room.stageToken !== token) throw new Error("Stage link is not valid.");

@@ -127,6 +127,21 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
           return;
         }
 
+        if (message.type === "inspectStage") {
+          if (!lookupLimiter.record(roomRequestKey)) {
+            send(socket, { type: "error", requestId: message.requestId, message: TOO_MANY_ROOM_REQUESTS_ERROR });
+            return;
+          }
+
+          send(socket, {
+            type: "stageStatus",
+            requestId: message.requestId,
+            ...manager.inspectStage(message.roomCode, message.stageToken),
+            ...roomServerInfo,
+          });
+          return;
+        }
+
         if (message.type === "joinRoom") {
           if (failedJoinLimiter.isBlocked(roomRequestKey)) throw new Error(TOO_MANY_ROOM_REQUESTS_ERROR);
 

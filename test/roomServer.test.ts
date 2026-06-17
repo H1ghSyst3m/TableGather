@@ -16,6 +16,7 @@ type ConnectedMessage = Extract<ServerMessage, { type: "connected" }>;
 type SnapshotMessage = Extract<ServerMessage, { type: "snapshot" }>;
 type RoomStatusMessage = Extract<ServerMessage, { type: "roomStatus" }>;
 type RoomSessionStatusMessage = Extract<ServerMessage, { type: "roomSessionStatus" }>;
+type StageStatusMessage = Extract<ServerMessage, { type: "stageStatus" }>;
 
 const openSockets: TestSocket[] = [];
 let closeServer: (() => Promise<void>) | null = null;
@@ -513,7 +514,7 @@ describe("room websocket server", () => {
       } satisfies Partial<RoomStatusMessage>);
     }
 
-    guest.send({ type: "inspectRoom", requestId: "lookup-limited", roomCode: "MISS01" });
+    guest.send({ type: "inspectStage", requestId: "lookup-limited", roomCode: "MISS01", stageToken: "TOKEN123" });
     await expect(guest.next((message) => message.type === "error" && message.requestId === "lookup-limited")).resolves.toMatchObject({
       type: "error",
       requestId: "lookup-limited",
@@ -696,6 +697,19 @@ describe("room websocket server", () => {
     );
     const stageToken = hostView.stageToken!;
 
+    const lookup = await openSocket(url);
+    lookup.send({ type: "inspectStage", requestId: "active-stage", roomCode, stageToken });
+    await expect(lookup.next((message) => message.type === "stageStatus" && message.requestId === "active-stage")).resolves.toMatchObject({
+      type: "stageStatus",
+      requestId: "active-stage",
+      roomCode,
+      valid: true,
+      gameId: "werewolf",
+      phase: "lobby",
+      playerCount: 0,
+      protocolVersion: ROOM_PROTOCOL_VERSION,
+    } satisfies Partial<StageStatusMessage>);
+
     const stage = await openSocket(url);
     stage.send({ type: "joinStage", roomCode, stageToken });
     await expect(stage.next((message) => message.type === "connected" && message.role === "stage")).resolves.toMatchObject({
@@ -714,6 +728,15 @@ describe("room websocket server", () => {
       await host.next((message) => message.type === "snapshot" && hostSnapshot(message).stageToken !== stageToken),
     );
     const rotatedToken = rotatedHostView.stageToken!;
+
+    const staleLookup = await openSocket(url);
+    staleLookup.send({ type: "inspectStage", requestId: "stale-stage", roomCode, stageToken });
+    await expect(staleLookup.next((message) => message.type === "stageStatus" && message.requestId === "stale-stage")).resolves.toMatchObject({
+      type: "stageStatus",
+      requestId: "stale-stage",
+      roomCode,
+      valid: false,
+    } satisfies Partial<StageStatusMessage>);
 
     const staleStage = await openSocket(url);
     staleStage.send({ type: "joinStage", roomCode, stageToken });

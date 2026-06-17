@@ -26,6 +26,7 @@ export const werewolfDefinition = {
     localPlay: "werewolf.localPlay",
     roomHost: "werewolf.roomHost",
     roomPlayer: "werewolf.roomPlayer",
+    stage: "werewolf.stage",
   },
   i18n: {
     en: werewolfEn,

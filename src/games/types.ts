@@ -46,6 +46,7 @@ export interface GameComponentSlots {
   localPlay?: string;
   roomHost?: string;
   roomPlayer?: string;
+  stage?: string;
 }
 
 export interface GameSetupDefinition {
