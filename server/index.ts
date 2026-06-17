@@ -17,6 +17,7 @@ const ROOM_LOOKUP_LIMIT = 60;
 const FAILED_JOIN_LIMIT = 20;
 const ROOM_RATE_LIMIT_WINDOW_MS = 60_000;
 const ROOM_RATE_LIMIT_MAX_KEYS = 10_000;
+const ROOM_WS_MAX_PAYLOAD_BYTES = 64 * 1024;
 const TOO_MANY_ROOM_REQUESTS_ERROR = "Too many room requests.";
 
 interface RoomServerOptions {
@@ -61,7 +62,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
     response.end("Not found");
   });
 
-  const wss = new WebSocketServer({ server, path: "/ws" });
+  const wss = new WebSocketServer({ server, path: "/ws", maxPayload: ROOM_WS_MAX_PAYLOAD_BYTES });
   server.on("close", () => clearInterval(expirySweep));
   wss.on("close", () => clearInterval(expirySweep));
 
@@ -69,6 +70,7 @@ export function createRoomServer(manager = new RoomManager(), options: RoomServe
     const clientId = createClientId();
     const roomRequestKey = roomRateLimitKey(request, trustedProxies);
     clients.set(clientId, socket);
+    socket.on("error", () => undefined);
 
     socket.on("message", (data) => {
       closeExpiredRooms();

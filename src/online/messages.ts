@@ -82,40 +82,64 @@ export type ServerMessage =
   | { type: "error"; requestId?: string; message: string };
 
 export function parseClientMessage(raw: unknown): ClientMessage | null {
-  if (!raw || typeof raw !== "object" || !("type" in raw)) return null;
-  const type = (raw as { type: unknown }).type;
+  if (!isRecord(raw)) return null;
+  const type = raw.type;
   if (typeof type !== "string") return null;
+  if (!hasOptionalStringField(raw, "requestId")) return null;
 
   switch (type) {
-    case "createRoom":
-    case "joinRoom":
+    case "createRoom": {
+      const payload = raw.payload;
+      if (!isRecord(payload) || typeof payload.gameId !== "string") return null;
+      return raw as ClientMessage;
+    }
+    case "joinRoom": {
+      const payload = raw.payload;
+      if (!hasStringField(raw, "roomCode")) return null;
+      if (!isRecord(payload) || typeof payload.name !== "string") return null;
+      return raw as ClientMessage;
+    }
     case "resumeRoom":
-    case "hostCommand":
-    case "playerCommand":
     case "leaveRoom":
+      if (!hasStringField(raw, "roomCode")) return null;
+      if (!hasStringField(raw, "clientToken")) return null;
       return raw as ClientMessage;
+    case "hostCommand":
+    case "playerCommand": {
+      if (!hasStringField(raw, "roomCode")) return null;
+      if (!hasStringField(raw, "clientToken")) return null;
+      if (!isCommandPayload(raw.payload)) return null;
+      return raw as ClientMessage;
+    }
     case "inspectStage":
-    case "joinStage": {
-      const message = raw as { requestId?: unknown; roomCode?: unknown; stageToken?: unknown };
-      if (typeof message.roomCode !== "string") return null;
-      if (typeof message.stageToken !== "string") return null;
-      if (message.requestId !== undefined && typeof message.requestId !== "string") return null;
+    case "joinStage":
+      if (!hasStringField(raw, "roomCode")) return null;
+      if (!hasStringField(raw, "stageToken")) return null;
       return raw as ClientMessage;
-    }
-    case "inspectRoom": {
-      const message = raw as { requestId?: unknown; roomCode?: unknown };
-      if (typeof message.roomCode !== "string") return null;
-      if (message.requestId !== undefined && typeof message.requestId !== "string") return null;
+    case "inspectRoom":
+      if (!hasStringField(raw, "roomCode")) return null;
       return raw as ClientMessage;
-    }
-    case "inspectRoomSession": {
-      const message = raw as { requestId?: unknown; roomCode?: unknown; clientToken?: unknown };
-      if (typeof message.roomCode !== "string") return null;
-      if (typeof message.clientToken !== "string") return null;
-      if (message.requestId !== undefined && typeof message.requestId !== "string") return null;
+    case "inspectRoomSession":
+      if (!hasStringField(raw, "roomCode")) return null;
+      if (!hasStringField(raw, "clientToken")) return null;
       return raw as ClientMessage;
-    }
     default:
       return null;
   }
+}
+
+function hasStringField(message: Record<string, unknown>, key: string) {
+  return typeof message[key] === "string";
+}
+
+function hasOptionalStringField(message: Record<string, unknown>, key: string) {
+  return message[key] === undefined || typeof message[key] === "string";
+}
+
+function isCommandPayload(value: unknown) {
+  return isRecord(value) && typeof value.type === "string";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
