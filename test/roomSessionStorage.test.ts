@@ -24,46 +24,46 @@ describe("room session storage", () => {
   it("lists host and player candidates before deduping sessions", () => {
     useStorage(
       createMemoryStorage({
-        "tablegather-room-ABCD-host": "HOST_TOKEN",
-        "tablegather-room-ABCD-player": "PLAYER_TOKEN",
+        "tablegather-room-ABC123-host": "HOST_TOKEN",
+        "tablegather-room-ABC123-player": "PLAYER_TOKEN",
       }),
     );
 
     expect(listStoredRoomSessionCandidates()).toEqual([
-      { roomCode: "ABCD", role: "host", token: "HOST_TOKEN" },
-      { roomCode: "ABCD", role: "player", token: "PLAYER_TOKEN" },
+      { roomCode: "ABC123", role: "host", token: "HOST_TOKEN" },
+      { roomCode: "ABC123", role: "player", token: "PLAYER_TOKEN" },
     ]);
   });
 
   it("keeps deduped sessions host-preferred", () => {
     useStorage(
       createMemoryStorage({
-        "tablegather-room-ABCD-player": "PLAYER_TOKEN",
-        "tablegather-room-ABCD-host": "HOST_TOKEN",
+        "tablegather-room-ABC123-player": "PLAYER_TOKEN",
+        "tablegather-room-ABC123-host": "HOST_TOKEN",
       }),
     );
 
-    expect(listStoredRoomSessions()).toEqual([{ roomCode: "ABCD", role: "host", token: "HOST_TOKEN" }]);
+    expect(listStoredRoomSessions()).toEqual([{ roomCode: "ABC123", role: "host", token: "HOST_TOKEN" }]);
   });
 
   it("does not throw when storage methods fail", () => {
     useStorage(createThrowingStorage());
 
     expect(() => {
-      expect(getStoredHostRoomToken("ABCD")).toBeNull();
-      expect(getStoredPlayerRoomToken("ABCD")).toBeNull();
+      expect(getStoredHostRoomToken("ABC123")).toBeNull();
+      expect(getStoredPlayerRoomToken("ABC123")).toBeNull();
       expect(listStoredRoomSessionCandidates()).toEqual([]);
       expect(listStoredRoomSessions()).toEqual([]);
-      saveHostRoomSession("ABCD", "HOST_TOKEN");
-      savePlayerRoomSession("ABCD", "PLAYER_TOKEN");
-      removeHostRoomSession("ABCD");
-      removePlayerRoomSession("ABCD");
+      saveHostRoomSession("ABC123", "HOST_TOKEN");
+      savePlayerRoomSession("ABC123", "PLAYER_TOKEN");
+      removeHostRoomSession("ABC123");
+      removePlayerRoomSession("ABC123");
     }).not.toThrow();
   });
 
   it("does not throw when storage key iteration fails", () => {
     const storage = createMemoryStorage({
-      "tablegather-room-ABCD-host": "HOST_TOKEN",
+      "tablegather-room-ABC123-host": "HOST_TOKEN",
     });
     storage.key = vi.fn(() => {
       throw new DOMException("blocked", "SecurityError");
@@ -75,16 +75,16 @@ describe("room session storage", () => {
 
   it("keeps the player token when saving the host token fails", () => {
     const storage = createMemoryStorage({
-      "tablegather-room-ABCD-player": "PLAYER_TOKEN",
+      "tablegather-room-ABC123-player": "PLAYER_TOKEN",
     });
     storage.setItem = vi.fn(() => {
       throw new DOMException("blocked", "QuotaExceededError");
     });
     useStorage(storage);
 
-    saveHostRoomSession("ABCD", "HOST_TOKEN");
+    saveHostRoomSession("ABC123", "HOST_TOKEN");
 
-    expect(getStoredPlayerRoomToken("ABCD")).toBe("PLAYER_TOKEN");
+    expect(getStoredPlayerRoomToken("ABC123")).toBe("PLAYER_TOKEN");
     expect(storage.removeItem).not.toHaveBeenCalled();
   });
 });

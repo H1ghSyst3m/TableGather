@@ -19,7 +19,8 @@ import { I18nContext } from "../src/i18n/context";
 import { translate } from "../src/i18n/translations";
 import type { AdminRoomsSummary } from "../src/online/admin";
 import { submitAdminTokenInput } from "../src/online/adminToken";
-import { hasDuplicatePlayerName, normalizePlayerName } from "../src/playerNames";
+import { ROOM_CODE_LENGTH } from "../src/online/roomCodes";
+import { hasDuplicatePlayerName, MAX_PLAYER_NAME_LENGTH, normalizePlayerName } from "../src/playerNames";
 
 const previousSessionStorage = globalThis.sessionStorage;
 const localWerewolfStorageKey = "tablegather-werewolf-local";
@@ -773,6 +774,7 @@ describe("werewolf play surface", () => {
 
     expect(html).toContain(translate("de", "werewolf.playerLobbyTitle"));
     expect(html).toContain(translate("de", "werewolf.playerList"));
+    expect(html).toContain(`maxLength="${MAX_PLAYER_NAME_LENGTH}"`);
     expect(html).not.toContain(translate("de", "werewolf.roleSetup"));
     expect(html).toContain("1 / 3");
     expect(html).toContain(translate("de", "werewolf.minPlayers"));
@@ -864,6 +866,7 @@ describe("werewolf play surface", () => {
     expect(html).toContain("hub-action-footer-actions");
     expect(html).toContain("game-icon game-icon-werewolf game-icon-large");
     expect(html).toContain("werewolf-mark.png");
+    expect(html).toContain(`5+ ${translate("de", "common.players")}`);
     expect(html).toContain(translate("de", "hub.joinRoomByCode"));
     expect(html).not.toContain(`class="segmented-tabs" aria-label="${translate("de", "common.session")}"`);
     expect(buttonHtmlForClass(html, "hub-join-room-action")).not.toContain("disabled");
@@ -1048,19 +1051,28 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "werewolf.enterRoomCodeTitle"));
     expect(html).toContain(translate("de", "werewolf.enterRoomCodeAndNamePrompt"));
     expect(html).toContain(translate("de", "common.name"));
+    expect(html).toContain(`maxLength="${ROOM_CODE_LENGTH}"`);
+    expect(html).toContain(`maxLength="${MAX_PLAYER_NAME_LENGTH}"`);
   });
 
   it("renders invite-link joins through the same branded flat form", () => {
-    const html = renderWithI18n(<WerewolfRoomPlayerScreen code="G5KQ" navigate={() => undefined} />);
+    const html = renderWithI18n(<WerewolfRoomPlayerScreen code="G5KQ9R" navigate={() => undefined} />);
 
     expect(html).toContain("player-join-screen");
     expect(html).toContain("room-code-entry-screen");
     expect(html).toContain("werewolf-brand-mark");
     expect(html).toContain("werewolf-mark.png");
     expect(html).toContain("player-join-form");
-    expect(html).toContain('value="G5KQ"');
+    expect(html).toContain('value="G5KQ9R"');
     expect(html).toContain(translate("de", "werewolf.roomChecking"));
     expect(html).not.toContain("add-player-form");
+  });
+
+  it("keeps partial invite-link codes idle on the join screen", () => {
+    const html = renderWithI18n(<WerewolfRoomPlayerScreen code="G5K" navigate={() => undefined} />);
+
+    expect(html).toContain('value="G5K"');
+    expect(html).not.toContain(translate("de", "werewolf.roomChecking"));
   });
 
   it("renders host stage language controls in the stage link panel", () => {

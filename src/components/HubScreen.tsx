@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { games } from "../games/registry";
 import { gameThemeStyle, hubDefaultTheme } from "../games/theme";
+import { translateCommonRoomServerError } from "../i18n/roomServerErrors";
 import { useI18n } from "../i18n/useI18n";
 import type { GameId, RoomPhase, SessionMode } from "../types";
 import { GameIcon } from "./GameIcon";
@@ -74,7 +75,7 @@ export function HubScreen({ navigate, initialTab = "games", initialMode = "room"
 
       clearPendingSessionTimer(pendingSessionTimersRef.current, message.requestId);
       pendingSessionsRef.current.delete(message.requestId);
-      setSessionServerError(message.message);
+      setSessionServerError(translateCommonRoomServerError(message.message, t));
       if (pendingSessionsRef.current.size === 0) setSessionLoading(false);
     }
   });

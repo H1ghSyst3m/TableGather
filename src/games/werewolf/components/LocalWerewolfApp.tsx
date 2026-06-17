@@ -44,7 +44,7 @@ import type { RoleCounts, RoleId, WerewolfOptions, WerewolfState } from "../doma
 import { ensureDayTimer } from "../domain/timer";
 import { useI18n } from "../../../i18n/useI18n";
 import { GameConfirmDialog } from "../../../components/GameConfirmDialog";
-import { hasDuplicatePlayerName, normalizePlayerName } from "../../../playerNames";
+import { hasDuplicatePlayerName, MAX_PLAYER_NAME_LENGTH, validatePlayerName } from "../../../playerNames";
 import { RoleCountEditor } from "./RoleCountEditor";
 import { RoleRevealScreen } from "./RoleRevealScreen";
 import { GameRulesButton } from "./RoleRulesModal";
@@ -93,9 +93,13 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
   );
 
   const addPlayer = () => {
-    const trimmedName = normalizePlayerName(name);
-    if (!trimmedName) {
+    const { name: trimmedName, error } = validatePlayerName(name);
+    if (error === "required") {
       setNameError(t("errors.nameRequired"));
+      return;
+    }
+    if (error === "tooLong") {
+      setNameError(t("errors.nameTooLong"));
       return;
     }
     if (hasDuplicatePlayerName(players.map((player) => player.name), trimmedName)) {
@@ -374,6 +378,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
                   setNameError(null);
                 }}
                 placeholder={t("werewolf.addPlayerPlaceholder")}
+                maxLength={MAX_PLAYER_NAME_LENGTH}
               />
               <button type="submit" aria-label={t("common.add")}>
                 <Plus />

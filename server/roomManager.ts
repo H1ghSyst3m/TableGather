@@ -12,7 +12,8 @@ import {
   type AdminRoomsSummary,
 } from "../src/online/admin";
 import type { HostCommand, PlayerCommand } from "../src/online/messages";
-import { normalizePlayerName, playerNameKey } from "../src/playerNames";
+import { normalizeRoomCode, ROOM_CODE_LENGTH } from "../src/online/roomCodes";
+import { playerNameKey, validatePlayerName } from "../src/playerNames";
 import { InMemoryRoomStore, type Room, type RoomPlayer, type RoomStore } from "./roomStore";
 
 export const DEFAULT_ROOM_TTL_MS = 48 * 60 * 60 * 1000;
@@ -65,8 +66,9 @@ export class RoomManager {
     const room = this.requireRoom(code);
     if (room.phase !== "lobby") throw new Error("The room is already in game.");
 
-    const trimmedName = normalizePlayerName(name);
-    if (!trimmedName) throw new Error("Name is required.");
+    const { name: trimmedName, error } = validatePlayerName(name);
+    if (error === "required") throw new Error("Name is required.");
+    if (error === "tooLong") throw new Error("Name is too long.");
 
     const duplicate = room.players.find((player) => playerNameKey(player.name) === playerNameKey(trimmedName));
     if (duplicate) throw new Error("Name is already taken.");
@@ -413,7 +415,7 @@ export class RoomManager {
   private createRoomCode() {
     let code = "";
     do {
-      code = createToken(4).toUpperCase();
+      code = createToken(ROOM_CODE_LENGTH).toUpperCase();
     } while (this.getActiveRoom(code));
     return code;
   }
@@ -474,10 +476,6 @@ function incrementCounts(counts: AdminGameCounts, flags: { active: boolean; prog
 function createToken(length = 18) {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length }, () => alphabet[randomInt(alphabet.length)]).join("");
-}
-
-function normalizeRoomCode(code: string) {
-  return code.trim().toUpperCase();
 }
 
 function normalizeStageLocale(locale: unknown): Locale {

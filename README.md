@@ -37,6 +37,7 @@ Configuration:
 - `TABLEGATHER_ADMIN_TOKEN` enables the protected admin room overview API and `/admin` dashboard. Open `/admin#token=<token>` only as a transient way to load the token; the client immediately stores it in `sessionStorage` and removes it from the fragment so it is not kept in the address bar. Subsequent admin visits should use `/admin` without the token.
 - `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` optionally allows comma-separated cross-origin admin UI origins. Production defaults to same-origin admin access; set this only for split-origin admin deployments.
 - `TABLEGATHER_SERVE_STATIC` controls whether the room server serves the built `dist/` frontend. It defaults to enabled when `NODE_ENV=production` and disabled otherwise.
+- `TABLEGATHER_TRUSTED_PROXIES` optionally allows comma-separated exact proxy peer IPs whose `CF-Connecting-IP` or `X-Forwarded-For` headers may identify room rate-limit clients. Leave it empty unless the room server is behind a trusted reverse proxy.
 - `VITE_WS_URL` overrides the browser WebSocket URL. It accepts `ws://`, `wss://`, `http://`, or `https://`; HTTP(S) values are converted to WS(S). In production, leave it empty for a same-origin `/ws` endpoint behind your reverse proxy.
 - For phone/tablet testing on the same local network, run `npm run dev:all`, open the Vite URL from the host machine's LAN address, and make sure the room server port is reachable from the other devices.
 
@@ -51,6 +52,7 @@ Use `.env.example` as the reference for production values. The usual production 
 - `TABLEGATHER_ADMIN_TOKEN` when the protected `/admin` dashboard should be enabled.
 - `TABLEGATHER_ADMIN_ALLOWED_ORIGINS` only when `/admin` is served from a different origin than `/admin/rooms`.
 - `TABLEGATHER_SERVE_STATIC=false` only for split deployments where another service serves `dist/`.
+- `TABLEGATHER_TRUSTED_PROXIES` only when a trusted reverse proxy overwrites forwarding headers before traffic reaches the room server.
 
 Build and start with the repository scripts:
 
