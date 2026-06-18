@@ -85,7 +85,7 @@ export function RoleRevealScreen({
   if (!currentPlayer || !role) return null;
 
   const screen = (
-    <section className="role-reveal-screen" aria-label={title ?? t("werewolf.roleReveal")}>
+    <section className={isDragging ? "role-reveal-screen is-dragging" : "role-reveal-screen"} aria-label={title ?? t("werewolf.roleReveal")}>
       <header className="reveal-header">
         <p className="section-label">{title ?? t("werewolf.roleReveal")}</p>
         <div className="reveal-dots" aria-label={`${currentIndex + 1} / ${players.length}`}>
@@ -119,7 +119,7 @@ export function RoleRevealScreen({
         </div>
 
         <div
-          className="cover-card"
+          className={werewolfAssets.cover ? "cover-card has-cover-image" : "cover-card"}
           role="button"
           tabIndex={0}
           aria-label={t("werewolf.revealInstruction")}
@@ -159,7 +159,7 @@ export function RoleRevealScreen({
           }}
         >
           {werewolfAssets.cover ? (
-            <img className="cover-card-image" src={werewolfAssets.cover} alt="" />
+            <img className="cover-card-image" src={werewolfAssets.cover} alt="" aria-hidden="true" draggable={false} />
           ) : (
             <span className="cover-card-mark">
               <Shield />
