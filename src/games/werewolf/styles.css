@@ -1616,6 +1616,11 @@
   margin: 0;
   color: var(--muted);
   text-align: center;
+  transition: opacity 140ms ease;
+}
+
+.role-reveal-screen.is-dragging .reveal-instruction {
+  opacity: 0;
 }
 
 .reveal-stack {
@@ -1689,6 +1694,7 @@
   overflow: hidden;
   touch-action: none;
   cursor: grab;
+  user-select: none;
   color: #fff;
   background:
     radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.22), transparent 7rem),
@@ -1699,9 +1705,15 @@
 .cover-card-image {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .cover-card:focus-visible {
@@ -1713,8 +1725,14 @@
   content: "";
   position: absolute;
   inset: 0.85rem;
+  z-index: 2;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 1rem;
+  pointer-events: none;
+}
+
+.cover-card.has-cover-image::before {
+  content: none;
 }
 
 .cover-card-mark svg {
@@ -1728,7 +1746,7 @@
   left: 1rem;
   right: 1rem;
   bottom: 1.2rem;
-  z-index: 1;
+  z-index: 3;
   display: inline-flex;
   justify-content: center;
   align-items: center;

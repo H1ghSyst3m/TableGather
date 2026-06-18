@@ -842,7 +842,7 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain("reveal-footer");
   });
 
-  it("renders Werewolf role reveal with icon fallbacks until real assets are provided", () => {
+  it("renders Werewolf role reveal with a non-draggable cover asset", () => {
     const html = renderWithI18n(
       <RoleRevealScreen
         players={[{ id: "one", name: "Alex", roleId: "werewolf" }]}
@@ -850,10 +850,13 @@ describe("werewolf play surface", () => {
       />,
     );
 
-    expect(html).toContain("cover-card-mark");
+    expect(html).toContain("cover-card has-cover-image");
+    expect(html).toContain("cover-card-image");
+    expect(html).toContain("role-reveal-cover.webp");
+    expect(html).toContain('draggable="false"');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).not.toContain("cover-card-mark");
     expect(html).not.toContain("role-layer-icon");
-    expect(html).not.toContain("cover-card-image");
-    expect(html).not.toContain("/games/werewolf/");
     expect(html).not.toContain("<footer");
   });
 

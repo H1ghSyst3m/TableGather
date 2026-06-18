@@ -1,5 +1,6 @@
 import type { GameThemeTokens } from "../types";
 
+const roleRevealCover = new URL("./assets/role-reveal-cover.webp", import.meta.url).href;
 const werewolfMark = new URL("./assets/werewolf-mark.png", import.meta.url).href;
 
 export const werewolfTheme = {
@@ -20,5 +21,6 @@ export const werewolfTheme = {
   assets: {
     icon: werewolfMark,
     logo: werewolfMark,
+    cover: roleRevealCover,
   },
 } satisfies GameThemeTokens;
