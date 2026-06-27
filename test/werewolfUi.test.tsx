@@ -862,6 +862,8 @@ describe("werewolf play surface", () => {
 
   it("keeps the Hub frame and current game preview on hub visuals", () => {
     const html = renderWithI18n(<HubScreen navigate={() => undefined} />);
+    const footerHtml = elementHtmlForClass(html, "hub-action-footer", "footer");
+    const joinActionHtml = buttonHtmlForClass(html, "hub-join-room-action");
 
     expect(html).toContain("--app-bg:rgba(255, 255, 255, 0.96)");
     expect(html).toContain("hub-screen-body");
@@ -872,7 +874,9 @@ describe("werewolf play surface", () => {
     expect(html).toContain(`5+ ${translate("de", "common.players")}`);
     expect(html).toContain(translate("de", "hub.joinRoomByCode"));
     expect(html).not.toContain(`class="segmented-tabs" aria-label="${translate("de", "common.session")}"`);
-    expect(buttonHtmlForClass(html, "hub-join-room-action")).not.toContain("disabled");
+    expect(joinActionHtml).not.toContain("disabled");
+    expect(footerHtml).toContain(translate("de", "hub.startGame", { game: translate("de", "games.werewolf") }));
+    expect(footerHtml).not.toContain(translate("de", "hub.joinRoomByCode"));
     expect(html).not.toContain("sticky-action");
     expect(html).not.toContain('class="current-game-logo"');
   });
@@ -1658,6 +1662,14 @@ function renderAdminDashboard(
       onProgressFilterChange={() => undefined}
     />,
   );
+}
+
+function elementHtmlForClass(html: string, className: string, tagName: string) {
+  const classIndex = html.indexOf(className);
+  if (classIndex === -1) return "";
+  const elementStart = html.lastIndexOf(`<${tagName}`, classIndex);
+  const elementEnd = html.indexOf(`</${tagName}>`, classIndex);
+  return elementStart >= 0 && elementEnd >= 0 ? html.slice(elementStart, elementEnd) : "";
 }
 
 function buttonHtmlForClass(html: string, className: string) {
