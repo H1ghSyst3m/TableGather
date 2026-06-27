@@ -249,9 +249,6 @@ export function HubScreen({ navigate, initialTab = "games", initialMode = "room"
                   onClick={() => setMode("pass-and-play")}
                 />
               </div>
-              <button className="secondary-button full hub-join-room-action" type="button" onClick={() => navigate("/room/join")}>
-                <LogIn /> {t("hub.joinRoomByCode")}
-              </button>
             </section>
           </div>
         ) : (
@@ -276,6 +273,9 @@ export function HubScreen({ navigate, initialTab = "games", initialMode = "room"
               <button className="primary-action" type="button" onClick={start} disabled={!canStart}>
                 <Play />
                 {t("hub.startGame", { game: t(currentGame.titleKey as TranslationKey) })}
+              </button>
+              <button className="secondary-button full hub-join-room-action" type="button" onClick={() => navigate("/room/join")}>
+                <LogIn /> {t("hub.joinRoomByCode")}
               </button>
             </div>
           </div>

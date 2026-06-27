@@ -876,7 +876,7 @@ describe("werewolf play surface", () => {
     expect(html).not.toContain(`class="segmented-tabs" aria-label="${translate("de", "common.session")}"`);
     expect(joinActionHtml).not.toContain("disabled");
     expect(footerHtml).toContain(translate("de", "hub.startGame", { game: translate("de", "games.werewolf") }));
-    expect(footerHtml).not.toContain(translate("de", "hub.joinRoomByCode"));
+    expect(footerHtml).toContain(translate("de", "hub.joinRoomByCode"));
     expect(html).not.toContain("sticky-action");
     expect(html).not.toContain('class="current-game-logo"');
   });
