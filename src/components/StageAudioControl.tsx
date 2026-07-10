@@ -14,15 +14,7 @@ export function StageAudioControl({
   const errorLabel = audio.error === "activation"
     ? t("common.stageAudioNeedsInteraction")
     : t("common.stageAudioUnavailable");
-  const buttonLabel = audio.loading
-    ? t("common.stageAudioLoading")
-    : audio.error && !audio.enabled
-      ? errorLabel
-      : !audio.enabled
-        ? t("common.stageAudioEnable")
-        : audio.muted
-          ? t("common.stageAudioUnmute")
-          : t("common.stageAudioMute");
+  const buttonLabel = stageAudioButtonLabel(audio, errorLabel, t);
   const classes = ["stage-audio-control", className, audio.error ? "error" : ""].filter(Boolean).join(" ");
 
   return (
@@ -52,4 +44,16 @@ export function StageAudioControl({
       )}
     </div>
   );
+}
+
+function stageAudioButtonLabel(
+  audio: StageAudioControlState,
+  errorLabel: string,
+  t: ReturnType<typeof useI18n>["t"],
+) {
+  if (audio.loading) return t("common.stageAudioLoading");
+  if (audio.error && !audio.enabled) return errorLabel;
+  if (!audio.enabled) return t("common.stageAudioEnable");
+  if (audio.muted) return t("common.stageAudioUnmute");
+  return t("common.stageAudioMute");
 }

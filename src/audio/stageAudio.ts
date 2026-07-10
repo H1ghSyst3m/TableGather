@@ -160,12 +160,14 @@ export class StageAudioEngine<AmbienceId extends string, CueId extends string> {
       try {
         await resumeAudioContext(context, this.definition.mix?.resumeTimeoutMs ?? DEFAULT_RESUME_TIMEOUT_MS);
       } catch (error) {
-        this.onActivationFailure({
-          contextState: context.state,
-          message: errorMessage(error),
-          retryable: isRetryableStageAudioActivationError(error),
-          visibilityState: documentVisibilityState(),
-        });
+        if (!this.disposed) {
+          this.onActivationFailure({
+            contextState: context.state,
+            message: errorMessage(error),
+            retryable: isRetryableStageAudioActivationError(error),
+            visibilityState: documentVisibilityState(),
+          });
+        }
         throw error;
       }
     }

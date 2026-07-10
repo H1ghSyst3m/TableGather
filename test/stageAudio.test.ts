@@ -266,6 +266,28 @@ describe("StageAudioEngine", () => {
     await suspendedEngine.dispose();
     expect(suspendedContext.closed).toBe(true);
   });
+
+  it("does not report an activation failure after disposal", async () => {
+    const context = new FakeAudioContext();
+    context.resumePending = true;
+    const activationFailures = vi.fn();
+    const timeoutDefinition = {
+      ...definition,
+      mix: { ...definition.mix, resumeTimeoutMs: 5 },
+    } satisfies StageAudioDefinition<TestAmbience, TestCue>;
+    const engine = new StageAudioEngine(timeoutDefinition, {
+      createContext: () => context as unknown as AudioContext,
+      fetchAudio: (async () => audioResponse()) as typeof fetch,
+      onActivationFailure: activationFailures,
+    });
+
+    const activation = expect(engine.activate(0.6, false)).rejects.toThrow("visible user interaction");
+    await engine.dispose();
+    await activation;
+
+    expect(context.closed).toBe(true);
+    expect(activationFailures).not.toHaveBeenCalled();
+  });
 });
 
 function audioResponse({

@@ -63,7 +63,7 @@ Keep reusable structure global:
 - shared panels;
 - shared player rows;
 - shared modals/dialogs;
-- shared Stage audio control structure, range semantics, loading animation, and screen-reader status;
+- shared Stage audio control structure, range semantics, loading animation with a static reduced-motion fallback, and screen-reader status;
 - generic `GameFlowLayout` styles for future games.
 
 Keep game personality and game-specific layout in the game stylesheet:

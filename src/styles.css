@@ -332,10 +332,6 @@ svg {
   padding: 0;
 }
 
-.stage-audio-control button:disabled {
-  cursor: wait;
-}
-
 .stage-audio-control button svg {
   height: 1.35rem;
   width: 1.35rem;
@@ -349,7 +345,6 @@ svg {
 }
 
 .stage-audio-control-status {
-  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   height: 1px;
   overflow: hidden;
@@ -365,6 +360,12 @@ svg {
 @keyframes stage-audio-control-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-audio-control-loading {
+    animation: none;
   }
 }
 

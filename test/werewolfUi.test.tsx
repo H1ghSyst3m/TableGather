@@ -1496,23 +1496,52 @@ describe("werewolf stage", () => {
     expect(germanHtml).toContain(`aria-label="${translate("de", "common.stageAudioEnable")}"`);
   });
 
-  it("keeps the Stage audio button available for a second Firefox activation gesture", () => {
-    const html = renderWithI18n(
-      <StageAudioControl
-        audio={{
-          enabled: false,
-          error: null,
-          loading: true,
-          muted: false,
-          setVolume: () => undefined,
-          toggle: () => undefined,
-          volume: 0.6,
-        }}
-      />,
-    );
+  it("preserves the Stage audio button label priority in both locales", () => {
+    const states = [
+      {
+        audio: { enabled: false, error: "activation", loading: true, muted: false },
+        labelKey: "common.stageAudioLoading",
+      },
+      {
+        audio: { enabled: false, error: "activation", loading: false, muted: false },
+        labelKey: "common.stageAudioNeedsInteraction",
+      },
+      {
+        audio: { enabled: false, error: "assets", loading: false, muted: false },
+        labelKey: "common.stageAudioUnavailable",
+      },
+      {
+        audio: { enabled: false, error: null, loading: false, muted: false },
+        labelKey: "common.stageAudioEnable",
+      },
+      {
+        audio: { enabled: true, error: "assets", loading: false, muted: true },
+        labelKey: "common.stageAudioUnmute",
+      },
+      {
+        audio: { enabled: true, error: null, loading: false, muted: false },
+        labelKey: "common.stageAudioMute",
+      },
+    ] as const;
 
-    expect(html).toContain(`aria-label="${translate("de", "common.stageAudioLoading")}"`);
-    expect(html).not.toContain("disabled");
+    for (const locale of ["de", "en"] as const) {
+      for (const { audio, labelKey } of states) {
+        const html = renderWithI18n(
+          <StageAudioControl
+            audio={{
+              ...audio,
+              setVolume: () => undefined,
+              toggle: () => undefined,
+              volume: 0.6,
+            }}
+          />,
+          locale,
+        );
+
+        expect(html).toContain(`aria-label="${translate(locale, labelKey)}"`);
+        expect(html).not.toContain("disabled");
+      }
+    }
   });
 
   it("renders the stage from the host-controlled room locale", () => {

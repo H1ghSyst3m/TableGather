@@ -3923,10 +3923,6 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
   color: var(--wolf-teal-strong, var(--accent));
 }
 
-.werewolf-stage-audio button:disabled {
-  color: var(--wolf-muted, var(--muted));
-}
-
 .werewolf-stage-audio button:focus-visible,
 .werewolf-stage-audio input:focus-visible {
   outline: 2px solid var(--wolf-teal-strong, var(--accent));
