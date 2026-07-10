@@ -3903,7 +3903,34 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
 .werewolf-stage-header-actions {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.85rem;
+  justify-content: flex-end;
+}
+
+.werewolf-stage-audio {
+  background: rgba(5, 17, 30, 0.52);
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 0.5rem;
+}
+
+.werewolf-stage-audio.error {
+  border-color: color-mix(in srgb, var(--wolf-danger, var(--danger)) 56%, transparent);
+}
+
+.werewolf-stage-audio button {
+  border-right: 1px solid rgba(123, 181, 218, 0.2);
+  color: var(--wolf-teal-strong, var(--accent));
+}
+
+.werewolf-stage-audio button:focus-visible,
+.werewolf-stage-audio input:focus-visible {
+  outline: 2px solid var(--wolf-teal-strong, var(--accent));
+  outline-offset: -2px;
+}
+
+.werewolf-stage-audio input {
+  accent-color: var(--wolf-teal, var(--accent));
 }
 
 .werewolf-stage-language {
@@ -4525,6 +4552,10 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
     align-items: stretch;
     justify-content: space-between;
     width: 100%;
+  }
+
+  .werewolf-stage-audio {
+    flex: 1 1 9rem;
   }
 
   .werewolf-stage-header h1 {

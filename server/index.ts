@@ -795,6 +795,10 @@ function contentTypeForPath(filePath: string) {
       return "image/jpeg";
     case ".webp":
       return "image/webp";
+    case ".mp3":
+      return "audio/mpeg";
+    case ".wav":
+      return "audio/wav";
     case ".ico":
       return "image/x-icon";
     case ".txt":

@@ -86,6 +86,8 @@ Stage styling should prioritize:
 
 The Stage event timeline is context only. It should stay secondary to the active reveal, but it must remain readable on a TV. Single timeline entries should not stretch across the full stage width.
 
+Stage audio controls live in the header before the optional language control and room code. `StageAudioControl` and `.stage-audio-control` provide the reusable markup, accessibility, and layout structure; `.werewolf-stage-audio` supplies the Werewolf command-surface appearance and responsive sizing. Keep the group compact, with a speaker button and directly visible master-volume slider. It must wrap with the existing header actions at narrow widths, preserve keyboard focus treatment, and use the established Stage borders, surfaces, accent, muted, and danger tokens.
+
 ## Portal Modals
 
 Some modal sheets are rendered through portals outside the `.game-theme-werewolf` subtree. Werewolf-specific classes are added where needed so the dark theme still applies:
@@ -116,6 +118,7 @@ For Werewolf styling changes, check:
 - Room host screen with stage link create/copy/rotate/disable;
 - Room player role reveal;
 - Stage route `/stage/<CODE>/<TOKEN>` for lobby, day timer, night report, Hunter prompt, vote reveal, and ended scenes;
+- Stage audio activation, mute, volume, partial-load error, day/night crossfade, timer ticks, and timer gong;
 - Settings, Role Info, Role Rules, Game Log, Players Overview;
 - no horizontal overflow;
 - footer does not overlap body content;

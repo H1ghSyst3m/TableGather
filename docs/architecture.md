@@ -9,7 +9,7 @@ TableGather Hub is a React + TypeScript browser app with a small in-memory WebSo
 | App routing | `src/App.tsx` parses `/`, `/play/:gameId`, `/room/create/:gameId`, `/room/:code`, and `/stage/:code/:token`; `src/games/routeComponents.tsx` maps playable games to client-only route screens. |
 | Game registry | `src/games/registry.ts` registers Werewolf, Imposter, and Undercover. Werewolf is the only playable V1 game. |
 | Game contract | `src/games/types.ts` defines `GameDefinition`, `GameRoomAdapter`, setup slots, theme tokens, and i18n bundles. |
-| Generic frontend | `src/components/`, `src/i18n/`, `src/online/`, `src/styles.css`, and `src/pwa.ts`. |
+| Generic frontend | `src/audio/`, `src/components/`, `src/i18n/`, `src/online/`, `src/styles.css`, and `src/pwa.ts`. |
 | Game modules | `src/games/<gameId>/` contains each game's definition, domain behavior, room adapter, components, i18n, theme, and styles. |
 | Room server | `server/index.ts`, `server/roomManager.ts`, and `server/roomStore.ts`. |
 | Tests | `test/` covers domain logic, room manager/server, UI rendering, i18n, registry, and clipboard. |
@@ -57,6 +57,7 @@ A complete game module is split by responsibility:
 | Room adapter | `roomAdapter.ts`, `roomTypes.ts`, optional `stage.ts` | Host/player/stage snapshots, command validation and routing, setup normalization, and privacy filtering. |
 | React screens | `components/*.tsx` | Local, host, player, setup, play, and optional Stage surfaces. |
 | Text and theme | `i18n/en.ts`, `i18n/de.ts`, `theme.ts`, `styles.css` | Game copy, theme tokens, game-specific CSS, and optional assets. |
+| Optional Stage presentation | `stageAudio.ts`, `assets/audio/*` | Client-only track definitions, phase resolution, cues, and bundled presentation assets. |
 
 Game domain code owns behavior. UI components should send commands or call domain functions; they should not duplicate game rules.
 
@@ -77,6 +78,12 @@ The server never knows Werewolf rules directly. It delegates game-specific comma
 Room audiences are defined in `src/types.ts` as `host`, `player`, and `stage`. Stage sessions use their own `stageToken`, join through `joinStage`, and are accepted only for adapters that implement `stageSnapshot`.
 
 The Hub Session tab is not a matchmaking or account feature. It scans only host/player tokens stored on the current device, asks the server to validate those tokens through `inspectRoomSession`, and shows active rooms that still exist in memory and have not expired.
+
+## Client Stage Audio
+
+`src/audio/` owns the reusable browser-only Stage audio runtime. `StageAudioDefinition` configures typed ambience and cue tracks, mix values, crossfade timing, default volume, and the versioned preference key. `StageAudioEngine` handles retryable loading, decoding, cross-browser Web Audio unlock, buses, playback, and cleanup; `useStageAudio` connects that runtime to React Stage components. A browser-blocked context remains available for another user gesture instead of restarting the same first-attempt cycle, while asset loads stay deduplicated. The shared `StageAudioControl` lives in `src/components/`.
+
+Each game opts in from its client Stage implementation. It keeps its track URLs and phase/cue rules inside `src/games/<gameId>/`, resolving bundled files with `new URL(..., import.meta.url).href`. Audio definitions deliberately do not belong to `GameDefinition`, the room adapter, snapshots, or WebSocket messages: the server imports the game registry, while browser audio assets and Web Audio must stay client-only.
 
 ## Styling Architecture
 
@@ -115,6 +122,8 @@ Relevant test files:
 
 - `test/werewolf.test.ts` for domain behavior and role interactions.
 - `test/werewolfUi.test.tsx` for rendered Werewolf UI structure.
+- `test/stageAudio.test.ts` for the shared Stage audio runtime and preferences.
+- `test/werewolfStageAudio.test.ts` for Werewolf timer cue behavior.
 - `test/roomManager.test.ts` and `test/roomServer.test.ts` for room behavior and privacy.
 - `test/i18n.test.ts` for translation coverage and locale key alignment.
 - `test/registry.test.ts` for game registration and theme resolution.

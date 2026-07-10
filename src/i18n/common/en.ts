@@ -34,7 +34,15 @@ export const commonEn = {
     "ready": "Ready",
     "alive": "Alive",
     "eliminated": "Eliminated",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "stageAudio": "Stage sound",
+    "stageAudioEnable": "Enable sound",
+    "stageAudioMute": "Mute sound",
+    "stageAudioUnmute": "Unmute sound",
+    "stageAudioVolume": "Sound volume",
+    "stageAudioLoading": "Loading sound",
+    "stageAudioNeedsInteraction": "Activate sound again while the Stage is visible.",
+    "stageAudioUnavailable": "Some sound files could not be loaded."
   },
   "errors": {
     "roomConnection": "Could not connect to the room server.",

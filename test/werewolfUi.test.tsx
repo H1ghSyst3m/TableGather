@@ -6,6 +6,7 @@ import type { WerewolfState } from "../src/games/werewolf/domain/types";
 import { AdminDashboardView, AdminScreen, AdminStatePanel, AdminTokenForm } from "../src/components/AdminScreen";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
+import { StageAudioControl } from "../src/components/StageAudioControl";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
 import { WerewolfRoomPlayerScreen } from "../src/games/werewolf/components/WerewolfRoomPlayerScreen";
 import { RoleRulesModal } from "../src/games/werewolf/components/RoleRulesModal";
@@ -1478,6 +1479,69 @@ describe("werewolf stage", () => {
     expect(dayHtml).toContain(translate("en", "werewolf.dayTimerWaiting"));
     expect(nightHtml).not.toContain("werewolf-stage-day-timer");
     expect(nightHtml).not.toContain(translate("en", "werewolf.dayTimer"));
+  });
+
+  it("renders accessible Stage audio controls in both locales", () => {
+    const englishHtml = renderStage({ scene: "day", phase: "playing", round: 3 }, "en");
+    const germanHtml = renderStage({ scene: "night", phase: "playing", round: 3 }, "de");
+
+    expect(englishHtml).toContain(`class="stage-audio-control werewolf-stage-audio"`);
+    expect(englishHtml).toContain(`aria-label="${translate("en", "common.stageAudio")}"`);
+    expect(englishHtml).toContain(`aria-label="${translate("en", "common.stageAudioEnable")}"`);
+    expect(englishHtml).toContain(`aria-label="${translate("en", "common.stageAudioVolume")}"`);
+    expect(englishHtml).toContain('type="range" min="0" max="100" step="1"');
+    expect(englishHtml).toContain('aria-label="Sound volume" value="60"');
+    expect(englishHtml.indexOf("werewolf-stage-audio")).toBeLessThan(englishHtml.indexOf("werewolf-stage-language"));
+    expect(germanHtml).toContain(`aria-label="${translate("de", "common.stageAudio")}"`);
+    expect(germanHtml).toContain(`aria-label="${translate("de", "common.stageAudioEnable")}"`);
+  });
+
+  it("preserves the Stage audio button label priority in both locales", () => {
+    const states = [
+      {
+        audio: { enabled: false, error: "activation", loading: true, muted: false },
+        labelKey: "common.stageAudioLoading",
+      },
+      {
+        audio: { enabled: false, error: "activation", loading: false, muted: false },
+        labelKey: "common.stageAudioNeedsInteraction",
+      },
+      {
+        audio: { enabled: false, error: "assets", loading: false, muted: false },
+        labelKey: "common.stageAudioUnavailable",
+      },
+      {
+        audio: { enabled: false, error: null, loading: false, muted: false },
+        labelKey: "common.stageAudioEnable",
+      },
+      {
+        audio: { enabled: true, error: "assets", loading: false, muted: true },
+        labelKey: "common.stageAudioUnmute",
+      },
+      {
+        audio: { enabled: true, error: null, loading: false, muted: false },
+        labelKey: "common.stageAudioMute",
+      },
+    ] as const;
+
+    for (const locale of ["de", "en"] as const) {
+      for (const { audio, labelKey } of states) {
+        const html = renderWithI18n(
+          <StageAudioControl
+            audio={{
+              ...audio,
+              setVolume: () => undefined,
+              toggle: () => undefined,
+              volume: 0.6,
+            }}
+          />,
+          locale,
+        );
+
+        expect(html).toContain(`aria-label="${translate(locale, labelKey)}"`);
+        expect(html).not.toContain("disabled");
+      }
+    }
   });
 
   it("renders the stage from the host-controlled room locale", () => {

@@ -34,7 +34,15 @@ export const commonDe = {
     "ready": "Bereit",
     "alive": "Lebt",
     "eliminated": "Ausgeschieden",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "stageAudio": "Bühnenton",
+    "stageAudioEnable": "Ton aktivieren",
+    "stageAudioMute": "Ton stummschalten",
+    "stageAudioUnmute": "Ton einschalten",
+    "stageAudioVolume": "Lautstärke",
+    "stageAudioLoading": "Ton wird geladen",
+    "stageAudioNeedsInteraction": "Aktiviere den Ton erneut, während die Stage sichtbar ist.",
+    "stageAudioUnavailable": "Einige Tondateien konnten nicht geladen werden."
   },
   "errors": {
     "roomConnection": "Verbindung zum Raumserver fehlgeschlagen.",
