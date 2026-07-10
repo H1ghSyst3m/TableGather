@@ -46,7 +46,7 @@ export function updateWerewolfStageTimerCues(
 
   const remaining = Math.max(0, Math.floor(remainingSeconds));
   const emittedTicks = [...state.emittedTicks];
-  let gongPlayed = state.gongPlayed;
+  const gongPlayed = state.gongPlayed;
   const previous = state.lastRemainingSeconds;
   const currentTickPending = remaining >= 1 && remaining <= 5 && !emittedTicks.includes(remaining);
 
@@ -54,7 +54,6 @@ export function updateWerewolfStageTimerCues(
     for (let second = Math.min(5, previous - 1); second >= Math.max(1, remaining); second -= 1) {
       if (!emittedTicks.includes(second)) emittedTicks.push(second);
     }
-    if (!audible && remaining === 0) gongPlayed = true;
   }
 
   const nextState = {
@@ -63,12 +62,15 @@ export function updateWerewolfStageTimerCues(
     lastRemainingSeconds: remaining,
   };
 
-  if (!audible || timer.status !== "running" || previous === null || remaining >= previous) {
-    return { cues: [], state: nextState };
+  if (timer.status === "running" && remaining === 0 && !gongPlayed) {
+    return {
+      cues: audible ? ["gong"] : [],
+      state: { ...nextState, gongPlayed: true },
+    };
   }
 
-  if (remaining === 0 && !gongPlayed) {
-    return { cues: ["gong"], state: { ...nextState, gongPlayed: true } };
+  if (!audible || timer.status !== "running" || previous === null || remaining >= previous) {
+    return { cues: [], state: nextState };
   }
 
   if (currentTickPending) return { cues: ["tick"], state: nextState };

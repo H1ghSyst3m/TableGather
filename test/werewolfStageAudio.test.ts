@@ -26,6 +26,48 @@ describe("werewolf stage audio cues", () => {
     expect(state.gongPlayed).toBe(true);
   });
 
+  it("emits one gong when a running timer is first observed at zero", () => {
+    const initial = updateWerewolfStageTimerCues(
+      createWerewolfStageTimerCueState(),
+      timerStatus("running"),
+      0,
+    );
+    expect(initial.cues).toEqual(["gong"]);
+    expect(initial.state).toMatchObject({ gongPlayed: true, lastRemainingSeconds: 0 });
+
+    const repeated = updateWerewolfStageTimerCues(initial.state, timerStatus("running"), 0);
+    expect(repeated.cues).toEqual([]);
+    expect(repeated.state.gongPlayed).toBe(true);
+  });
+
+  it("records an inaudible initial gong without replaying it later", () => {
+    const hidden = updateWerewolfStageTimerCues(
+      createWerewolfStageTimerCueState(),
+      timerStatus("running"),
+      0,
+      false,
+    );
+    expect(hidden.cues).toEqual([]);
+    expect(hidden.state.gongPlayed).toBe(true);
+
+    const visible = updateWerewolfStageTimerCues(hidden.state, timerStatus("running"), 0, true);
+    expect(visible.cues).toEqual([]);
+  });
+
+  it("waits to emit an initial zero gong until a paused timer starts running", () => {
+    const paused = updateWerewolfStageTimerCues(
+      createWerewolfStageTimerCueState(),
+      timerStatus("paused"),
+      0,
+    );
+    expect(paused.cues).toEqual([]);
+    expect(paused.state.gongPlayed).toBe(false);
+
+    const running = updateWerewolfStageTimerCues(paused.state, timerStatus("running"), 0);
+    expect(running.cues).toEqual(["gong"]);
+    expect(running.state.gongPlayed).toBe(true);
+  });
+
   it("does not replay skipped cues after a hidden-tab resync", () => {
     let state = createWerewolfStageTimerCueState();
     state = updateWerewolfStageTimerCues(state, timerStatus("running"), 6).state;
