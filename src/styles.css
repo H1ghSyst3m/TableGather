@@ -313,6 +313,61 @@ svg {
   padding: 0;
 }
 
+.stage-audio-control {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 3rem minmax(5rem, 7.5rem);
+  min-height: 3rem;
+  overflow: hidden;
+}
+
+.stage-audio-control button {
+  align-items: center;
+  align-self: stretch;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  padding: 0;
+}
+
+.stage-audio-control button:disabled {
+  cursor: wait;
+}
+
+.stage-audio-control button svg {
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.stage-audio-control input {
+  cursor: pointer;
+  margin: 0 0.75rem;
+  min-width: 0;
+  width: calc(100% - 1.5rem);
+}
+
+.stage-audio-control-status {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.stage-audio-control-loading {
+  animation: stage-audio-control-spin 0.9s linear infinite;
+}
+
+@keyframes stage-audio-control-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .back-button {
   padding: 0 1rem;
   font-weight: 750;

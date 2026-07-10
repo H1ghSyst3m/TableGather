@@ -2,6 +2,8 @@ import QRCode from "qrcode";
 import { Ban, Clock, HeartCrack, Moon, Skull, Sun, Target, Trophy, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { StageAudioControlState } from "../../../audio/stageAudio";
+import { StageAudioControl } from "../../../components/StageAudioControl";
 import type { Locale } from "../../../types";
 import { I18nContext } from "../../../i18n/context";
 import { translate } from "../../../i18n/translations";
@@ -14,6 +16,7 @@ import type { RoleId, Winner } from "../domain/types";
 import type { WerewolfStageEvent, WerewolfStageRoomSnapshot } from "../roomTypes";
 import { ActionIconChip, RoleIconChip } from "./WerewolfIcons";
 import { useSyncedNow } from "./useSyncedNow";
+import { useWerewolfStageAudio } from "./useWerewolfStageAudio";
 
 type TFunction = ReturnType<typeof useI18n>["t"];
 
@@ -120,11 +123,13 @@ function WerewolfStageContent({
   allowLocalLanguage: boolean;
 }) {
   const { locale, setLocale } = useI18n();
-  const tone = stageTone(snapshot);
+  const phase = stagePhase(snapshot);
+  const tone = phase === "day" ? "day" : "night";
+  const audio = useWerewolfStageAudio(phase, snapshot.dayTimer);
 
   return (
     <main className={`werewolf-stage-screen ${tone}`}>
-      <StageHeader snapshot={snapshot} locale={locale} onLocaleChange={allowLocalLanguage ? setLocale : null} />
+      <StageHeader snapshot={snapshot} locale={locale} onLocaleChange={allowLocalLanguage ? setLocale : null} audio={audio} />
       <StageBody snapshot={snapshot} joinQr={joinQr} />
     </main>
   );
@@ -134,10 +139,12 @@ function StageHeader({
   snapshot,
   locale,
   onLocaleChange,
+  audio,
 }: {
   snapshot: WerewolfStageRoomSnapshot;
   locale: Locale;
   onLocaleChange: ((locale: Locale) => void) | null;
+  audio: StageAudioControlState;
 }) {
   const { t } = useI18n();
   const title = stageTitle(snapshot, t);
@@ -149,6 +156,7 @@ function StageHeader({
         <h1>{title}</h1>
       </div>
       <div className="werewolf-stage-header-actions">
+        <StageAudioControl audio={audio} className="werewolf-stage-audio" />
         {onLocaleChange && <LanguageToggle locale={locale} onLocaleChange={onLocaleChange} />}
         <span className="werewolf-stage-code">{snapshot.code}</span>
       </div>
@@ -583,10 +591,6 @@ function stageTitle(snapshot: WerewolfStageRoomSnapshot, t: TFunction) {
   if (snapshot.scene === "roleReveal") return t("werewolf.roleReveal");
   if (snapshot.scene === "ended") return t("werewolf.gameOverTitle");
   return t("werewolf.stagePreparation");
-}
-
-function stageTone(snapshot: WerewolfStageRoomSnapshot) {
-  return stagePhase(snapshot) === "day" ? "day" : "night";
 }
 
 function stagePhase(snapshot: WerewolfStageRoomSnapshot): "day" | "night" | null {
