@@ -13,16 +13,16 @@ describe("werewolf stage audio cues", () => {
     let state = createWerewolfStageTimerCueState();
     const cues: WerewolfStageAudioCue[] = [];
 
-    for (const remaining of [6, 5, 5, 4, 3]) {
+    for (const remaining of [11, 10, 10, 9, 8]) {
       ({ state } = collectCues(state, "running", remaining, cues));
     }
-    ({ state } = collectCues(state, "paused", 3, cues));
-    ({ state } = collectCues(state, "running", 3, cues));
-    for (const remaining of [2, 1, 0, 0]) {
+    ({ state } = collectCues(state, "paused", 8, cues));
+    ({ state } = collectCues(state, "running", 8, cues));
+    for (const remaining of [7, 6, 5, 4, 3, 2, 1, 0, 0]) {
       ({ state } = collectCues(state, "running", remaining, cues));
     }
 
-    expect(cues).toEqual(["tick", "tick", "tick", "tick", "tick", "gong"]);
+    expect(cues).toEqual([...Array<WerewolfStageAudioCue>(10).fill("tick"), "gong"]);
     expect(state.gongPlayed).toBe(true);
   });
 
@@ -70,24 +70,28 @@ describe("werewolf stage audio cues", () => {
 
   it("does not replay skipped cues after a hidden-tab resync", () => {
     let state = createWerewolfStageTimerCueState();
-    state = updateWerewolfStageTimerCues(state, timerStatus("running"), 6).state;
-    const hiddenResult = updateWerewolfStageTimerCues(state, timerStatus("running"), 2, false);
+    state = updateWerewolfStageTimerCues(state, timerStatus("running"), 11).state;
+    const hiddenResult = updateWerewolfStageTimerCues(state, timerStatus("running"), 7, false);
     expect(hiddenResult.cues).toEqual([]);
-    expect(hiddenResult.state.emittedTicks).toEqual([5, 4, 3, 2]);
+    expect(hiddenResult.state.emittedTicks).toEqual([10, 9, 8, 7]);
 
-    const visibleResult = updateWerewolfStageTimerCues(hiddenResult.state, timerStatus("running"), 1, true);
+    const visibleResult = updateWerewolfStageTimerCues(hiddenResult.state, timerStatus("running"), 6, true);
     expect(visibleResult.cues).toEqual(["tick"]);
   });
 
   it("emits only the current cue after a running timer jump and resets from idle", () => {
-    let state = updateWerewolfStageTimerCues(createWerewolfStageTimerCueState(), timerStatus("running"), 8).state;
-    let result = updateWerewolfStageTimerCues(state, timerStatus("running"), 3);
+    let state = updateWerewolfStageTimerCues(createWerewolfStageTimerCueState(), timerStatus("running"), 13).state;
+    let result = updateWerewolfStageTimerCues(state, timerStatus("running"), 11);
+    expect(result.cues).toEqual([]);
+
+    result = updateWerewolfStageTimerCues(result.state, timerStatus("running"), 8);
     expect(result.cues).toEqual(["tick"]);
+    expect(result.state.emittedTicks).toEqual([10, 9, 8]);
 
     state = updateWerewolfStageTimerCues(result.state, timerStatus("idle"), 120).state;
     result = updateWerewolfStageTimerCues(state, timerStatus("running"), 120);
     expect(result.cues).toEqual([]);
-    result = updateWerewolfStageTimerCues(result.state, timerStatus("running"), 5);
+    result = updateWerewolfStageTimerCues(result.state, timerStatus("running"), 10);
     expect(result.cues).toEqual(["tick"]);
   });
 

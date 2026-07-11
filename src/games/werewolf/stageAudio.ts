@@ -4,6 +4,8 @@ import type { WerewolfDayTimerPublicSnapshot } from "./domain/types";
 export type WerewolfStageAmbience = "day" | "night";
 export type WerewolfStageAudioCue = "tick" | "gong";
 
+const COUNTDOWN_TICK_START_SECONDS = 10;
+
 export interface WerewolfStageTimerCueState {
   emittedTicks: number[];
   gongPlayed: boolean;
@@ -48,10 +50,16 @@ export function updateWerewolfStageTimerCues(
   const emittedTicks = [...state.emittedTicks];
   const gongPlayed = state.gongPlayed;
   const previous = state.lastRemainingSeconds;
-  const currentTickPending = remaining >= 1 && remaining <= 5 && !emittedTicks.includes(remaining);
+  const currentTickPending = remaining >= 1
+    && remaining <= COUNTDOWN_TICK_START_SECONDS
+    && !emittedTicks.includes(remaining);
 
   if (previous !== null && remaining < previous) {
-    for (let second = Math.min(5, previous - 1); second >= Math.max(1, remaining); second -= 1) {
+    for (
+      let second = Math.min(COUNTDOWN_TICK_START_SECONDS, previous - 1);
+      second >= Math.max(1, remaining);
+      second -= 1
+    ) {
       if (!emittedTicks.includes(second)) emittedTicks.push(second);
     }
   }
