@@ -189,6 +189,52 @@ describe("room manager", () => {
     expect(hostSnapshot.gameState).toBeTruthy();
   });
 
+  it("resets a finished room while preserving players and game settings", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    ["Alex", "Sam", "Jordan", "Taylor", "Morgan"].forEach((name, index) =>
+      manager.joinRoom(room.code, name, `player-${index}`),
+    );
+    const roleCounts: RoleCounts = { werewolf: 1, seer: 1, witch: 1, hunter: 1, villager: 1 };
+    const options = { winMode: "extended", revealMode: "hidden", roleReveal: true } as const;
+
+    manager.applyHostCommand(room.code, hostToken, { type: "beginSetup", roleCounts, options });
+    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment", roleCounts, options });
+    manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "random" });
+    manager.applyHostCommand(room.code, hostToken, { type: "startGame" });
+    manager.applyHostCommand(room.code, hostToken, { type: "createStageLink", stageLocale: "de" });
+
+    const finishedRoom = asWerewolfRoom(manager.getRoom(room.code));
+    const playersBeforeReset = finishedRoom.players.map((player) => ({ ...player }));
+    const stageToken = finishedRoom.stageToken;
+    finishedRoom.phase = "ended";
+    finishedRoom.gameState = { ...finishedRoom.gameState!, phase: "ended", winner: "villagers" };
+    finishedRoom.undoState = { phase: "playing", gameState: finishedRoom.gameState };
+
+    expect(finishedRoom.assignment).toHaveLength(5);
+    expect(finishedRoom.gameState.log.length).toBeGreaterThan(0);
+    expect(werewolfHostSnapshot(manager, finishedRoom).canUndo).toBe(true);
+
+    manager.applyHostCommand(room.code, hostToken, { type: "resetToLobby" });
+
+    const resetRoom = asWerewolfRoom(manager.getRoom(room.code));
+    const hostSnapshot = werewolfHostSnapshot(manager, resetRoom);
+    expect(resetRoom.phase).toBe("lobby");
+    expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: true, phase: "lobby" });
+    expect(resetRoom.players).toEqual(playersBeforeReset);
+    expect(resetRoom.stageToken).toBe(stageToken);
+    expect(resetRoom.stageLocale).toBe("de");
+    expect(hostSnapshot).toMatchObject({
+      roleCounts,
+      options,
+      assignMode: null,
+      assignment: [],
+      gameState: null,
+      canUndo: false,
+    });
+    expect(resetRoom.undoState).toBeNull();
+  });
+
   it("rejects invalid game settings before leaving the player lobby", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
