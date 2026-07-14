@@ -313,6 +313,56 @@ svg {
   padding: 0;
 }
 
+.stage-display-control {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: end;
+  max-width: min(18rem, 100%);
+}
+
+.stage-display-control-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 3rem);
+  min-height: 3rem;
+  overflow: hidden;
+}
+
+.stage-display-control button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  padding: 0;
+}
+
+.stage-display-control button:disabled {
+  cursor: not-allowed;
+}
+
+.stage-display-control button svg {
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
+.stage-display-control-status {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  max-width: 18rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.stage-display-control-loading {
+  animation: stage-display-control-spin 0.9s linear infinite;
+}
+
+@keyframes stage-display-control-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .stage-audio-control {
   align-items: center;
   display: grid;
@@ -364,6 +414,7 @@ svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .stage-display-control-loading,
   .stage-audio-control-loading {
     animation: none;
   }

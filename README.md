@@ -108,6 +108,7 @@ Main routes:
 - `src/games/routeComponents.tsx` maps playable game definitions to client-only route screens.
 - `src/games/types.ts` defines `GameDefinition`, structured player constraints, theme tokens, and the room adapter contract, including command validators and optional stage snapshots.
 - `src/games/werewolf/` contains the Werewolf definition, domain engine, room adapter, stage snapshot builder, components, i18n, theme, and game-specific CSS.
+- `src/stage/` contains reusable client-only Stage display state for fullscreen and Screen Wake Lock.
 - `src/online/` contains client-side WebSocket message types, room session storage helpers, and the room socket hook.
 - `server/` contains the in-memory WebSocket room runtime.
 - `test/` contains Vitest coverage for domain behavior, room behavior, i18n, registry, clipboard, and UI rendering.

@@ -141,6 +141,12 @@ Werewolf Stage reveal rules:
 
 Privacy expectations are covered by `test/roomManager.test.ts` and `test/roomServer.test.ts`.
 
+## Stage Display Controls
+
+Fullscreen and Screen Wake Lock are local presentation state on the opened Stage device. `WerewolfStageScreen` opts into the shared controller and control from `src/stage/` and `src/components/`; it does not add host commands, player commands, snapshot fields, or Stage settings.
+
+Both features start disabled after every open or reload and require an action on the Stage device. Fullscreen follows browser-driven exits such as Escape. A requested screen wake lock is reacquired when the Stage becomes visible after a temporary tab switch; unsupported APIs, rejected requests, and system releases are shown as retryable local status without blocking Stage content or the other display feature.
+
 ## Stage Audio
 
 Stage audio is local presentation state. It does not add room commands or snapshot fields, and the Stage remains a read-only room client.

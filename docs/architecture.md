@@ -9,7 +9,7 @@ TableGather Hub is a React + TypeScript browser app with a small in-memory WebSo
 | App routing | `src/App.tsx` parses `/`, `/play/:gameId`, `/room/create/:gameId`, `/room/:code`, and `/stage/:code/:token`; `src/games/routeComponents.tsx` maps playable games to client-only route screens. |
 | Game registry | `src/games/registry.ts` registers Werewolf, Imposter, and Undercover. Werewolf is the only playable V1 game. |
 | Game contract | `src/games/types.ts` defines `GameDefinition`, `GameRoomAdapter`, setup slots, theme tokens, and i18n bundles. |
-| Generic frontend | `src/audio/`, `src/components/`, `src/i18n/`, `src/online/`, `src/styles.css`, and `src/pwa.ts`. |
+| Generic frontend | `src/audio/`, `src/components/`, `src/i18n/`, `src/online/`, `src/stage/`, `src/styles.css`, and `src/pwa.ts`. |
 | Game modules | `src/games/<gameId>/` contains each game's definition, domain behavior, room adapter, components, i18n, theme, and styles. |
 | Room server | `server/index.ts`, `server/roomManager.ts`, and `server/roomStore.ts`. |
 | Tests | `test/` covers domain logic, room manager/server, UI rendering, i18n, registry, and clipboard. |
@@ -85,6 +85,12 @@ The Hub Session tab is not a matchmaking or account feature. It scans only host/
 
 Each game opts in from its client Stage implementation. It keeps its track URLs and phase/cue rules inside `src/games/<gameId>/`, resolving bundled files with `new URL(..., import.meta.url).href`. Audio definitions deliberately do not belong to `GameDefinition`, the room adapter, snapshots, or WebSocket messages: the server imports the game registry, while browser audio assets and Web Audio must stay client-only.
 
+## Client Stage Display Controls
+
+`src/stage/` owns reusable browser-only Stage display state. `StageDisplayController` manages the Fullscreen and Screen Wake Lock APIs, their lifecycle events, retryable failures, and cleanup. `useStageDisplay` connects one controller instance to a mounted React Stage, while the shared `StageDisplayControl` lives in `src/components/`.
+
+Games opt in from their client Stage component and provide only game-specific placement and styling. Display state starts disabled after every page load, is activated on the Stage device, and is never copied into `GameDefinition`, room adapters, snapshots, host settings, or WebSocket messages. A requested screen wake lock is reacquired after the Stage returns from a temporarily hidden tab; rejected requests and unsupported APIs remain local, visible UI states and never block the public Stage snapshot.
+
 ## Styling Architecture
 
 Global styles in `src/styles.css` define app defaults and reusable UI primitives. Game-specific styles live under each game module, for example `src/games/werewolf/styles.css`, and are imported after global styles in `src/main.tsx`.
@@ -123,6 +129,7 @@ Relevant test files:
 - `test/werewolf.test.ts` for domain behavior and role interactions.
 - `test/werewolfUi.test.tsx` for rendered Werewolf UI structure.
 - `test/stageAudio.test.ts` for the shared Stage audio runtime and preferences.
+- `test/stageDisplay.test.ts` for shared fullscreen and Screen Wake Lock lifecycle behavior.
 - `test/werewolfStageAudio.test.ts` for Werewolf timer cue behavior.
 - `test/roomManager.test.ts` and `test/roomServer.test.ts` for room behavior and privacy.
 - `test/i18n.test.ts` for translation coverage and locale key alignment.

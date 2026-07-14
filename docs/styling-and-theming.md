@@ -9,7 +9,7 @@ The app has two CSS layers:
 1. `src/styles.css`
    - global reset and base app styles;
    - hub styles;
-   - reusable controls such as `.primary-action`, `.secondary-button`, `.text-button`, `.icon-button`, `.stage-audio-control`;
+   - reusable controls such as `.primary-action`, `.secondary-button`, `.text-button`, `.icon-button`, `.stage-audio-control`, `.stage-display-control`;
    - shared panels, forms, player tables, modals, and generic game-flow styles.
 2. `src/games/werewolf/styles.css`
    - current game-specific stylesheet example;
@@ -63,6 +63,7 @@ Keep reusable structure global:
 - shared panels;
 - shared player rows;
 - shared modals/dialogs;
+- shared Stage display control structure, icon-button states, visible status layout, loading animation, and reduced-motion fallback;
 - shared Stage audio control structure, range semantics, loading animation with a static reduced-motion fallback, and screen-reader status;
 - generic `GameFlowLayout` styles for future games.
 
@@ -73,6 +74,7 @@ Keep game personality and game-specific layout in the game stylesheet:
 - game-specific reveal, play, room, and stage surfaces;
 - game-specific modal sheet overrides;
 - game-specific Stage audio colors, borders, surfaces, focus treatment, and responsive sizing;
+- game-specific Stage display colors, borders, active/error states, focus treatment, and responsive placement;
 - game-specific colors, borders, mood, and assets.
 
 Do not move global styles into one game's CSS just because that game currently uses them. Future games should be able to reuse global defaults and then override them through their own `.game-theme-*` class.
@@ -114,6 +116,7 @@ For game styling changes, check the relevant game-specific QA doc plus shared UI
 - primary action footer/body layout;
 - room host/player screens when room mode is supported;
 - Stage routes when public display is supported;
+- shared Stage fullscreen and Screen Wake Lock activation, deactivation, unsupported, rejection, release, and narrow-header behavior;
 - shared Stage audio activation, mute, volume, loading, error, and narrow-header behavior when audio is enabled;
 - settings, role/rule info, logs, and overview modals;
 - no horizontal overflow;

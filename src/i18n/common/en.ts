@@ -42,7 +42,19 @@ export const commonEn = {
     "stageAudioVolume": "Sound volume",
     "stageAudioLoading": "Loading sound",
     "stageAudioNeedsInteraction": "Activate sound again while the Stage is visible.",
-    "stageAudioUnavailable": "Some sound files could not be loaded."
+    "stageAudioUnavailable": "Some sound files could not be loaded.",
+    "stageDisplay": "Stage display",
+    "stageFullscreenEnter": "Enter fullscreen",
+    "stageFullscreenExit": "Exit fullscreen",
+    "stageFullscreenLoading": "Changing fullscreen mode",
+    "stageFullscreenUnsupported": "Fullscreen is not supported by this browser.",
+    "stageFullscreenUnavailable": "Fullscreen was declined. Try again on this device.",
+    "stageWakeLockEnable": "Keep screen awake",
+    "stageWakeLockDisable": "Allow screen to sleep",
+    "stageWakeLockLoading": "Activating keep-awake",
+    "stageWakeLockUnsupported": "Keeping the screen awake is not supported by this browser.",
+    "stageWakeLockUnavailable": "The screen could not be kept awake. Check browser or power-saving settings and try again.",
+    "stageWakeLockReleased": "The browser stopped keeping the screen awake. Try again if needed."
   },
   "errors": {
     "roomConnection": "Could not connect to the room server.",

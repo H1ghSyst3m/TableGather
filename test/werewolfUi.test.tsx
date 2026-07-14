@@ -7,6 +7,7 @@ import { AdminDashboardView, AdminScreen, AdminStatePanel, AdminTokenForm } from
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { StageAudioControl } from "../src/components/StageAudioControl";
+import { StageDisplayControl } from "../src/components/StageDisplayControl";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
 import {
   WerewolfRoomPlayerScreen,
@@ -30,6 +31,7 @@ import type { ServerMessage } from "../src/online/messages";
 import { ROOM_CODE_LENGTH } from "../src/online/roomCodes";
 import type { RoomSocketControls } from "../src/online/useRoomSocket";
 import { hasDuplicatePlayerName, MAX_PLAYER_NAME_LENGTH, normalizePlayerName } from "../src/playerNames";
+import type { StageDisplayControlState } from "../src/stage/useStageDisplay";
 
 const roomSocketHarness = vi.hoisted(() => ({ message: null as ServerMessage | null }));
 
@@ -1640,6 +1642,73 @@ describe("werewolf stage", () => {
     expect(germanHtml).toContain(`aria-label="${translate("de", "common.stageAudioEnable")}"`);
   });
 
+  it("renders accessible local Stage display controls before audio", () => {
+    const englishHtml = renderStage({ scene: "day", phase: "playing", round: 3 }, "en");
+    const germanHtml = renderStage({ scene: "night", phase: "playing", round: 3 }, "de");
+
+    expect(englishHtml).toContain(`class="stage-display-control werewolf-stage-display"`);
+    expect(englishHtml).toContain(`aria-label="${translate("en", "common.stageDisplay")}"`);
+    expect(englishHtml).toContain(`aria-label="${translate("en", "common.stageFullscreenEnter")}"`);
+    expect(englishHtml).toContain(`aria-label="${translate("en", "common.stageWakeLockEnable")}"`);
+    expect(englishHtml).toContain("lucide-maximize2");
+    expect(englishHtml).toContain("lucide-sun-dim");
+    expect(englishHtml.indexOf("werewolf-stage-display")).toBeLessThan(englishHtml.indexOf("werewolf-stage-audio"));
+    expect(englishHtml.indexOf("werewolf-stage-audio")).toBeLessThan(englishHtml.indexOf("werewolf-stage-language"));
+    expect(germanHtml).not.toContain(translate("de", "common.stageFullscreenUnsupported"));
+    expect(germanHtml).not.toContain(translate("de", "common.stageWakeLockUnsupported"));
+  });
+
+  it("renders active, pending, and failed Stage display states in both locales", () => {
+    for (const locale of ["de", "en"] as const) {
+      const activeHtml = renderWithI18n(
+        <StageDisplayControl
+          display={stageDisplayState({ fullscreenActive: true, wakeLockActive: true, wakeLockRequested: true })}
+        />,
+        locale,
+      );
+      expect(activeHtml).toContain(`aria-label="${translate(locale, "common.stageFullscreenExit")}"`);
+      expect(activeHtml).toContain(`aria-label="${translate(locale, "common.stageWakeLockDisable")}"`);
+      expect(activeHtml).toContain("lucide-minimize2");
+      expect(activeHtml).toContain("lucide-sun");
+      expect(countOccurrences(activeHtml, 'aria-pressed="true"')).toBe(2);
+
+      const pendingHtml = renderWithI18n(
+        <StageDisplayControl display={stageDisplayState({ fullscreenPending: true, wakeLockPending: true })} />,
+        locale,
+      );
+      expect(pendingHtml).toContain(`aria-label="${translate(locale, "common.stageFullscreenLoading")}"`);
+      expect(pendingHtml).toContain(`aria-label="${translate(locale, "common.stageWakeLockLoading")}"`);
+      expect(countOccurrences(pendingHtml, "stage-display-control-loading")).toBe(2);
+      expect(countOccurrences(pendingHtml, "disabled")).toBe(2);
+
+      const errorHtml = renderWithI18n(
+        <StageDisplayControl
+          display={stageDisplayState({ fullscreenError: "requestFailed", wakeLockError: "released" })}
+        />,
+        locale,
+      );
+      expect(errorHtml).toContain(translate(locale, "common.stageFullscreenUnavailable"));
+      expect(errorHtml).toContain(translate(locale, "common.stageWakeLockReleased"));
+      expect(errorHtml).toContain('role="status" aria-live="polite"');
+      expect(errorHtml).not.toContain("disabled");
+
+      const unsupportedHtml = renderWithI18n(
+        <StageDisplayControl
+          display={stageDisplayState({
+            fullscreenError: "unsupported",
+            fullscreenSupported: false,
+            wakeLockError: "unsupported",
+            wakeLockSupported: false,
+          })}
+        />,
+        locale,
+      );
+      expect(unsupportedHtml).toContain(translate(locale, "common.stageFullscreenUnsupported"));
+      expect(unsupportedHtml).toContain(translate(locale, "common.stageWakeLockUnsupported"));
+      expect(countOccurrences(unsupportedHtml, "disabled")).toBe(2);
+    }
+  });
+
   it("preserves the Stage audio button label priority in both locales", () => {
     const states = [
       {
@@ -1926,6 +1995,46 @@ function createMemoryStorage(): Storage {
     key: (index) => Array.from(values.keys())[index] ?? null,
     removeItem: (key) => values.delete(key),
     setItem: (key, value) => values.set(key, value),
+  };
+}
+
+function stageDisplayState({
+  fullscreenActive = false,
+  fullscreenError = null,
+  fullscreenPending = false,
+  fullscreenSupported = true,
+  wakeLockActive = false,
+  wakeLockError = null,
+  wakeLockPending = false,
+  wakeLockRequested = false,
+  wakeLockSupported = true,
+}: {
+  fullscreenActive?: boolean;
+  fullscreenError?: StageDisplayControlState["fullscreen"]["error"];
+  fullscreenPending?: boolean;
+  fullscreenSupported?: boolean;
+  wakeLockActive?: boolean;
+  wakeLockError?: StageDisplayControlState["wakeLock"]["error"];
+  wakeLockPending?: boolean;
+  wakeLockRequested?: boolean;
+  wakeLockSupported?: boolean;
+} = {}): StageDisplayControlState {
+  return {
+    fullscreen: {
+      active: fullscreenActive,
+      error: fullscreenError,
+      pending: fullscreenPending,
+      supported: fullscreenSupported,
+    },
+    wakeLock: {
+      active: wakeLockActive,
+      error: wakeLockError,
+      pending: wakeLockPending,
+      requested: wakeLockRequested,
+      supported: wakeLockSupported,
+    },
+    toggleFullscreen: () => undefined,
+    toggleWakeLock: () => undefined,
   };
 }
 
