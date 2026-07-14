@@ -4,12 +4,15 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { StageAudioControlState } from "../../../audio/stageAudio";
 import { StageAudioControl } from "../../../components/StageAudioControl";
+import { StageDisplayControl } from "../../../components/StageDisplayControl";
 import type { Locale } from "../../../types";
 import { I18nContext } from "../../../i18n/context";
 import { translate } from "../../../i18n/translations";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
 import { useRoomSocket, type RoomSocketControls } from "../../../online/useRoomSocket";
+import type { StageDisplayControlState } from "../../../stage/useStageDisplay";
+import { useStageDisplay } from "../../../stage/useStageDisplay";
 import { roleDefinitions } from "../domain/roles";
 import { formatDayTimer } from "../domain/timer";
 import type { RoleId, Winner } from "../domain/types";
@@ -126,10 +129,17 @@ function WerewolfStageContent({
   const phase = stagePhase(snapshot);
   const tone = phase === "day" ? "day" : "night";
   const audio = useWerewolfStageAudio(phase, snapshot.dayTimer);
+  const display = useStageDisplay();
 
   return (
     <main className={`werewolf-stage-screen ${tone}`}>
-      <StageHeader snapshot={snapshot} locale={locale} onLocaleChange={allowLocalLanguage ? setLocale : null} audio={audio} />
+      <StageHeader
+        snapshot={snapshot}
+        locale={locale}
+        onLocaleChange={allowLocalLanguage ? setLocale : null}
+        audio={audio}
+        display={display}
+      />
       <StageBody snapshot={snapshot} joinQr={joinQr} />
     </main>
   );
@@ -140,11 +150,13 @@ function StageHeader({
   locale,
   onLocaleChange,
   audio,
+  display,
 }: {
   snapshot: WerewolfStageRoomSnapshot;
   locale: Locale;
   onLocaleChange: ((locale: Locale) => void) | null;
   audio: StageAudioControlState;
+  display: StageDisplayControlState;
 }) {
   const { t } = useI18n();
   const title = stageTitle(snapshot, t);
@@ -156,6 +168,7 @@ function StageHeader({
         <h1>{title}</h1>
       </div>
       <div className="werewolf-stage-header-actions">
+        <StageDisplayControl display={display} className="werewolf-stage-display" />
         <StageAudioControl audio={audio} className="werewolf-stage-audio" />
         {onLocaleChange && <LanguageToggle locale={locale} onLocaleChange={onLocaleChange} />}
         <span className="werewolf-stage-code">{snapshot.code}</span>

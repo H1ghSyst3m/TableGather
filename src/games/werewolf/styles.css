@@ -3874,6 +3874,45 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
   justify-content: flex-end;
 }
 
+.werewolf-stage-display .stage-display-control-buttons {
+  background: rgba(5, 17, 30, 0.52);
+  border: 1px solid rgba(123, 181, 218, 0.22);
+  border-radius: 0.5rem;
+}
+
+.werewolf-stage-display.error .stage-display-control-buttons {
+  border-color: color-mix(in srgb, var(--wolf-danger, var(--danger)) 56%, transparent);
+}
+
+.werewolf-stage-display button {
+  color: var(--wolf-muted, var(--muted));
+}
+
+.werewolf-stage-display button + button {
+  border-left: 1px solid rgba(123, 181, 218, 0.2);
+}
+
+.werewolf-stage-display button.active {
+  background: rgba(59, 215, 240, 0.16);
+  color: var(--wolf-teal-strong, var(--accent));
+}
+
+.werewolf-stage-display button:disabled {
+  color: color-mix(in srgb, var(--wolf-muted, var(--muted)) 48%, transparent);
+}
+
+.werewolf-stage-display button:focus-visible {
+  outline: 2px solid var(--wolf-teal-strong, var(--accent));
+  outline-offset: -2px;
+}
+
+.werewolf-stage-display .stage-display-control-status {
+  background: rgba(5, 17, 30, 0.84);
+  border: 1px solid color-mix(in srgb, var(--wolf-danger, var(--danger)) 48%, transparent);
+  border-radius: 0.5rem;
+  color: color-mix(in srgb, var(--wolf-danger, var(--danger)) 72%, white);
+}
+
 .werewolf-stage-audio {
   background: rgba(5, 17, 30, 0.52);
   border: 1px solid rgba(123, 181, 218, 0.22);
@@ -4522,6 +4561,10 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .dialog-action.danger {
 
   .werewolf-stage-audio {
     flex: 1 1 9rem;
+  }
+
+  .werewolf-stage-display {
+    justify-items: start;
   }
 
   .werewolf-stage-header h1 {

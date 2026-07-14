@@ -223,6 +223,8 @@ Public Hunter moments are explicit Stage/host reveal steps. The Hunter prompt ca
 
 Stage mode is a read-only Werewolf room client for a public display. The host creates, rotates, or disables a stage link from the room host screen. The stage route joins with `joinStage` and receives `WerewolfStageRoomSnapshot`.
 
+The opened Stage device owns its local fullscreen and keep-awake controls. Both start disabled after a page load and do not appear in the host Stage settings or room snapshot.
+
 Stage scenes:
 
 - `lobby`: room code, player list, ready/status information, and player-join QR.

@@ -42,7 +42,19 @@ export const commonDe = {
     "stageAudioVolume": "Lautstärke",
     "stageAudioLoading": "Ton wird geladen",
     "stageAudioNeedsInteraction": "Aktiviere den Ton erneut, während die Stage sichtbar ist.",
-    "stageAudioUnavailable": "Einige Tondateien konnten nicht geladen werden."
+    "stageAudioUnavailable": "Einige Tondateien konnten nicht geladen werden.",
+    "stageDisplay": "Stage-Anzeige",
+    "stageFullscreenEnter": "Vollbild aktivieren",
+    "stageFullscreenExit": "Vollbild beenden",
+    "stageFullscreenLoading": "Vollbildmodus wird geändert",
+    "stageFullscreenUnsupported": "Vollbild wird von diesem Browser nicht unterstützt.",
+    "stageFullscreenUnavailable": "Vollbild wurde abgelehnt. Versuche es auf diesem Gerät erneut.",
+    "stageWakeLockEnable": "Bildschirm wach halten",
+    "stageWakeLockDisable": "Bildschirm wieder ausschalten lassen",
+    "stageWakeLockLoading": "Wachhalten wird aktiviert",
+    "stageWakeLockUnsupported": "Das Wachhalten des Bildschirms wird von diesem Browser nicht unterstützt.",
+    "stageWakeLockUnavailable": "Der Bildschirm konnte nicht wach gehalten werden. Prüfe Browser- oder Energiespareinstellungen und versuche es erneut.",
+    "stageWakeLockReleased": "Der Browser hält den Bildschirm nicht mehr wach. Versuche es bei Bedarf erneut."
   },
   "errors": {
     "roomConnection": "Verbindung zum Raumserver fehlgeschlagen.",
