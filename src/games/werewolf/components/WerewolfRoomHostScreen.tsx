@@ -26,11 +26,13 @@ import type { GameId, Locale } from "../../../types";
 import { GameConfirmDialog } from "../../../components/GameConfirmDialog";
 import { copyText } from "../../../clipboard";
 import { RoleCountEditor } from "./RoleCountEditor";
+import { GameRulesEditor } from "./GameRulesEditor";
 import { GameRulesButton } from "./RoleRulesModal";
 import { WerewolfFlowShell, type WerewolfSettingsActionsControls } from "./WerewolfFlowShell";
 import { WerewolfPlaySurface } from "./WerewolfPlaySurface";
 import { loadWerewolfHostOptions, saveWerewolfHostOptionsPatch } from "../hostOptionsStorage";
 import { StageLanguageControl, StageLinkPanel } from "./StageLinkPanel";
+import { WerewolfPreparationShell } from "./WerewolfPreparationShell";
 
 export function WerewolfRoomHostScreen({
   code,
@@ -282,25 +284,62 @@ export function WerewolfRoomHostScreen({
 
     return (
       <WerewolfFlowShell
+        key="preparation-4"
         title={t("werewolf.setupAssignmentTitle")}
-        onBack={() => hostCommand({ type: "returnToGameSettings" })}
+        onBack={() =>
+          snapshot.assignMode
+            ? hostCommand({ type: "setAssignMode", assignMode: null })
+            : hostCommand({ type: "returnToRules" })
+        }
         settingsActions={settingsActions}
         footer={assignmentFooter}
       >
-        <RoomAssignmentPanel
-          snapshot={snapshot}
-          onSetAssignMode={(assignMode) => hostCommand({ type: "setAssignMode", assignMode })}
-          onManualAssignment={(assignment) => hostCommand({ type: "setManualAssignment", assignment })}
-        />
+        <WerewolfPreparationShell step={4} description={t("werewolf.roleAssignmentSubtitle")}>
+          <RoomAssignmentPanel
+            snapshot={snapshot}
+            onSetAssignMode={(assignMode) => hostCommand({ type: "setAssignMode", assignMode })}
+            onManualAssignment={(assignment) => hostCommand({ type: "setManualAssignment", assignment })}
+          />
+        </WerewolfPreparationShell>
         {confirmDialogs}
       </WerewolfFlowShell>
     );
   }
 
   if (snapshot.phase === "setup") {
+    if (snapshot.preparationStep === "rules") {
+      return (
+        <WerewolfFlowShell
+          key="preparation-3"
+          title={t("werewolf.gameRules")}
+          onBack={() => hostCommand({ type: "returnToRoleSelection" })}
+          settingsActions={settingsActions}
+          footer={
+            <>
+              <button
+                className="primary-action"
+                type="button"
+                disabled={!validation.valid}
+                onClick={() => hostCommand({ type: "prepareAssignment" })}
+              >
+                {snapshot.players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextAssignment")}
+              </button>
+              {serverError && <p className="error-text">{serverError}</p>}
+            </>
+          }
+        >
+          <WerewolfPreparationShell step={3} description={t("werewolf.gameRulesStepSubtitle")}>
+            <GameRulesEditor options={options} onChange={updateOptions} showRoleRevealOption={false} />
+          </WerewolfPreparationShell>
+          {confirmDialogs}
+        </WerewolfFlowShell>
+      );
+    }
+
     return (
       <WerewolfFlowShell
-        title={t("werewolf.gameSettingsTitle")}
+        key="preparation-2"
+        title={t("werewolf.roleSelectionTitle")}
         onBack={() => hostCommand({ type: "returnToPlayerLobby" })}
         settingsActions={settingsActions}
         footer={
@@ -309,28 +348,17 @@ export function WerewolfRoomHostScreen({
               className="primary-action"
               type="button"
               disabled={!validation.valid}
-              onClick={() => hostCommand({ type: "prepareAssignment", roleCounts: visibleCounts, options: { ...options, roleReveal: true } })}
+              onClick={() => hostCommand({ type: "continueToRules" })}
             >
-              {snapshot.players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextAssignment")}
+              {snapshot.players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextRules")}
             </button>
             {serverError && <p className="error-text">{serverError}</p>}
           </>
         }
       >
-        <section className="setup-hero">
-          <p className="section-label">{t("werewolf.setupTitle")}</p>
-          <h2>{t("werewolf.gameSettingsTitle")}</h2>
-          <p>{t("werewolf.gameSettingsSubtitle")}</p>
-        </section>
-
-        <RoleCountEditor
-          playerCount={snapshot.players.length}
-          counts={visibleCounts}
-          onChange={updateCounts}
-          options={options}
-          onOptionsChange={updateOptions}
-          hideRoleReveal
-        />
+        <WerewolfPreparationShell step={2} description={t("werewolf.roleSelectionSubtitle")}>
+          <RoleCountEditor playerCount={snapshot.players.length} counts={visibleCounts} onChange={updateCounts} />
+        </WerewolfPreparationShell>
         {confirmDialogs}
       </WerewolfFlowShell>
     );
@@ -403,6 +431,7 @@ export function WerewolfRoomHostScreen({
 
   return (
     <WerewolfFlowShell
+      key="preparation-1"
       title={t("werewolf.playerLobbyTitle")}
       onBack={() => navigate("/")}
       settingsActions={settingsActions}
@@ -420,35 +449,37 @@ export function WerewolfRoomHostScreen({
         </>
       }
     >
-      <RoomHeader code={snapshot.code} qr={qr} joinLink={joinLink} />
-      <StageLinkPanel
-        stageLink={stageLink}
-        qr={stageQr}
-        stageLocale={stageLocale}
-        onCreate={createStageLink}
-        onDisable={() => hostCommand({ type: "disableStageLink" })}
-        onStageLocaleChange={setStageLocale}
-      />
+      <WerewolfPreparationShell step={1} description={t("werewolf.roomLobbySubtitle")}>
+        <RoomHeader code={snapshot.code} qr={qr} joinLink={joinLink} />
+        <StageLinkPanel
+          stageLink={stageLink}
+          qr={stageQr}
+          stageLocale={stageLocale}
+          onCreate={createStageLink}
+          onDisable={() => hostCommand({ type: "disableStageLink" })}
+          onStageLocaleChange={setStageLocale}
+        />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <h3>{t("werewolf.playerStatus")}</h3>
-          <span>
-            <Users /> {snapshot.players.length}
-          </span>
-        </div>
-        <PlayerStatus players={snapshot.players} onKick={(playerId) => hostCommand({ type: "kickPlayer", playerId })} />
-      </section>
+        <section className="panel">
+          <div className="panel-heading">
+            <h3>{t("werewolf.playerStatus")}</h3>
+            <span>
+              <Users /> {snapshot.players.length}
+            </span>
+          </div>
+          <PlayerStatus players={snapshot.players} onKick={(playerId) => hostCommand({ type: "kickPlayer", playerId })} />
+        </section>
 
-      <HostTransferPanel
-        players={snapshot.players}
-        error={serverError}
-        open={transferOpen}
-        onToggle={() => setTransferOpen((open) => !open)}
-        onTransfer={(playerId) => {
-          hostCommand({ type: "transferHost", playerId });
-        }}
-      />
+        <HostTransferPanel
+          players={snapshot.players}
+          error={serverError}
+          open={transferOpen}
+          onToggle={() => setTransferOpen((open) => !open)}
+          onTransfer={(playerId) => {
+            hostCommand({ type: "transferHost", playerId });
+          }}
+        />
+      </WerewolfPreparationShell>
 
       {confirmDialogs}
     </WerewolfFlowShell>

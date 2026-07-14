@@ -10,11 +10,13 @@ import type {
 } from "./domain/types";
 
 export type WerewolfRoomAssignMode = "random" | "manual" | null;
+export type WerewolfPreparationStep = "roles" | "rules";
 
 export interface WerewolfSetupState {
   roleCounts: RoleCounts;
   options: WerewolfOptions;
   assignMode: WerewolfRoomAssignMode;
+  preparationStep: WerewolfPreparationStep;
 }
 
 export type WerewolfRoomAssignmentEntry = RoomAssignmentEntry<RoleId>;
@@ -28,6 +30,7 @@ export interface WerewolfHostRoomSnapshot extends HostRoomSnapshot {
   roleCounts: RoleCounts;
   options: WerewolfOptions;
   assignMode: WerewolfRoomAssignMode;
+  preparationStep: WerewolfPreparationStep;
   assignment: WerewolfRoomAssignmentEntry[];
   serverTime: number;
   gameState: WerewolfState | null;

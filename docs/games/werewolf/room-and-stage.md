@@ -9,6 +9,7 @@ Read this with `../../online-mode.md`. The top-level room doc owns generic WebSo
 It owns:
 
 - initial setup state from player count;
+- host-only role/rule preparation step state;
 - host and player command payload validation;
 - lobby reset;
 - host command routing to engine functions;
@@ -28,7 +29,8 @@ The adapter is the correct place to add room-mode support for new Werewolf role 
 ```text
 Host creates room
   -> lobby with room code, link, QR, player status, host transfer
-  -> role setup
+  -> role selection
+  -> game rules
   -> assignment mode and draft
   -> start role reveal
   -> wait until players mark roles seen
@@ -57,6 +59,7 @@ Host snapshots include:
 - `serverTime` for synchronized host-side timer display;
 - public player list;
 - role counts and options;
+- host-only `preparationStep` (`roles` or `rules`);
 - assignment mode and assignment draft;
 - full Werewolf game state when started.
 
@@ -72,6 +75,7 @@ Player snapshots must not expose:
 
 - assignment drafts before role reveal;
 - role counts/options during setup or assignment;
+- the host-only preparation step;
 - other players' roles;
 - GM log details;
 - target selections;
@@ -102,7 +106,7 @@ Room-mode day timer sync uses server timestamps in host and stage snapshots. Cli
 
 Werewolf host commands include:
 
-- setup/assignment: `beginSetup`, `updateSetup`, `returnToPlayerLobby`, `prepareAssignment`, `returnToGameSettings`, `setAssignMode`, `shuffleRoles`, `setManualAssignment`, `startGame`;
+- setup/assignment: `beginSetup`, `updateSetup`, `continueToRules`, `returnToRoleSelection`, `returnToPlayerLobby`, `prepareAssignment`, `returnToRules`, `setAssignMode`, `shuffleRoles`, `setManualAssignment`, `startGame`;
 - night targets: `setProtectedPlayer`, `setNightGuestHost`, `setWildChildModel`, `setCupidTargets`, `setInspectedPlayer`, `setAuraTarget`, `setDetectiveTargets`, `setWolfTarget`, `setAlphaWolfTransform`, `setDoctorHealTonight`, `setWitchHealTonight`, `setWitchPoisonTarget`;
 - explicit reveals and progression: `revealNightResult`, `advanceNightStep`, `resolveNight`, `startDay`, `startNextNight`;
 - public reveal queue: `advancePublicEvent`;
@@ -113,6 +117,8 @@ Werewolf host commands include:
 Nullable target commands are used for clear/undo while a step is still reversible.
 
 Werewolf command payloads are runtime-validated by the adapter before they are applied. Required IDs, role counts, manual assignments, options, reveal steps, and day timer durations must match the command schema; unknown command types, missing fields, wrong field types, and extra fields are rejected.
+
+`prepareAssignment` and `startGame` are payload-free progression commands. The adapter accepts them only after Game Rules and after a complete random or manual assignment respectively, so room clients cannot bypass the four-step preparation order.
 
 `undoStep` is host-only, server-side, one-step deep, and captures only committed Werewolf play progression such as night-step advance, night/day resolution, public reveal advance, day vote, Hunter shot, and starting the next phase. It does not capture target selection, result reveal, assignment, stage-link, room management, or day timer controls. Player and Stage snapshots never expose the private undo state; host snapshots expose only `canUndo`.
 

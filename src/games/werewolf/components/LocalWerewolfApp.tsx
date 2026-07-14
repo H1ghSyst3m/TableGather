@@ -1,5 +1,5 @@
 import { ChevronLeft, Dice5, Plus, Shuffle, Trash2, X } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   advanceNightStep,
   advancePublicEvent,
@@ -46,15 +46,17 @@ import { useI18n } from "../../../i18n/useI18n";
 import { GameConfirmDialog } from "../../../components/GameConfirmDialog";
 import { hasDuplicatePlayerName, MAX_PLAYER_NAME_LENGTH, validatePlayerName } from "../../../playerNames";
 import { RoleCountEditor } from "./RoleCountEditor";
+import { GameRulesEditor } from "./GameRulesEditor";
 import { RoleRevealScreen } from "./RoleRevealScreen";
 import { GameRulesButton } from "./RoleRulesModal";
 import { WerewolfFlowShell } from "./WerewolfFlowShell";
 import { WerewolfPlaySurface } from "./WerewolfPlaySurface";
+import { WerewolfPreparationShell } from "./WerewolfPreparationShell";
 import { loadWerewolfHostOptions, saveWerewolfHostOptions } from "../hostOptionsStorage";
 
 const STORAGE_KEY = "tablegather-werewolf-local";
 
-type SetupStep = 1 | 2 | 3;
+type SetupStep = 1 | 2 | 3 | 4;
 type AssignMode = "random" | "manual" | null;
 
 interface SetupPlayer {
@@ -186,19 +188,19 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
     />
   ) : null;
   const setupBack = () => {
-    if (setupStep === 3) {
+    if (setupStep === 4) {
       if (assignMode) {
         setAssignMode(null);
         setRandomPreview(null);
         setManualAssign({});
         return;
       }
-      setSetupStep(2);
+      setSetupStep(3);
       return;
     }
 
-    if (setupStep === 2) {
-      setSetupStep(1);
+    if (setupStep > 1) {
+      setSetupStep((setupStep - 1) as SetupStep);
       return;
     }
 
@@ -284,12 +286,15 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
 
   return (
     <WerewolfFlowShell
+      key={`preparation-${setupStep}`}
       title={
         setupStep === 1
           ? t("werewolf.playerLobbyTitle")
           : setupStep === 2
-            ? t("werewolf.gameSettingsTitle")
-            : t("werewolf.setupAssignmentTitle")
+            ? t("werewolf.roleSelectionTitle")
+            : setupStep === 3
+              ? t("werewolf.gameRules")
+              : t("werewolf.setupAssignmentTitle")
       }
       onBack={setupBack}
       settingsActions={settingsActions}
@@ -310,9 +315,18 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
           <button
             className="primary-action"
             type="button"
+            onClick={() => setSetupStep(3)}
+            disabled={!validation.valid}
+          >
+            {players.length < 5 ? t("werewolf.minPlayers") : t("werewolf.nextRules")}
+          </button>
+        ) : setupStep === 3 ? (
+          <button
+            className="primary-action"
+            type="button"
             onClick={() => {
               resetAssignmentState();
-              setSetupStep(3);
+              setSetupStep(4);
             }}
             disabled={!validation.valid}
           >
@@ -350,15 +364,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
       )}
 
       {setupStep === 1 && (
-        <SetupShell
-          step={1}
-        >
-          <section className="setup-hero">
-            <p className="section-label">{t("hub.passAndPlay")}</p>
-            <h2>{t("werewolf.playerLobbyTitle")}</h2>
-            <p>{t("werewolf.playerLobbySubtitle")}</p>
-          </section>
-
+        <WerewolfPreparationShell step={1} description={t("werewolf.playerLobbySubtitle")}>
           <section className="panel">
             <div className="panel-heading">
               <h3>{t("werewolf.playerList")}</h3>
@@ -404,27 +410,23 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
             </div>
           </section>
 
-        </SetupShell>
+        </WerewolfPreparationShell>
       )}
 
       {setupStep === 2 && (
-        <SetupShell
-          step={2}
-        >
-          <section className="setup-hero">
-            <p className="section-label">{t("werewolf.setupTitle")}</p>
-            <h2>{t("werewolf.gameSettingsTitle")}</h2>
-            <p>{t("werewolf.gameSettingsSubtitle")}</p>
-          </section>
-
-          <RoleCountEditor playerCount={players.length} counts={displayCounts} onChange={setCounts} options={options} onOptionsChange={updateOptions} />
-        </SetupShell>
+        <WerewolfPreparationShell step={2} description={t("werewolf.roleSelectionSubtitle")}>
+          <RoleCountEditor playerCount={players.length} counts={displayCounts} onChange={setCounts} />
+        </WerewolfPreparationShell>
       )}
 
       {setupStep === 3 && (
-        <SetupShell
-          step={3}
-        >
+        <WerewolfPreparationShell step={3} description={t("werewolf.gameRulesStepSubtitle")}>
+          <GameRulesEditor options={options} onChange={updateOptions} />
+        </WerewolfPreparationShell>
+      )}
+
+      {setupStep === 4 && (
+        <WerewolfPreparationShell step={4} description={t("werewolf.roleAssignmentSubtitle")}>
           {!assignMode && (
             <section className="assignment-choice">
               <button type="button" className="mode-button active" onClick={startRandomAssignment}>
@@ -489,26 +491,9 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
               </div>
             </section>
           )}
-        </SetupShell>
+        </WerewolfPreparationShell>
       )}
     </WerewolfFlowShell>
-  );
-}
-
-function SetupShell({
-  step,
-  children,
-}: {
-  step: SetupStep;
-  children: ReactNode;
-}) {
-  return (
-    <section className="setup-shell">
-      <div className="setup-shell-progress">
-        <span>{step} / 3</span>
-      </div>
-      <div className="setup-shell-content">{children}</div>
-    </section>
   );
 }
 

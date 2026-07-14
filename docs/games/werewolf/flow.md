@@ -34,13 +34,16 @@ Stage mode uses a separate TV/projector layout in `WerewolfStageScreen`. It has 
 
 ### Preparation Steps
 
-Local pass-and-play and room host setup both use three preparation steps:
+Local pass-and-play and room host setup both use four preparation steps:
 
 1. Player Lobby
-2. Game Settings
-3. Role Assignment
+2. Role Selection
+3. Game Rules
+4. Role Assignment
 
-In room mode, only the Player Lobby accepts new joins. Moving to Game Settings stores setup server-side and blocks new player joins; returning to Player Lobby reopens joins. Existing players stay in the room and continue seeing status/waiting screens.
+The fixed `WerewolfFlowShell` header owns the only visible title for each step. `WerewolfPreparationShell` renders the shared progress indicator, the compact Werewolf preparation label, and the step description; the remaining body uses only content-specific headings such as Players, room code, or the selected assignment method.
+
+In room mode, only the Player Lobby accepts new joins. Moving to Role Selection stores setup server-side and blocks new player joins; returning to Player Lobby reopens joins. The host-only `preparationStep` keeps Role Selection and Game Rules distinct across reconnects while the generic room phase remains `setup`. Existing players stay in the room and continue seeing status/waiting screens.
 
 ### Player Lobby
 
@@ -52,13 +55,12 @@ The Player Lobby manages table membership:
 
 Room mode also shows room code/QR, player status, Stage controls, and Host Transfer in this step.
 
-### Game Settings
+### Role Selection
 
-Game Settings owns the role and rule setup:
+Role Selection owns the role pool:
 
 - configure role counts in `RoleCountEditor`;
 - auto-fill Villagers for open role slots;
-- open Game rules inside the role setup card;
 - switch between Classic and Special role categories.
 
 Validation is domain-driven:
@@ -68,9 +70,19 @@ Validation is domain-driven:
 - unique roles cannot exceed one;
 - role count defaults come from `createDefaultRoleCounts`.
 
-Primary setup actions live in the bottom action bar. Setup body buttons remain contextual, for example player add/remove; room-link copy is room-mode only. In room mode, Game Settings changes are sent through `updateSetup` so the server snapshot stays authoritative.
+Primary setup actions live in the bottom action bar. Setup body buttons remain contextual, for example player add/remove; room-link copy is room-mode only. In room mode, Role Selection changes are sent through `updateSetup` so the server snapshot stays authoritative.
 
-### Assignment
+### Game Rules
+
+Game Rules owns the existing Werewolf options and shows them without an extra disclosure control:
+
+- choose the Werewolf win condition;
+- choose what is revealed after a vote;
+- enable or disable private role reveal in pass-and-play.
+
+Room mode always requires private role reveal, so that option stays hidden and is forced on. Moving backward or forward between Role Selection and Game Rules preserves both role counts and options. Room changes remain server-authoritative through `updateSetup`.
+
+### Role Assignment
 
 After setup, the host chooses role assignment:
 
@@ -214,7 +226,7 @@ Stage mode is a read-only Werewolf room client for a public display. The host cr
 Stage scenes:
 
 - `lobby`: room code, player list, ready/status information, and player-join QR.
-- `setup`: room code, player wall, and preparation status while the host edits roles/rules, without a player-join QR.
+- `setup`: room code, player wall, and preparation status while the host selects roles or rules, without a player-join QR.
 - `assignment`: room code, player wall, and preparation status while the host assigns roles, without a player-join QR.
 - `roleReveal`: neutral progress screen while players view private roles.
 - `night`: public night atmosphere only, with no role/action hints.
@@ -250,7 +262,8 @@ Room host setup is similar to local setup but split around room lifecycle:
 ```text
 Create room
   -> lobby with room code, link, QR, player status, host transfer
-  -> role setup
+  -> role selection
+  -> game rules
   -> assignment mode and draft
   -> start role reveal
   -> wait until players mark roles seen

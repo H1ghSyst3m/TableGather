@@ -1,4 +1,4 @@
-export const ROOM_PROTOCOL_VERSION = 18;
+export const ROOM_PROTOCOL_VERSION = 19;
 
 export const ROOM_PROTOCOL_FEATURES = [
   "transferHost",
@@ -9,7 +9,7 @@ export const ROOM_PROTOCOL_FEATURES = [
   "completeRoleParity",
   "privateFormerRole",
   "roomAssignmentFlow",
-  "werewolfSetupPhase",
+  "werewolfPreparationSteps",
   "roomLookup",
   "stageMode",
   "stageLookup",

@@ -42,6 +42,8 @@ Contextual body actions stay in the body:
 - Game rules options;
 - manual assignment selectors.
 
+During the four preparation steps, the fixed header is the sole owner of the step title. `WerewolfPreparationShell` adds only progress, the compact preparation label, and a short description before the step-specific content. Do not repeat the step title in a setup hero or editor panel. Rule option cards keep their icon and copy centered across desktop and mobile layouts.
+
 ## Footer Height Contract
 
 The Werewolf footer avoids uncapped dynamic safe-area padding in normal browser mode. Mobile browsers can change dynamic viewport and safe-area values when address bars show/hide, so the footer keeps stable content height.
@@ -109,7 +111,7 @@ When adding a new portal for Werewolf, either:
 For Werewolf styling changes, check:
 
 - `/play/werewolf` setup with many players;
-- Role Setup with Game rules open;
+- all four preparation steps, including centered rule cards on desktop and mobile;
 - Role Reveal at 375x667 and 430x932;
 - Night Seer/Aura/Detective result footer;
 - Day Vote selection and footer action;
