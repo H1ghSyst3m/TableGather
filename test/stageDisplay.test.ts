@@ -39,6 +39,20 @@ describe("StageDisplayController", () => {
     await controller.dispose();
   });
 
+  it("switches fullscreen from another element to the Stage target", async () => {
+    const document = new FakeDocument();
+    document.fullscreenElement = {} as Element;
+    const controller = createController(document, new FakeWakeLock());
+
+    await controller.toggleFullscreen();
+
+    expect(document.requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(document.exitFullscreen).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().fullscreen).toMatchObject({ active: true, error: null, pending: false });
+
+    await controller.dispose();
+  });
+
   it("marks unavailable browser APIs as unsupported without invoking them", async () => {
     const document = new FakeDocument();
     document.fullscreenEnabled = false;

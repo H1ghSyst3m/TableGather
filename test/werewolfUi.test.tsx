@@ -1687,9 +1687,25 @@ describe("werewolf stage", () => {
         />,
         locale,
       );
-      expect(errorHtml).toContain(translate(locale, "common.stageFullscreenUnavailable"));
-      expect(errorHtml).toContain(translate(locale, "common.stageWakeLockReleased"));
-      expect(errorHtml).toContain('role="status" aria-live="polite"');
+      const fullscreenStatus = translate(locale, "common.stageFullscreenUnavailable");
+      const wakeLockStatus = translate(locale, "common.stageWakeLockReleased");
+      const fullscreenStatusId = describedById(
+        errorHtml,
+        translate(locale, "common.stageFullscreenEnter"),
+      );
+      const wakeLockStatusId = describedById(
+        errorHtml,
+        translate(locale, "common.stageWakeLockEnable"),
+      );
+      expect(fullscreenStatusId).not.toBe(wakeLockStatusId);
+      expect(errorHtml).toContain(
+        `<span id="${fullscreenStatusId}" role="status" aria-live="polite">${fullscreenStatus}</span>`,
+      );
+      expect(errorHtml).toContain(
+        `<span id="${wakeLockStatusId}" role="status" aria-live="polite">${wakeLockStatus}</span>`,
+      );
+      expect(countOccurrences(errorHtml, 'class="stage-display-control-status"')).toBe(1);
+      expect(countOccurrences(errorHtml, 'role="status" aria-live="polite"')).toBe(2);
       expect(errorHtml).not.toContain("disabled");
 
       const unsupportedHtml = renderWithI18n(
@@ -1705,6 +1721,7 @@ describe("werewolf stage", () => {
       );
       expect(unsupportedHtml).toContain(translate(locale, "common.stageFullscreenUnsupported"));
       expect(unsupportedHtml).toContain(translate(locale, "common.stageWakeLockUnsupported"));
+      expect(countOccurrences(unsupportedHtml, 'role="status" aria-live="polite"')).toBe(2);
       expect(countOccurrences(unsupportedHtml, "disabled")).toBe(2);
     }
   });
@@ -2065,6 +2082,15 @@ function renderStage(overrides: Partial<WerewolfStageRoomSnapshot>, locale: "de"
 
 function countOccurrences(value: string, search: string) {
   return value.split(search).length - 1;
+}
+
+function describedById(html: string, label: string) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = html.match(
+    new RegExp(`<button(?=[^>]*aria-describedby="([^"]+)")(?=[^>]*aria-label="${escapedLabel}")[^>]*>`),
+  );
+  if (!match) throw new Error(`Missing aria-describedby for ${label}`);
+  return match[1];
 }
 
 function stepHeadingText(html: string) {

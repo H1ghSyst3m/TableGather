@@ -88,7 +88,7 @@ export class StageDisplayController {
     if (this.disposed || !fullscreen.supported || fullscreen.pending) return;
 
     const operation = ++this.fullscreenOperation;
-    const entering = this.document.fullscreenElement === null;
+    const entering = this.document.fullscreenElement !== this.target;
     this.updateFullscreen({ error: null, pending: true });
 
     try {

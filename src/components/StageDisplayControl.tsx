@@ -11,7 +11,8 @@ export function StageDisplayControl({
   className?: string;
 }) {
   const { t } = useI18n();
-  const statusId = useId();
+  const fullscreenStatusId = useId();
+  const wakeLockStatusId = useId();
   const fullscreenLabel = display.fullscreen.pending
     ? t("common.stageFullscreenLoading")
     : display.fullscreen.active
@@ -22,8 +23,10 @@ export function StageDisplayControl({
     : display.wakeLock.requested
       ? t("common.stageWakeLockDisable")
       : t("common.stageWakeLockEnable");
-  const status = displayStatus(display, t);
-  const classes = ["stage-display-control", className, status ? "error" : ""].filter(Boolean).join(" ");
+  const fullscreenStatus = getFullscreenStatus(display, t);
+  const wakeLockStatus = getWakeLockStatus(display, t);
+  const hasStatus = Boolean(fullscreenStatus || wakeLockStatus);
+  const classes = ["stage-display-control", className, hasStatus ? "error" : ""].filter(Boolean).join(" ");
 
   return (
     <div className={classes} role="group" aria-label={t("common.stageDisplay")}>
@@ -31,7 +34,7 @@ export function StageDisplayControl({
         <button
           type="button"
           aria-busy={display.fullscreen.pending}
-          aria-describedby={display.fullscreen.error ? statusId : undefined}
+          aria-describedby={fullscreenStatus ? fullscreenStatusId : undefined}
           aria-label={fullscreenLabel}
           aria-pressed={display.fullscreen.active}
           className={display.fullscreen.active ? "active" : ""}
@@ -46,7 +49,7 @@ export function StageDisplayControl({
         <button
           type="button"
           aria-busy={display.wakeLock.pending}
-          aria-describedby={display.wakeLock.error ? statusId : undefined}
+          aria-describedby={wakeLockStatus ? wakeLockStatusId : undefined}
           aria-label={wakeLockLabel}
           aria-pressed={display.wakeLock.requested}
           className={display.wakeLock.requested ? "active" : ""}
@@ -59,26 +62,40 @@ export function StageDisplayControl({
             : display.wakeLock.requested ? <Sun /> : <SunDim />}
         </button>
       </div>
-      {status && (
-        <span id={statusId} className="stage-display-control-status" role="status" aria-live="polite">
-          {status}
+      {hasStatus && (
+        <span className="stage-display-control-status">
+          {fullscreenStatus && (
+            <span id={fullscreenStatusId} role="status" aria-live="polite">
+              {fullscreenStatus}
+            </span>
+          )}
+          {fullscreenStatus && wakeLockStatus ? " " : null}
+          {wakeLockStatus && (
+            <span id={wakeLockStatusId} role="status" aria-live="polite">
+              {wakeLockStatus}
+            </span>
+          )}
         </span>
       )}
     </div>
   );
 }
 
-function displayStatus(
+function getFullscreenStatus(
   display: StageDisplayControlState,
   t: ReturnType<typeof useI18n>["t"],
 ) {
-  const messages: string[] = [];
+  if (display.fullscreen.error === "unsupported") return t("common.stageFullscreenUnsupported");
+  if (display.fullscreen.error === "requestFailed") return t("common.stageFullscreenUnavailable");
+  return null;
+}
 
-  if (display.fullscreen.error === "unsupported") messages.push(t("common.stageFullscreenUnsupported"));
-  if (display.fullscreen.error === "requestFailed") messages.push(t("common.stageFullscreenUnavailable"));
-  if (display.wakeLock.error === "unsupported") messages.push(t("common.stageWakeLockUnsupported"));
-  if (display.wakeLock.error === "requestFailed") messages.push(t("common.stageWakeLockUnavailable"));
-  if (display.wakeLock.error === "released") messages.push(t("common.stageWakeLockReleased"));
-
-  return messages.join(" ");
+function getWakeLockStatus(
+  display: StageDisplayControlState,
+  t: ReturnType<typeof useI18n>["t"],
+) {
+  if (display.wakeLock.error === "unsupported") return t("common.stageWakeLockUnsupported");
+  if (display.wakeLock.error === "requestFailed") return t("common.stageWakeLockUnavailable");
+  if (display.wakeLock.error === "released") return t("common.stageWakeLockReleased");
+  return null;
 }
