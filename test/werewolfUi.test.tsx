@@ -18,13 +18,36 @@ import { StageSettingsDialog } from "../src/games/werewolf/components/WerewolfRo
 import { WerewolfStageView } from "../src/games/werewolf/components/WerewolfStageScreen";
 import { StageLinkPanel } from "../src/games/werewolf/components/StageLinkPanel";
 import { GameLog, PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/werewolf/components/WerewolfPlaySurface";
-import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
+import type { WerewolfPlayerRoomSnapshot, WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { I18nContext } from "../src/i18n/context";
 import { translate, type TranslationKey } from "../src/i18n/translations";
 import type { AdminRoomsSummary } from "../src/online/admin";
 import { submitAdminTokenInput } from "../src/online/adminToken";
+import type { ServerMessage } from "../src/online/messages";
 import { ROOM_CODE_LENGTH } from "../src/online/roomCodes";
+import type { RoomSocketControls } from "../src/online/useRoomSocket";
 import { hasDuplicatePlayerName, MAX_PLAYER_NAME_LENGTH, normalizePlayerName } from "../src/playerNames";
+
+const roomSocketHarness = vi.hoisted(() => ({ message: null as ServerMessage | null }));
+
+vi.mock("../src/online/useRoomSocket", () => {
+  const controls: RoomSocketControls = {
+    disconnect: () => undefined,
+    send: () => false,
+  };
+
+  return {
+    useRoomSocket: (onMessage: (message: ServerMessage, controls: RoomSocketControls) => void) => {
+      const message = roomSocketHarness.message;
+      if (message) {
+        roomSocketHarness.message = null;
+        onMessage(message, controls);
+      }
+
+      return { ...controls, connect: () => null, connected: false, error: null };
+    },
+  };
+});
 
 const previousSessionStorage = globalThis.sessionStorage;
 const localWerewolfStorageKey = "tablegather-werewolf-local";
@@ -59,6 +82,7 @@ const actions: ComponentProps<typeof WerewolfPlaySurface>["actions"] = {
 };
 
 afterEach(() => {
+  roomSocketHarness.message = null;
   Object.defineProperty(globalThis, "sessionStorage", {
     configurable: true,
     value: previousSessionStorage,
@@ -1068,20 +1092,62 @@ describe("werewolf play surface", () => {
 
   it("maps every room player winner to the localized game-over text", () => {
     const winners = [
-      { winner: "villagers", key: "werewolf.winnerVillagers" },
-      { winner: "werewolves", key: "werewolf.winnerWerewolves" },
-      { winner: "fool", key: "werewolf.winnerFool" },
-      { winner: "villageIdiot", key: "werewolf.winnerVillageIdiot" },
-      { winner: "lovers", key: "werewolf.winnerLovers" },
-    ] as const satisfies ReadonlyArray<{ winner: Winner; key: TranslationKey }>;
+      {
+        winner: "villagers",
+        key: "werewolf.winnerVillagers",
+        expected: { de: "Das Dorf gewinnt", en: "Villagers win" },
+      },
+      {
+        winner: "werewolves",
+        key: "werewolf.winnerWerewolves",
+        expected: { de: "Die Werwölfe gewinnen", en: "Werewolves win" },
+      },
+      {
+        winner: "fool",
+        key: "werewolf.winnerFool",
+        expected: { de: "Der Narr gewinnt", en: "The Fool wins" },
+      },
+      {
+        winner: "villageIdiot",
+        key: "werewolf.winnerVillageIdiot",
+        expected: { de: "Der Dorftrottel gewinnt", en: "The Village Idiot wins" },
+      },
+      {
+        winner: "lovers",
+        key: "werewolf.winnerLovers",
+        expected: { de: "Die Liebenden gewinnen", en: "The lovers win" },
+      },
+    ] as const satisfies ReadonlyArray<{
+      winner: Winner;
+      key: TranslationKey;
+      expected: Record<"de" | "en", string>;
+    }>;
 
     for (const locale of ["de", "en"] as const) {
-      for (const { winner, key } of winners) {
+      for (const { winner, key, expected } of winners) {
         const html = renderWithI18n(<WerewolfRoomPlayerWinnerPanel winner={winner} />, locale);
+        const expectedHeading = expected[locale];
 
-        expect(html).toContain(`<h2>${translate(locale, key)}</h2>`);
+        expect(translate(locale, key)).toBe(expectedHeading);
+        expect(html).toContain(`<h2>${expectedHeading}</h2>`);
       }
     }
+  });
+
+  it("renders the localized winner from the room player snapshot", () => {
+    const player = { id: "alex", name: "Alex", connected: true, seenRole: true, alive: true };
+    const snapshot: WerewolfPlayerRoomSnapshot = {
+      audience: "player",
+      code: "G5KQ9R",
+      phase: "ended",
+      gameId: "werewolf",
+      self: player,
+      players: [player],
+      winner: "fool",
+    };
+    const html = renderRoomPlayer(snapshot);
+
+    expect(html).toContain("<h2>Der Narr gewinnt</h2>");
   });
 
   it("renders invite-link joins through the same branded flat form", () => {
@@ -1777,6 +1843,11 @@ function renderWithI18n(node: ReactNode, locale: "de" | "en" = "de") {
       {node}
     </I18nContext.Provider>,
   );
+}
+
+function renderRoomPlayer(snapshot: WerewolfPlayerRoomSnapshot, locale: "de" | "en" = "de") {
+  roomSocketHarness.message = { type: "snapshot", roomCode: snapshot.code, snapshot };
+  return renderWithI18n(<WerewolfRoomPlayerScreen code={snapshot.code} navigate={() => undefined} />, locale);
 }
 
 function useSessionStorage(storage: Storage) {

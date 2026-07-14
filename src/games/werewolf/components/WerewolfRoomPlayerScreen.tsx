@@ -1,9 +1,10 @@
 import { Eye, QrCode } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import type { werewolfDe } from "../i18n/de";
+import type { werewolfEn } from "../i18n/en";
 import { roleDefinitions } from "../domain/roles";
 import type { RoleId, Winner } from "../domain/types";
 import { translateCommonRoomServerError } from "../../../i18n/roomServerErrors";
-import type { TranslationKey } from "../../../i18n/translations";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
 import { isCompleteRoomCode, normalizeRoomCodeInput, ROOM_CODE_LENGTH } from "../../../online/roomCodes";
@@ -25,6 +26,10 @@ import { GameRulesButton } from "./RoleRulesModal";
 import { WerewolfFlowShell } from "./WerewolfFlowShell";
 
 type JoinRoomStatus = "idle" | "checking" | "joinable" | "locked" | "notFound" | "started";
+type WerewolfWinnerTranslationKey = `werewolf.${Extract<
+  keyof typeof werewolfEn.werewolf & keyof typeof werewolfDe.werewolf,
+  `winner${string}`
+>}`;
 
 const werewolfAssets = resolveGameTheme({ theme: werewolfTheme }).assets;
 const roomPlayerWinnerTranslationKeys = {
@@ -33,7 +38,7 @@ const roomPlayerWinnerTranslationKeys = {
   fool: "werewolf.winnerFool",
   villageIdiot: "werewolf.winnerVillageIdiot",
   lovers: "werewolf.winnerLovers",
-} satisfies Record<Winner, TranslationKey>;
+} satisfies Record<Winner, WerewolfWinnerTranslationKey>;
 
 function getRoomPlayerWinnerTranslationKey(winner: Winner) {
   return roomPlayerWinnerTranslationKeys[winner];
