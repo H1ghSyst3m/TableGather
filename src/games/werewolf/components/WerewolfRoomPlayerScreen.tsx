@@ -1,8 +1,9 @@
 import { Eye, QrCode } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { roleDefinitions } from "../domain/roles";
-import type { RoleId } from "../domain/types";
+import type { RoleId, Winner } from "../domain/types";
 import { translateCommonRoomServerError } from "../../../i18n/roomServerErrors";
+import type { TranslationKey } from "../../../i18n/translations";
 import { useI18n } from "../../../i18n/useI18n";
 import type { ServerMessage } from "../../../online/messages";
 import { isCompleteRoomCode, normalizeRoomCodeInput, ROOM_CODE_LENGTH } from "../../../online/roomCodes";
@@ -26,6 +27,27 @@ import { WerewolfFlowShell } from "./WerewolfFlowShell";
 type JoinRoomStatus = "idle" | "checking" | "joinable" | "locked" | "notFound" | "started";
 
 const werewolfAssets = resolveGameTheme({ theme: werewolfTheme }).assets;
+const roomPlayerWinnerTranslationKeys = {
+  villagers: "werewolf.winnerVillagers",
+  werewolves: "werewolf.winnerWerewolves",
+  fool: "werewolf.winnerFool",
+  villageIdiot: "werewolf.winnerVillageIdiot",
+  lovers: "werewolf.winnerLovers",
+} satisfies Record<Winner, TranslationKey>;
+
+function getRoomPlayerWinnerTranslationKey(winner: Winner) {
+  return roomPlayerWinnerTranslationKeys[winner];
+}
+
+export function WerewolfRoomPlayerWinnerPanel({ winner }: { winner: Winner }) {
+  const { t } = useI18n();
+
+  return (
+    <section className="panel">
+      <h2>{t(getRoomPlayerWinnerTranslationKey(winner))}</h2>
+    </section>
+  );
+}
 
 export function WerewolfRoomPlayerScreen({
   code: initialCode = "",
@@ -314,11 +336,7 @@ export function WerewolfRoomPlayerScreen({
         )}
       </section>
 
-      {snapshot.winner && (
-        <section className="panel">
-          <h2>{snapshot.winner === "werewolves" ? t("werewolf.winnerWerewolves") : t("werewolf.winnerVillagers")}</h2>
-        </section>
-      )}
+      {snapshot.winner && <WerewolfRoomPlayerWinnerPanel winner={snapshot.winner} />}
 
       <section className="panel player-status-panel">
         <div className="panel-heading">

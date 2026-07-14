@@ -2,13 +2,16 @@ import type { ComponentProps, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWerewolfGameFromAssignments, markRoleSeen } from "../src/games/werewolf/domain/engine";
-import type { WerewolfState } from "../src/games/werewolf/domain/types";
+import type { WerewolfState, Winner } from "../src/games/werewolf/domain/types";
 import { AdminDashboardView, AdminScreen, AdminStatePanel, AdminTokenForm } from "../src/components/AdminScreen";
 import { GameConfirmDialog } from "../src/components/GameConfirmDialog";
 import { HubScreen, HubSessionPanel } from "../src/components/HubScreen";
 import { StageAudioControl } from "../src/components/StageAudioControl";
 import { LocalWerewolfApp } from "../src/games/werewolf/components/LocalWerewolfApp";
-import { WerewolfRoomPlayerScreen } from "../src/games/werewolf/components/WerewolfRoomPlayerScreen";
+import {
+  WerewolfRoomPlayerScreen,
+  WerewolfRoomPlayerWinnerPanel,
+} from "../src/games/werewolf/components/WerewolfRoomPlayerScreen";
 import { RoleRulesModal } from "../src/games/werewolf/components/RoleRulesModal";
 import { RoleRevealScreen } from "../src/games/werewolf/components/RoleRevealScreen";
 import { StageSettingsDialog } from "../src/games/werewolf/components/WerewolfRoomHostScreen";
@@ -17,7 +20,7 @@ import { StageLinkPanel } from "../src/games/werewolf/components/StageLinkPanel"
 import { GameLog, PlayerOverviewSheet, WerewolfPlaySurface } from "../src/games/werewolf/components/WerewolfPlaySurface";
 import type { WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { I18nContext } from "../src/i18n/context";
-import { translate } from "../src/i18n/translations";
+import { translate, type TranslationKey } from "../src/i18n/translations";
 import type { AdminRoomsSummary } from "../src/online/admin";
 import { submitAdminTokenInput } from "../src/online/adminToken";
 import { ROOM_CODE_LENGTH } from "../src/online/roomCodes";
@@ -1061,6 +1064,24 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "common.name"));
     expect(html).toContain(`maxLength="${ROOM_CODE_LENGTH}"`);
     expect(html).toContain(`maxLength="${MAX_PLAYER_NAME_LENGTH}"`);
+  });
+
+  it("maps every room player winner to the localized game-over text", () => {
+    const winners = [
+      { winner: "villagers", key: "werewolf.winnerVillagers" },
+      { winner: "werewolves", key: "werewolf.winnerWerewolves" },
+      { winner: "fool", key: "werewolf.winnerFool" },
+      { winner: "villageIdiot", key: "werewolf.winnerVillageIdiot" },
+      { winner: "lovers", key: "werewolf.winnerLovers" },
+    ] as const satisfies ReadonlyArray<{ winner: Winner; key: TranslationKey }>;
+
+    for (const locale of ["de", "en"] as const) {
+      for (const { winner, key } of winners) {
+        const html = renderWithI18n(<WerewolfRoomPlayerWinnerPanel winner={winner} />, locale);
+
+        expect(html).toContain(`<h2>${translate(locale, key)}</h2>`);
+      }
+    }
   });
 
   it("renders invite-link joins through the same branded flat form", () => {
