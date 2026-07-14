@@ -20,16 +20,16 @@ export function GameRulesEditor({
         <h3>{t("werewolf.gameRules")}</h3>
       </div>
       <div className="rules-editor-body">
-        <OptionGroup
+        <OptionGroup<WinMode>
           label={t("werewolf.winMode")}
           options={[
             { value: "standard", label: t("werewolf.winStandard"), description: t("werewolf.winStandardHint"), icon: Shield },
             { value: "extended", label: t("werewolf.winExtended"), description: t("werewolf.winExtendedHint"), icon: Sparkles },
           ]}
           value={options.winMode}
-          onChange={(value) => updateOptions({ winMode: value as WinMode })}
+          onChange={(winMode) => updateOptions({ winMode })}
         />
-        <OptionGroup
+        <OptionGroup<RevealMode>
           label={t("werewolf.revealMode")}
           options={[
             { value: "hidden", label: t("werewolf.revealHidden"), description: t("werewolf.revealHiddenHint"), icon: EyeOff },
@@ -37,7 +37,7 @@ export function GameRulesEditor({
             { value: "role", label: t("werewolf.revealRole"), description: t("werewolf.revealRoleHint"), icon: BadgeHelp },
           ]}
           value={options.revealMode}
-          onChange={(value) => updateOptions({ revealMode: value as RevealMode })}
+          onChange={(revealMode) => updateOptions({ revealMode })}
         />
         {showRoleRevealOption && (
           <label className="toggle-row">
@@ -57,19 +57,19 @@ export function GameRulesEditor({
   );
 }
 
-function OptionGroup({
+function OptionGroup<T extends string>({
   label,
   options,
   value,
   onChange,
 }: {
   label: string;
-  options: { value: string; label: string; description: string; icon?: LucideIcon }[];
-  value: string;
-  onChange: (value: string) => void;
+  options: { value: T; label: string; description: string; icon?: LucideIcon }[];
+  value: T;
+  onChange: (value: T) => void;
 }) {
   return (
-    <div className="option-group">
+    <div className="option-group" role="radiogroup" aria-label={label}>
       <p>{label}</p>
       <div>
         {options.map((option) => {
@@ -80,7 +80,8 @@ function OptionGroup({
               key={option.value}
               type="button"
               className={active ? "active" : ""}
-              aria-pressed={active}
+              role="radio"
+              aria-checked={active}
               onClick={() => onChange(option.value)}
             >
               {Icon && (

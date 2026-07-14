@@ -836,9 +836,20 @@ describe("werewolf play surface", () => {
     );
 
     expect(roleSelection).toContain("2 / 4");
+    expect(roleSelection).toContain('role="progressbar"');
+    expect(roleSelection).toContain('aria-valuemin="1"');
+    expect(roleSelection).toContain('aria-valuemax="4"');
+    expect(roleSelection).toContain('aria-valuenow="2"');
     expect(roleSelection).toContain(translate("de", "werewolf.roleSetup"));
     expect(roleSelection).not.toContain(translate("de", "werewolf.winMode"));
     expect(gameRules).toContain("3 / 4");
+    expect(gameRules).toContain('aria-valuenow="3"');
+    expect(gameRules.match(/role="radiogroup"/g)).toHaveLength(2);
+    expect(gameRules.match(/role="radio"/g)).toHaveLength(5);
+    expect(gameRules).toContain(`aria-label="${translate("de", "werewolf.winMode")}"`);
+    expect(gameRules).toContain(`aria-label="${translate("de", "werewolf.revealMode")}"`);
+    expect(gameRules).toContain('aria-checked="true"');
+    expect(gameRules).not.toContain("aria-pressed");
     expect(gameRules).toContain(translate("de", "werewolf.winMode"));
     expect(gameRules).toContain(translate("de", "werewolf.revealMode"));
     expect(gameRules).toContain(translate("de", "werewolf.roleRevealSetting"));

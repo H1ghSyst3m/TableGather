@@ -105,12 +105,7 @@ export const werewolfRoomAdapter = {
       }
       case "continueToRules": {
         requirePreparationStep(room, "roles");
-        const setup = readSetup(room);
-        const roleCounts = normalizeRoomRoleCounts(room.players.length, setup.roleCounts);
-        const validation = validateRoleCounts(room.players.length, roleCounts);
-        if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
-
-        writeSetup(room, roleCounts, setup.options, null, "rules");
+        persistRulesPreparation(room);
         break;
       }
       case "returnToPlayerLobby": {
@@ -139,12 +134,7 @@ export const werewolfRoomAdapter = {
       }
       case "prepareAssignment": {
         requirePreparationStep(room, "rules");
-        const setup = readSetup(room);
-        const roleCounts = normalizeRoomRoleCounts(room.players.length, setup.roleCounts);
-        const validation = validateRoleCounts(room.players.length, roleCounts);
-        if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
-
-        writeSetup(room, roleCounts, setup.options, null, "rules");
+        persistRulesPreparation(room);
         room.assignment = [];
         room.gameState = null;
         room.undoState = null;
@@ -409,6 +399,15 @@ function writeAssignMode(room: GameRoomRuntime, assignMode: WerewolfSetupState["
 function writePreparationStep(room: GameRoomRuntime, preparationStep: WerewolfPreparationStep) {
   const setup = readSetup(room);
   writeSetup(room, setup.roleCounts, setup.options, setup.assignMode, preparationStep);
+}
+
+function persistRulesPreparation(room: GameRoomRuntime) {
+  const setup = readSetup(room);
+  const roleCounts = normalizeRoomRoleCounts(room.players.length, setup.roleCounts);
+  const validation = validateRoleCounts(room.players.length, roleCounts);
+  if (!validation.valid) throw new Error(`Invalid role counts: ${validation.reason}`);
+
+  writeSetup(room, roleCounts, setup.options, null, "rules");
 }
 
 function requireAssignmentPhase(room: GameRoomRuntime) {

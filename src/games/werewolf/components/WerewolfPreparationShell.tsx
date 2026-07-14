@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 
-export type WerewolfPreparationStepNumber = 1 | 2 | 3 | 4;
+const werewolfPreparationSteps = [1, 2, 3, 4] as const;
+const werewolfPreparationStepTotal = werewolfPreparationSteps.length;
+
+export type WerewolfPreparationStepNumber = (typeof werewolfPreparationSteps)[number];
 
 export function WerewolfPreparationShell({
   step,
@@ -11,8 +14,14 @@ export function WerewolfPreparationShell({
 }) {
   return (
     <section className="setup-shell">
-      <div className="setup-shell-progress">
-        <span>{step} / 4</span>
+      <div
+        className="setup-shell-progress"
+        role="progressbar"
+        aria-valuemin={werewolfPreparationSteps[0]}
+        aria-valuemax={werewolfPreparationStepTotal}
+        aria-valuenow={step}
+      >
+        <span>{step} / {werewolfPreparationStepTotal}</span>
       </div>
       <div className="setup-shell-content">{children}</div>
     </section>

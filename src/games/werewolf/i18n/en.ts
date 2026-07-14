@@ -1,13 +1,8 @@
 export const werewolfEn = {
   "werewolf": {
     "setupTitle": "Set up Werewolf",
-    "setupSubtitle": "Add players, choose roles and rules, then assign the secret roles.",
     "playerLobbyTitle": "Player Lobby",
     "playerLobbySubtitle": "Gather the table, add every player, and get the local round ready.",
-    "gameSettingsTitle": "Preparation",
-    "gameSettingsSubtitle": "Choose roles and rules before assigning secret roles.",
-    "setupPlayersTitle": "Players",
-    "setupRolesTitle": "Role Selection",
     "setupAssignmentTitle": "Role Assignment",
     "addPlayerPlaceholder": "Player name",
     "addSamplePlayers": "Add sample group",
