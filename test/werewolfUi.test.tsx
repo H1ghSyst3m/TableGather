@@ -13,6 +13,9 @@ import {
   WerewolfRoomPlayerWinnerPanel,
 } from "../src/games/werewolf/components/WerewolfRoomPlayerScreen";
 import { RoleRulesModal } from "../src/games/werewolf/components/RoleRulesModal";
+import { RoleCountEditor } from "../src/games/werewolf/components/RoleCountEditor";
+import { GameRulesEditor } from "../src/games/werewolf/components/GameRulesEditor";
+import { WerewolfPreparationShell } from "../src/games/werewolf/components/WerewolfPreparationShell";
 import { RoleRevealScreen } from "../src/games/werewolf/components/RoleRevealScreen";
 import { StageSettingsDialog } from "../src/games/werewolf/components/WerewolfRoomHostScreen";
 import { WerewolfStageView } from "../src/games/werewolf/components/WerewolfStageScreen";
@@ -797,17 +800,51 @@ describe("werewolf play surface", () => {
     expect(html).toContain(translate("de", "werewolf.confirmNoVoteNightTitle"));
   });
 
-  it("renders Pass-and-Play player lobby before role setup and assignment", () => {
+  it("renders Pass-and-Play player lobby before role selection, rules, and assignment", () => {
     const html = renderWithStorage(<LocalWerewolfApp navigate={() => undefined} />);
 
     expect(html).toContain(translate("de", "werewolf.playerLobbyTitle"));
     expect(html).toContain(translate("de", "werewolf.playerList"));
     expect(html).toContain(`maxLength="${MAX_PLAYER_NAME_LENGTH}"`);
     expect(html).not.toContain(translate("de", "werewolf.roleSetup"));
-    expect(html).toContain("1 / 3");
+    expect(html).toContain("1 / 4");
     expect(html).toContain(translate("de", "werewolf.minPlayers"));
     expect(html).not.toContain(translate("de", "werewolf.addSamplePlayers"));
     expect(html).not.toContain(translate("de", "werewolf.nextRoles"));
+  });
+
+  it("renders role selection and game rules as separate preparation steps", () => {
+    const roleSelection = renderWithI18n(
+      <WerewolfPreparationShell step={2}>
+        <RoleCountEditor playerCount={5} counts={{ werewolf: 1, villager: 4 }} onChange={() => undefined} />
+      </WerewolfPreparationShell>,
+    );
+    const gameRules = renderWithI18n(
+      <WerewolfPreparationShell step={3}>
+        <GameRulesEditor
+          options={{ winMode: "standard", revealMode: "role", roleReveal: true }}
+          onChange={() => undefined}
+        />
+      </WerewolfPreparationShell>,
+    );
+    const roomRules = renderWithI18n(
+      <GameRulesEditor
+        options={{ winMode: "standard", revealMode: "role", roleReveal: true }}
+        onChange={() => undefined}
+        showRoleRevealOption={false}
+      />,
+    );
+
+    expect(roleSelection).toContain("2 / 4");
+    expect(roleSelection).toContain(translate("de", "werewolf.roleSetup"));
+    expect(roleSelection).not.toContain(translate("de", "werewolf.winMode"));
+    expect(gameRules).toContain("3 / 4");
+    expect(gameRules).toContain(translate("de", "werewolf.winMode"));
+    expect(gameRules).toContain(translate("de", "werewolf.revealMode"));
+    expect(gameRules).toContain(translate("de", "werewolf.roleRevealSetting"));
+    expect(gameRules).not.toContain(translate("de", "werewolf.roleSetup"));
+    expect(gameRules).not.toContain("aria-expanded");
+    expect(roomRules).not.toContain(translate("de", "werewolf.roleRevealSetting"));
   });
 
   it("restores old local doctor games without doctor state fields", () => {

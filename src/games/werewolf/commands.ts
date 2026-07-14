@@ -7,13 +7,15 @@ import type { WerewolfRoomAssignMode } from "./roomTypes";
 export type WerewolfHostCommand =
   | { type: "beginSetup"; roleCounts?: RoleCounts; options?: WerewolfOptions }
   | { type: "updateSetup"; roleCounts: RoleCounts; options?: WerewolfOptions }
+  | { type: "continueToRules" }
   | { type: "returnToPlayerLobby" }
-  | { type: "returnToGameSettings" }
-  | { type: "prepareAssignment"; roleCounts: RoleCounts; options?: WerewolfOptions }
+  | { type: "returnToRoleSelection" }
+  | { type: "prepareAssignment" }
+  | { type: "returnToRules" }
   | { type: "setAssignMode"; assignMode: WerewolfRoomAssignMode }
   | { type: "shuffleRoles" }
   | { type: "setManualAssignment"; assignment: Record<string, RoleId | null> }
-  | { type: "startGame"; roleCounts?: RoleCounts; options?: WerewolfOptions }
+  | { type: "startGame" }
   | { type: "setProtectedPlayer"; playerId: string | null }
   | { type: "setNightGuestHost"; playerId: string | null }
   | { type: "setWildChildModel"; playerId: string | null }
@@ -45,9 +47,11 @@ export type WerewolfPlayerCommand = { type: "markRoleSeen" };
 export const werewolfHostCommandTypes = [
   "beginSetup",
   "updateSetup",
+  "continueToRules",
   "returnToPlayerLobby",
-  "returnToGameSettings",
+  "returnToRoleSelection",
   "prepareAssignment",
+  "returnToRules",
   "setAssignMode",
   "shuffleRoles",
   "setManualAssignment",
@@ -82,8 +86,12 @@ export const werewolfHostCommandTypes = [
 export const werewolfPlayerCommandTypes = ["markRoleSeen"] as const;
 
 const noPayloadHostCommandTypes = new Set([
+  "continueToRules",
   "returnToPlayerLobby",
-  "returnToGameSettings",
+  "returnToRoleSelection",
+  "prepareAssignment",
+  "returnToRules",
+  "startGame",
   "shuffleRoles",
   "advanceNightStep",
   "advancePublicEvent",
@@ -118,10 +126,8 @@ export function isWerewolfHostCommand(command: GameCommand): command is Werewolf
 
   switch (command.type) {
     case "beginSetup":
-    case "startGame":
       return hasOnlyKeys(command, "type", "roleCounts", "options") && isOptionalRoleCounts(command.roleCounts) && isOptionalWerewolfOptions(command.options);
     case "updateSetup":
-    case "prepareAssignment":
       return hasOnlyKeys(command, "type", "roleCounts", "options") && isRoleCounts(command.roleCounts) && isOptionalWerewolfOptions(command.options);
     case "setAssignMode":
       return hasOnlyKeys(command, "type", "assignMode") && (command.assignMode === "random" || command.assignMode === "manual" || command.assignMode === null);

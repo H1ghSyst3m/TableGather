@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { RoomManager } from "../server/roomManager";
 import { InMemoryRoomStore, type Room } from "../server/roomStore";
 import { createWerewolfGameFromAssignments } from "../src/games/werewolf/domain/engine";
-import type { RoleCounts, WerewolfState } from "../src/games/werewolf/domain/types";
+import type { RoleCounts, WerewolfOptions, WerewolfState } from "../src/games/werewolf/domain/types";
 import type { WerewolfHostRoomSnapshot, WerewolfPlayerRoomSnapshot, WerewolfStageRoomSnapshot } from "../src/games/werewolf/roomTypes";
 import { ADMIN_INACTIVE_ACTIVITY_MS } from "../src/online/admin";
 import type { HostCommand } from "../src/online/messages";
@@ -32,6 +32,30 @@ function werewolfStageSnapshot(manager: RoomManager, room: Room): WerewolfStageR
 
 function sumRoleCounts(roleCounts: RoleCounts) {
   return Object.values(roleCounts).reduce((total, count) => total + (count ?? 0), 0);
+}
+
+function prepareWerewolfAssignment(
+  manager: RoomManager,
+  room: Room,
+  hostToken: string,
+  roleCounts: RoleCounts,
+  options?: WerewolfOptions,
+) {
+  manager.applyHostCommand(room.code, hostToken, { type: "beginSetup", roleCounts, options });
+  manager.applyHostCommand(room.code, hostToken, { type: "continueToRules" });
+  manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment" });
+}
+
+function startWerewolfRoom(
+  manager: RoomManager,
+  room: Room,
+  hostToken: string,
+  roleCounts: RoleCounts,
+  options?: WerewolfOptions,
+) {
+  prepareWerewolfAssignment(manager, room, hostToken, roleCounts, options);
+  manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "random" });
+  manager.applyHostCommand(room.code, hostToken, { type: "startGame" });
 }
 
 describe("room manager", () => {
@@ -149,7 +173,7 @@ describe("room manager", () => {
 
     room.gameId = "imposter";
 
-    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "startGame", roleCounts: counts })).toThrow(
+    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "startGame" })).toThrow(
       "Game imposter is not playable.",
     );
   });
@@ -170,6 +194,12 @@ describe("room manager", () => {
         options: { winMode: "standard", revealMode: "hidden", roleReveal: false, debug: true },
       } as unknown as HostCommand),
     ).toThrow("Invalid host command.");
+    expect(() =>
+      manager.applyHostCommand(room.code, hostToken, {
+        type: "prepareAssignment",
+        roleCounts: { werewolf: 1, villager: 4 },
+      } as unknown as HostCommand),
+    ).toThrow("Invalid host command.");
   });
 
   it("starts a game and keeps player snapshots role-filtered", () => {
@@ -179,7 +209,7 @@ describe("room manager", () => {
       (name, index) => manager.joinRoom(room.code, name, `player-${index}`).clientToken,
     );
 
-    manager.applyHostCommand(room.code, hostToken, { type: "startGame", roleCounts: counts });
+    startWerewolfRoom(manager, room, hostToken, counts);
     const started = asWerewolfRoom(manager.getRoom(room.code));
     const playerSnapshot = werewolfPlayerSnapshot(manager, started, tokens[0]);
     const hostSnapshot = werewolfHostSnapshot(manager, started);
@@ -198,8 +228,7 @@ describe("room manager", () => {
     const roleCounts: RoleCounts = { werewolf: 1, seer: 1, witch: 1, hunter: 1, villager: 1 };
     const options = { winMode: "extended", revealMode: "hidden", roleReveal: true } as const;
 
-    manager.applyHostCommand(room.code, hostToken, { type: "beginSetup", roleCounts, options });
-    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment", roleCounts, options });
+    prepareWerewolfAssignment(manager, room, hostToken, roleCounts, options);
     manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "random" });
     manager.applyHostCommand(room.code, hostToken, { type: "startGame" });
     manager.applyHostCommand(room.code, hostToken, { type: "createStageLink", stageLocale: "de" });
@@ -228,6 +257,7 @@ describe("room manager", () => {
       roleCounts,
       options,
       assignMode: null,
+      preparationStep: "roles",
       assignment: [],
       gameState: null,
       canUndo: false,
@@ -251,7 +281,7 @@ describe("room manager", () => {
     expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: true, phase: "lobby" });
   });
 
-  it("locks joins during game settings and reopens them in the player lobby", () => {
+  it("preserves roles and rules across the room preparation flow", () => {
     const manager = new RoomManager(new InMemoryRoomStore());
     const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
 
@@ -265,8 +295,12 @@ describe("room manager", () => {
 
     const setupRoom = asWerewolfRoom(manager.getRoom(room.code));
     expect(setupRoom.phase).toBe("setup");
+    expect(werewolfHostSnapshot(manager, setupRoom).preparationStep).toBe("roles");
     expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: false, phase: "setup" });
     expect(() => manager.joinRoom(room.code, "Late", "late-player")).toThrow("The room is already in game.");
+    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment" })).toThrow(
+      "Room is not in rules preparation.",
+    );
 
     manager.applyHostCommand(room.code, hostToken, {
       type: "updateSetup",
@@ -276,24 +310,70 @@ describe("room manager", () => {
     expect(werewolfHostSnapshot(manager, setupRoom)).toMatchObject({
       roleCounts: { werewolf: 1, seer: 1, villager: 3 },
       options: { winMode: "extended", revealMode: "hidden", roleReveal: true },
+      preparationStep: "roles",
     });
 
+    manager.applyHostCommand(room.code, hostToken, { type: "continueToRules" });
+    manager.resumeRoom(room.code, hostToken, "host-reconnected");
+    expect(werewolfHostSnapshot(manager, setupRoom)).toMatchObject({
+      roleCounts: { werewolf: 1, seer: 1, villager: 3 },
+      options: { winMode: "extended", revealMode: "hidden", roleReveal: true },
+      preparationStep: "rules",
+    });
+
+    manager.applyHostCommand(room.code, hostToken, { type: "returnToRoleSelection" });
+    expect(werewolfHostSnapshot(manager, setupRoom)).toMatchObject({
+      roleCounts: { werewolf: 1, seer: 1, villager: 3 },
+      options: { winMode: "extended", revealMode: "hidden", roleReveal: true },
+      preparationStep: "roles",
+    });
     manager.applyHostCommand(room.code, hostToken, { type: "returnToPlayerLobby" });
     expect(manager.getRoom(room.code)?.phase).toBe("lobby");
     expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: true, phase: "lobby" });
     expect(manager.joinRoom(room.code, "Late", "late-player").player.name).toBe("Late");
 
     manager.applyHostCommand(room.code, hostToken, { type: "beginSetup", roleCounts: { werewolf: 1, seer: 1, villager: 4 } });
-    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment", roleCounts: { werewolf: 1, seer: 1, villager: 4 } });
+    manager.applyHostCommand(room.code, hostToken, { type: "continueToRules" });
+    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment" });
     manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "random" });
     expect(asWerewolfRoom(manager.getRoom(room.code)).assignment).toHaveLength(6);
 
-    manager.applyHostCommand(room.code, hostToken, { type: "returnToGameSettings" });
+    manager.applyHostCommand(room.code, hostToken, { type: "returnToRules" });
     const returnedRoom = asWerewolfRoom(manager.getRoom(room.code));
     expect(returnedRoom.phase).toBe("setup");
     expect(returnedRoom.assignment).toEqual([]);
-    expect(werewolfHostSnapshot(manager, returnedRoom).assignMode).toBeNull();
+    expect(werewolfHostSnapshot(manager, returnedRoom)).toMatchObject({
+      assignMode: null,
+      preparationStep: "rules",
+      options: { winMode: "extended", revealMode: "hidden", roleReveal: true },
+    });
     expect(manager.inspectRoom(room.code)).toMatchObject({ exists: true, joinable: false, phase: "setup" });
+  });
+
+  it("rejects room preparation jumps and incomplete assignment starts", () => {
+    const manager = new RoomManager(new InMemoryRoomStore());
+    const { room, clientToken: hostToken } = manager.createRoom("host-1", "werewolf");
+    ["Alex", "Sam", "Jordan", "Taylor", "Morgan"].forEach((name, index) =>
+      manager.joinRoom(room.code, name, `player-${index}`),
+    );
+
+    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "startGame" })).toThrow("Room is not in assignment.");
+
+    manager.applyHostCommand(room.code, hostToken, { type: "beginSetup", roleCounts: { werewolf: 1, villager: 4 } });
+    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "returnToRoleSelection" })).toThrow(
+      "Room is not in rules preparation.",
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "continueToRules" });
+    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment" });
+    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "startGame" })).toThrow(
+      "Choose a role assignment mode before starting the game.",
+    );
+
+    manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "manual" });
+    expect(() => manager.applyHostCommand(room.code, hostToken, { type: "startGame" })).toThrow(
+      "Every room player must receive a role before the game can start.",
+    );
   });
 
   it("creates, rotates, and disables stage links", () => {
@@ -420,11 +500,13 @@ describe("room manager", () => {
     );
 
     manager.applyHostCommand(room.code, hostToken, { type: "createStageLink" });
-    manager.applyHostCommand(room.code, hostToken, {
-      type: "startGame",
-      roleCounts: { werewolf: 1, seer: 1, witch: 1, hunter: 1, villager: 1 },
-      options: { winMode: "extended", revealMode: "team", roleReveal: false },
-    });
+    startWerewolfRoom(
+      manager,
+      room,
+      hostToken,
+      { werewolf: 1, seer: 1, witch: 1, hunter: 1, villager: 1 },
+      { winMode: "extended", revealMode: "team", roleReveal: false },
+    );
     tokens.forEach((token) => manager.applyPlayerCommand(room.code, token, { type: "markRoleSeen" }));
     const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
     const state = activeRoom.gameState!;
@@ -456,11 +538,13 @@ describe("room manager", () => {
     );
 
     manager.applyHostCommand(room.code, hostToken, { type: "createStageLink" });
-    manager.applyHostCommand(room.code, hostToken, {
-      type: "startGame",
-      roleCounts: { werewolf: 1, villager: 4 },
-      options: { winMode: "standard", revealMode: "role", roleReveal: false },
-    });
+    startWerewolfRoom(
+      manager,
+      room,
+      hostToken,
+      { werewolf: 1, villager: 4 },
+      { winMode: "standard", revealMode: "role", roleReveal: false },
+    );
     tokens.forEach((token) => manager.applyPlayerCommand(room.code, token, { type: "markRoleSeen" }));
 
     const activeRoom = asWerewolfRoom(manager.getRoom(room.code));
@@ -498,7 +582,7 @@ describe("room manager", () => {
     );
     const roleCounts: RoleCounts = { werewolf: 1, seer: 1, witch: 1, hunter: 1, villager: 1 };
 
-    manager.applyHostCommand(room.code, hostToken, { type: "prepareAssignment", roleCounts });
+    prepareWerewolfAssignment(manager, room, hostToken, roleCounts);
     manager.applyHostCommand(room.code, hostToken, { type: "setAssignMode", assignMode: "manual" });
     manager.applyHostCommand(room.code, hostToken, {
       type: "setManualAssignment",
@@ -522,6 +606,8 @@ describe("room manager", () => {
     expect(playerDraft.self.roleId).toBeUndefined();
     expect("assignment" in playerDraft).toBe(false);
     expect(serializedPlayerDraft).not.toContain("roleCounts");
+    expect(serializedPlayerDraft).not.toContain("preparationStep");
+    expect(serializedPlayerDraft).not.toContain("\"options\":");
     expect(serializedPlayerDraft).not.toContain("roleId");
     expect(serializedPlayerDraft).not.toContain("gameState");
     expect(serializedPlayerDraft).not.toContain("\"assignment\":");
@@ -544,10 +630,7 @@ describe("room manager", () => {
       manager.joinRoom(room.code, name, `player-${index}`),
     );
 
-    manager.applyHostCommand(room.code, hostToken, {
-      type: "prepareAssignment",
-      roleCounts: { werewolf: 1, seer: 1, villager: 3 },
-    });
+    prepareWerewolfAssignment(manager, room, hostToken, { werewolf: 1, seer: 1, villager: 3 });
     manager.applyHostCommand(room.code, hostToken, { type: "shuffleRoles" });
 
     const assignment = asWerewolfRoom(manager.getRoom(room.code)).assignment;
@@ -568,7 +651,7 @@ describe("room manager", () => {
     const tokens = names.map((name, index) => manager.joinRoom(room.code, name, `player-${index}`).clientToken);
     const roleCounts: RoleCounts = { werewolf: 2, seer: 1, witch: 1, hunter: 1, villager: 2 };
 
-    manager.applyHostCommand(room.code, hostToken, { type: "startGame", roleCounts });
+    startWerewolfRoom(manager, room, hostToken, roleCounts);
     const started = asWerewolfRoom(manager.getRoom(room.code));
 
     expect(tokens.map((token) => werewolfPlayerSnapshot(manager, started, token).self.roleId)).toHaveLength(7);
@@ -585,10 +668,10 @@ describe("room manager", () => {
       manager.joinRoom(room.code, name, `player-${index}`),
     );
 
-    manager.applyHostCommand(room.code, hostToken, {
-      type: "startGame",
-      roleCounts: counts,
-      options: { winMode: "extended", revealMode: "hidden", roleReveal: true },
+    startWerewolfRoom(manager, room, hostToken, counts, {
+      winMode: "extended",
+      revealMode: "hidden",
+      roleReveal: true,
     });
 
     const gameState = asWerewolfRoom(manager.getRoom(room.code)).gameState;
@@ -969,11 +1052,13 @@ describe("room manager", () => {
       (name, index) => manager.joinRoom(room.code, name, `player-${index}`).clientToken,
     );
 
-    manager.applyHostCommand(room.code, hostToken, {
-      type: "startGame",
-      roleCounts: { werewolf: 1, villager: 4 },
-      options: { winMode: "extended", revealMode: "role", roleReveal: false },
-    });
+    startWerewolfRoom(
+      manager,
+      room,
+      hostToken,
+      { werewolf: 1, villager: 4 },
+      { winMode: "extended", revealMode: "role", roleReveal: false },
+    );
     tokens.forEach((token) => manager.applyPlayerCommand(room.code, token, { type: "markRoleSeen" }));
     let gameState = asWerewolfRoom(manager.getRoom(room.code)).gameState!;
     const victim = gameState.players.find((player) => player.roleId !== "werewolf")!;
@@ -1081,7 +1166,7 @@ describe("room manager", () => {
     expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_030);
 
     now = 1_040;
-    manager.applyHostCommand(room.code, hostToken, { type: "startGame", roleCounts: { werewolf: 1, villager: 4 } });
+    startWerewolfRoom(manager, room, hostToken, { werewolf: 1, villager: 4 });
     expect(manager.getRoom(room.code)?.lastActivityAt).toBe(1_040);
 
     now = 1_050;

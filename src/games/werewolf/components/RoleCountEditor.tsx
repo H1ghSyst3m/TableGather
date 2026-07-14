@@ -1,16 +1,4 @@
-import {
-  BadgeHelp,
-  Check,
-  EyeOff,
-  Home,
-  Info,
-  Minus,
-  Plus,
-  Shield,
-  Sparkles,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Home, Info, Minus, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { roleDefinitions, selectableRoleOrder, type RoleCategory, type RoleGroup } from "../domain/roles";
 import {
@@ -20,7 +8,7 @@ import {
   sanitizeRoleCount,
   validateRoleCounts,
 } from "../domain/setup";
-import type { RevealMode, RoleCounts, RoleId, WerewolfOptions, WinMode } from "../domain/types";
+import type { RoleCounts, RoleId } from "../domain/types";
 import { useI18n } from "../../../i18n/useI18n";
 import { RoleInfoModal } from "./RoleInfoModal";
 import { RoleIconChip } from "./WerewolfIcons";
@@ -31,16 +19,10 @@ export function RoleCountEditor({
   playerCount,
   counts,
   onChange,
-  options,
-  onOptionsChange,
-  hideRoleReveal = false,
 }: {
   playerCount: number;
   counts: RoleCounts;
   onChange: (counts: RoleCounts) => void;
-  options?: WerewolfOptions;
-  onOptionsChange?: (options: WerewolfOptions) => void;
-  hideRoleReveal?: boolean;
 }) {
   const { t } = useI18n();
   const [activeCategory, setActiveCategory] = useState<RoleCategory>("classic");
@@ -60,11 +42,6 @@ export function RoleCountEditor({
 
   const setCount = (roleId: RoleId, value: number) => {
     onChange(autoFillVillagers({ ...displayCounts, [roleId]: Math.max(0, value) }, playerCount));
-  };
-
-  const updateOptions = (patch: Partial<WerewolfOptions>) => {
-    if (!options || !onOptionsChange) return;
-    onOptionsChange({ ...options, ...patch });
   };
 
   return (
@@ -101,16 +78,6 @@ export function RoleCountEditor({
           {wolfCount} {t("werewolf.werewolves")}
         </span>
       </div>
-
-      {options && onOptionsChange && (
-        <RulesPanel
-          options={options}
-          hideRoleReveal={hideRoleReveal}
-          onWinMode={(winMode) => updateOptions({ winMode })}
-          onRevealMode={(revealMode) => updateOptions({ revealMode })}
-          onRoleReveal={(roleReveal) => updateOptions({ roleReveal })}
-        />
-      )}
 
       <div className="auto-villager-card">
         <Home />
@@ -208,116 +175,6 @@ function SummaryStat({ label, value, tone }: { label: string; value: string | nu
     <div className={`summary-stat summary-${tone}`}>
       <strong>{value}</strong>
       <span>{label}</span>
-    </div>
-  );
-}
-
-function RulesPanel({
-  options,
-  hideRoleReveal,
-  onWinMode,
-  onRevealMode,
-  onRoleReveal,
-}: {
-  options: WerewolfOptions;
-  hideRoleReveal: boolean;
-  onWinMode: (mode: WinMode) => void;
-  onRevealMode: (mode: RevealMode) => void;
-  onRoleReveal: (value: boolean) => void;
-}) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="rules-panel">
-      <button type="button" className="rules-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-        <span>{t("werewolf.gameRules")}</span>
-        <span>{open ? "−" : "+"}</span>
-      </button>
-      {open && (
-        <div className="rules-body">
-          <OptionGroup
-            label={t("werewolf.winMode")}
-            options={[
-              { value: "standard", label: t("werewolf.winStandard"), description: t("werewolf.winStandardHint"), icon: Shield },
-              { value: "extended", label: t("werewolf.winExtended"), description: t("werewolf.winExtendedHint"), icon: Sparkles },
-            ]}
-            value={options.winMode}
-            onChange={(value) => onWinMode(value as WinMode)}
-          />
-          <OptionGroup
-            label={t("werewolf.revealMode")}
-            options={[
-              { value: "hidden", label: t("werewolf.revealHidden"), description: t("werewolf.revealHiddenHint"), icon: EyeOff },
-              { value: "team", label: t("werewolf.revealTeam"), description: t("werewolf.revealTeamHint"), icon: Users },
-              { value: "role", label: t("werewolf.revealRole"), description: t("werewolf.revealRoleHint"), icon: BadgeHelp },
-            ]}
-            value={options.revealMode}
-            onChange={(value) => onRevealMode(value as RevealMode)}
-          />
-          {!hideRoleReveal && (
-            <label className="toggle-row">
-              <span>
-                <strong>{t("werewolf.roleRevealSetting")}</strong>
-                <small>{t("werewolf.roleRevealSettingHint")}</small>
-              </span>
-              <input
-                type="checkbox"
-                checked={options.roleReveal}
-                onChange={(event) => onRoleReveal(event.target.checked)}
-              />
-            </label>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OptionGroup({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: { value: string; label: string; description: string; icon?: LucideIcon }[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="option-group">
-      <p>{label}</p>
-      <div>
-        {options.map((option) => {
-          const Icon = option.icon;
-          const active = value === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={active ? "active" : ""}
-              aria-pressed={active}
-              onClick={() => onChange(option.value)}
-            >
-              {Icon && (
-                <span className="rules-option-icon" aria-hidden="true">
-                  <Icon />
-                </span>
-              )}
-              <span className="rules-option-copy">
-                <strong>{option.label}</strong>
-                <span>{option.description}</span>
-              </span>
-              {active && (
-                <span className="rules-option-check" aria-hidden="true">
-                  <Check />
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

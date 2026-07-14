@@ -42,6 +42,9 @@ describe("room websocket server", () => {
 
     host.send({ type: "createRoom", payload: { gameId: "werewolf" } });
     const created = (await host.next((message) => message.type === "connected" && message.role === "host")) as ConnectedMessage;
+    expect(ROOM_PROTOCOL_VERSION).toBe(19);
+    expect(ROOM_PROTOCOL_FEATURES).toContain("werewolfPreparationSteps");
+    expect(ROOM_PROTOCOL_FEATURES).not.toContain("werewolfSetupPhase");
     expect(created.protocolVersion).toBe(ROOM_PROTOCOL_VERSION);
     expect(created.features).toEqual(ROOM_PROTOCOL_FEATURES);
     const roomCode = created.roomCode;
@@ -490,7 +493,17 @@ describe("room websocket server", () => {
       message: "The room is already in game.",
     });
 
-    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "startGame", roleCounts: { werewolf: 1, villager: 4 } } });
+    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "continueToRules" } });
+    await host.next(
+      (message) => message.type === "snapshot" && hostSnapshot(message).preparationStep === "rules",
+    );
+    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "prepareAssignment" } });
+    await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "assignment");
+    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "setAssignMode", assignMode: "random" } });
+    await host.next(
+      (message) => message.type === "snapshot" && hostSnapshot(message).assignMode === "random",
+    );
+    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "startGame" } });
     await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "roleReveal");
     await Promise.all(players.map((player) => player.next((message) => message.type === "snapshot" && playerSnapshot(message).phase === "roleReveal")));
 
@@ -977,9 +990,7 @@ describe("room websocket server", () => {
     await host.next((message) => message.type === "snapshot" && hostSnapshot(message).players.length === 5);
 
     const roleCounts: RoleCounts = { werewolf: 1, seer: 1, villager: 3 };
-    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "startGame", roleCounts } });
-
-    const hostView = hostSnapshot(await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "roleReveal"));
+    const hostView = await startRandomWerewolfRoom(host, roomCode, created.clientToken, roleCounts);
     expect(hostView.players).toHaveLength(5);
 
     for (const player of players) {
@@ -1007,8 +1018,7 @@ describe("room websocket server", () => {
     await host.next((message) => message.type === "snapshot" && hostSnapshot(message).players.length === 5);
 
     const roleCounts: RoleCounts = { werewolf: 1, villager: 4 };
-    host.send({ type: "hostCommand", roomCode, clientToken: created.clientToken, payload: { type: "startGame", roleCounts } });
-    await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "roleReveal");
+    await startRandomWerewolfRoom(host, roomCode, created.clientToken, roleCounts);
 
     for (const player of players) {
       player.send({ type: "playerCommand", roomCode, clientToken: player.clientToken, payload: { type: "markRoleSeen" } });
@@ -1063,13 +1073,7 @@ describe("room websocket server", () => {
     const players = await Promise.all(["P1", "P2", "P3", "P4", "P5"].map((name) => joinPlayer(url, roomCode, name)));
     await host.next((message) => message.type === "snapshot" && hostSnapshot(message).players.length === 5);
 
-    host.send({
-      type: "hostCommand",
-      roomCode,
-      clientToken: created.clientToken,
-      payload: { type: "startGame", roleCounts: { werewolf: 1, villager: 4 } },
-    });
-    await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "roleReveal");
+    await startRandomWerewolfRoom(host, roomCode, created.clientToken, { werewolf: 1, villager: 4 });
 
     for (const player of players) {
       player.send({ type: "playerCommand", roomCode, clientToken: player.clientToken, payload: { type: "markRoleSeen" } });
@@ -1227,6 +1231,34 @@ async function joinPlayer(url: string, roomCode: string, name: string) {
   const connected = (await player.next((message) => message.type === "connected" && message.role === "player")) as ConnectedMessage;
   await player.next((message) => message.type === "snapshot");
   return Object.assign(player, { clientToken: connected.clientToken });
+}
+
+async function startRandomWerewolfRoom(
+  host: TestSocket,
+  roomCode: string,
+  clientToken: string,
+  roleCounts: RoleCounts,
+) {
+  host.send({ type: "hostCommand", roomCode, clientToken, payload: { type: "beginSetup", roleCounts } });
+  await host.next(
+    (message) => message.type === "snapshot" && hostSnapshot(message).phase === "setup" && hostSnapshot(message).preparationStep === "roles",
+  );
+
+  host.send({ type: "hostCommand", roomCode, clientToken, payload: { type: "continueToRules" } });
+  await host.next(
+    (message) => message.type === "snapshot" && hostSnapshot(message).preparationStep === "rules",
+  );
+
+  host.send({ type: "hostCommand", roomCode, clientToken, payload: { type: "prepareAssignment" } });
+  await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "assignment");
+
+  host.send({ type: "hostCommand", roomCode, clientToken, payload: { type: "setAssignMode", assignMode: "random" } });
+  await host.next(
+    (message) => message.type === "snapshot" && hostSnapshot(message).assignMode === "random",
+  );
+
+  host.send({ type: "hostCommand", roomCode, clientToken, payload: { type: "startGame" } });
+  return hostSnapshot(await host.next((message) => message.type === "snapshot" && hostSnapshot(message).phase === "roleReveal"));
 }
 
 async function exhaustRoomLookups(socket: TestSocket, prefix: string) {

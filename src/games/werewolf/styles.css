@@ -1185,29 +1185,10 @@
   background: var(--accent);
 }
 
-.rules-panel {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.95rem;
-  background: #fff;
-}
-
-.rules-toggle {
-  width: 100%;
-  min-height: 3.1rem;
-  padding: 0 0.9rem;
-  border: 0;
-  justify-content: space-between;
-  background: #fbfaf8;
-  color: var(--text);
-  font-weight: 850;
-}
-
-.rules-body {
+.rules-editor,
+.rules-editor-body {
   display: grid;
   gap: 1rem;
-  padding: 0.85rem;
-  border-top: 1px solid var(--border);
 }
 
 .category-tabs {
@@ -2055,7 +2036,6 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
 .game-theme-werewolf .gm-only-info,
 .game-theme-werewolf .role-balance-card,
 .game-theme-werewolf .auto-villager-card,
-.game-theme-werewolf .rules-panel,
 .game-theme-werewolf .role-summary-grid,
 .game-theme-werewolf .role-rule-list article,
 .game-theme-werewolf .role-rules-card,
@@ -2074,7 +2054,6 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
 .game-theme-werewolf .night-action-note,
 .game-theme-werewolf .night-report-row,
 .game-theme-werewolf .role-summary-grid,
-.game-theme-werewolf .rules-panel,
 .game-theme-werewolf .manual-assignment-row {
   border-width: 1px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -2086,7 +2065,6 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
     linear-gradient(180deg, rgba(47, 184, 178, 0.14), rgba(14, 25, 40, 0.94));
 }
 
-.game-theme-werewolf .rules-toggle,
 .game-theme-werewolf .category-tabs,
 .game-theme-werewolf .category-tabs button,
 .game-theme-werewolf .night-action-button,
@@ -2094,12 +2072,6 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
 .game-theme-werewolf .gm-role-button {
   background: rgba(9, 18, 31, 0.72);
   color: var(--wolf-text);
-}
-
-.game-theme-werewolf .rules-body {
-  border-color: var(--wolf-line);
-  background:
-    linear-gradient(180deg, rgba(10, 20, 34, 0.62), rgba(5, 11, 19, 0.34));
 }
 
 .game-theme-werewolf .option-group p {
@@ -2958,25 +2930,8 @@ body:has(.game-theme-werewolf) .game-confirm-sheet,
   background: rgba(5, 17, 30, 0.5);
 }
 
-.game-theme-werewolf .rules-panel {
-  border: 1px solid rgba(123, 181, 218, 0.22);
-  border-radius: 1rem;
-  background: #071626;
-  box-shadow: none;
-}
-
-.game-theme-werewolf .rules-toggle {
-  min-height: 3.15rem;
-  padding: 0 1rem;
-  background: transparent;
-  color: var(--wolf-text);
-}
-
-.game-theme-werewolf .rules-body {
+.game-theme-werewolf .rules-editor-body {
   gap: 1rem;
-  padding: 0.95rem;
-  border-top: 1px solid rgba(123, 181, 218, 0.16);
-  background: #061320;
 }
 
 .game-theme-werewolf .option-group > div {

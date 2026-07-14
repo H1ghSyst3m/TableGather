@@ -49,10 +49,10 @@ Players join by code/name
   -> server returns player token
   -> host and players receive updated snapshots
 
-Host opens Game Settings
+Host opens Preparation
   -> room moves from lobby to setup
   -> new player joins are blocked
-  -> role counts and options are host-owned
+  -> game-specific preparation steps remain host-owned
 
 Host assigns roles
   -> room moves from setup to assignment
