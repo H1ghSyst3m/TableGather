@@ -241,7 +241,7 @@ Stage reveal rules:
 - Village Idiot
 - Lovers
 
-Game over renders through `GameOverSurface` with a reset action. Local reset returns to setup. Room reset is a host command that sends the room back to lobby.
+Game over renders through `GameOverSurface` with a reset action. Local reset returns to setup. Room reset is a host command that sends the room back to lobby while preserving the players, selected role counts, game options, Stage link, and Stage locale. It clears the assignment mode and draft, the completed game state and log, and the server-side undo state.
 
 ## Room Host Flow
 

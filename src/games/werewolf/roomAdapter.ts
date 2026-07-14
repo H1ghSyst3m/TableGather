@@ -59,7 +59,7 @@ export const werewolfRoomAdapter = {
 
   resetRoom(room) {
     room.phase = "lobby";
-    room.setupState = createWerewolfSetupState(Math.max(room.players.length, 5));
+    writeAssignMode(room, null);
     room.assignment = [];
     room.gameState = null;
     room.undoState = null;
