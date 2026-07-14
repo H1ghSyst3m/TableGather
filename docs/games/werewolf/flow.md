@@ -41,6 +41,8 @@ Local pass-and-play and room host setup both use four preparation steps:
 3. Game Rules
 4. Role Assignment
 
+The fixed `WerewolfFlowShell` header owns the only visible title for each step. `WerewolfPreparationShell` renders the shared progress indicator, the compact Werewolf preparation label, and the step description; the remaining body uses only content-specific headings such as Players, room code, or the selected assignment method.
+
 In room mode, only the Player Lobby accepts new joins. Moving to Role Selection stores setup server-side and blocks new player joins; returning to Player Lobby reopens joins. The host-only `preparationStep` keeps Role Selection and Game Rules distinct across reconnects while the generic room phase remains `setup`. Existing players stay in the room and continue seeing status/waiting screens.
 
 ### Player Lobby

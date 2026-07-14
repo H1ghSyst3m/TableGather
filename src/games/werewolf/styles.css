@@ -351,9 +351,15 @@
   color: #84243a;
 }
 
-.role-editor-heading-actions {
-  max-width: 62%;
-  justify-content: flex-end;
+.role-editor-status {
+  margin: 0;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.werewolf-flow-shell .setup-hero .section-label {
+  margin: 0;
 }
 
 .restore-panel h2 {
@@ -2093,7 +2099,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
 }
 
 .game-theme-werewolf .option-group button.active,
-.game-theme-werewolf .option-group button[aria-pressed="true"] {
+.game-theme-werewolf .option-group button[aria-checked="true"] {
   border-color: rgba(116, 231, 223, 0.56);
   background:
     linear-gradient(180deg, rgba(47, 184, 178, 0.26), rgba(15, 72, 84, 0.84));
@@ -2104,7 +2110,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet .confirm-description {
 }
 
 .game-theme-werewolf .option-group button.active span,
-.game-theme-werewolf .option-group button[aria-pressed="true"] span {
+.game-theme-werewolf .option-group button[aria-checked="true"] span {
   color: rgba(244, 234, 219, 0.82);
 }
 
@@ -2943,8 +2949,10 @@ body:has(.game-theme-werewolf) .game-confirm-sheet,
   position: relative;
   min-height: 8.1rem;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
   justify-items: center;
+  justify-content: stretch;
   align-content: start;
   gap: 0.55rem;
   border: 1px solid rgba(123, 181, 218, 0.22);
@@ -2957,7 +2965,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet,
 }
 
 .game-theme-werewolf .option-group button.active,
-.game-theme-werewolf .option-group button[aria-pressed="true"] {
+.game-theme-werewolf .option-group button[aria-checked="true"] {
   border-color: rgba(77, 218, 246, 0.74);
   background:
     linear-gradient(180deg, rgba(59, 215, 240, 0.16), rgba(5, 17, 30, 0.66)),
@@ -2983,7 +2991,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet,
 }
 
 .game-theme-werewolf .option-group button.active .rules-option-icon,
-.game-theme-werewolf .option-group button[aria-pressed="true"] .rules-option-icon {
+.game-theme-werewolf .option-group button[aria-checked="true"] .rules-option-icon {
   border-color: rgba(77, 218, 246, 0.42);
   color: var(--wolf-teal-strong);
   background: rgba(59, 215, 240, 0.14);
@@ -2991,7 +2999,10 @@ body:has(.game-theme-werewolf) .game-confirm-sheet,
 
 .game-theme-werewolf .rules-option-copy {
   display: grid;
+  width: 100%;
+  justify-items: center;
   gap: 0.35rem;
+  text-align: center;
 }
 
 .game-theme-werewolf .rules-option-copy strong {
@@ -3177,7 +3188,7 @@ body:has(.game-theme-werewolf) .game-confirm-sheet,
 }
 
 .game-theme-werewolf .option-group button.active,
-.game-theme-werewolf .option-group button[aria-pressed="true"],
+.game-theme-werewolf .option-group button[aria-checked="true"],
 .game-theme-werewolf .category-tabs button.active,
 .game-theme-werewolf .night-action-button.selected,
 .game-theme-werewolf .night-action-choice-grid button.active,

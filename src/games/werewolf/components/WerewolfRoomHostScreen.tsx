@@ -294,7 +294,7 @@ export function WerewolfRoomHostScreen({
         settingsActions={settingsActions}
         footer={assignmentFooter}
       >
-        <WerewolfPreparationShell step={4}>
+        <WerewolfPreparationShell step={4} description={t("werewolf.roleAssignmentSubtitle")}>
           <RoomAssignmentPanel
             snapshot={snapshot}
             onSetAssignMode={(assignMode) => hostCommand({ type: "setAssignMode", assignMode })}
@@ -328,13 +328,7 @@ export function WerewolfRoomHostScreen({
             </>
           }
         >
-          <WerewolfPreparationShell step={3}>
-            <section className="setup-hero">
-              <p className="section-label">{t("werewolf.setupTitle")}</p>
-              <h2>{t("werewolf.gameRules")}</h2>
-              <p>{t("werewolf.gameRulesStepSubtitle")}</p>
-            </section>
-
+          <WerewolfPreparationShell step={3} description={t("werewolf.gameRulesStepSubtitle")}>
             <GameRulesEditor options={options} onChange={updateOptions} showRoleRevealOption={false} />
           </WerewolfPreparationShell>
           {confirmDialogs}
@@ -362,13 +356,7 @@ export function WerewolfRoomHostScreen({
           </>
         }
       >
-        <WerewolfPreparationShell step={2}>
-          <section className="setup-hero">
-            <p className="section-label">{t("werewolf.setupTitle")}</p>
-            <h2>{t("werewolf.roleSelectionTitle")}</h2>
-            <p>{t("werewolf.roleSelectionSubtitle")}</p>
-          </section>
-
+        <WerewolfPreparationShell step={2} description={t("werewolf.roleSelectionSubtitle")}>
           <RoleCountEditor playerCount={snapshot.players.length} counts={visibleCounts} onChange={updateCounts} />
         </WerewolfPreparationShell>
         {confirmDialogs}
@@ -461,7 +449,7 @@ export function WerewolfRoomHostScreen({
         </>
       }
     >
-      <WerewolfPreparationShell step={1}>
+      <WerewolfPreparationShell step={1} description={t("werewolf.roomLobbySubtitle")}>
         <RoomHeader code={snapshot.code} qr={qr} joinLink={joinLink} />
         <StageLinkPanel
           stageLink={stageLink}

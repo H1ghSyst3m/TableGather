@@ -805,8 +805,9 @@ describe("werewolf play surface", () => {
 
     expect(html).toContain(translate("de", "werewolf.playerLobbyTitle"));
     expect(html).toContain(translate("de", "werewolf.playerList"));
+    expect(html).toContain(translate("de", "werewolf.setupTitle"));
+    expect(html).toContain(translate("de", "werewolf.playerLobbySubtitle"));
     expect(html).toContain(`maxLength="${MAX_PLAYER_NAME_LENGTH}"`);
-    expect(html).not.toContain(translate("de", "werewolf.roleSetup"));
     expect(html).toContain("1 / 4");
     expect(html).toContain(translate("de", "werewolf.minPlayers"));
     expect(html).not.toContain(translate("de", "werewolf.addSamplePlayers"));
@@ -815,12 +816,12 @@ describe("werewolf play surface", () => {
 
   it("renders role selection and game rules as separate preparation steps", () => {
     const roleSelection = renderWithI18n(
-      <WerewolfPreparationShell step={2}>
+      <WerewolfPreparationShell step={2} description={translate("de", "werewolf.roleSelectionSubtitle")}>
         <RoleCountEditor playerCount={5} counts={{ werewolf: 1, villager: 4 }} onChange={() => undefined} />
       </WerewolfPreparationShell>,
     );
     const gameRules = renderWithI18n(
-      <WerewolfPreparationShell step={3}>
+      <WerewolfPreparationShell step={3} description={translate("de", "werewolf.gameRulesStepSubtitle")}>
         <GameRulesEditor
           options={{ winMode: "standard", revealMode: "role", roleReveal: true }}
           onChange={() => undefined}
@@ -840,10 +841,18 @@ describe("werewolf play surface", () => {
     expect(roleSelection).toContain('aria-valuemin="1"');
     expect(roleSelection).toContain('aria-valuemax="4"');
     expect(roleSelection).toContain('aria-valuenow="2"');
-    expect(roleSelection).toContain(translate("de", "werewolf.roleSetup"));
+    expect(roleSelection).toContain(translate("de", "werewolf.setupTitle"));
+    expect(roleSelection).toContain(translate("de", "werewolf.roleSelectionSubtitle"));
+    expect(roleSelection).toContain('role="status"');
+    expect(roleSelection).toContain('aria-live="polite"');
+    expect(roleSelection).toContain(translate("de", "werewolf.validRoleCount"));
+    expect(roleSelection).toContain(`${translate("de", "werewolf.villagers")}: 4`);
+    expect(roleSelection).toContain(translate("de", "werewolf.villagerFillHint"));
     expect(roleSelection).not.toContain(translate("de", "werewolf.winMode"));
     expect(gameRules).toContain("3 / 4");
     expect(gameRules).toContain('aria-valuenow="3"');
+    expect(gameRules).toContain(translate("de", "werewolf.setupTitle"));
+    expect(gameRules).toContain(translate("de", "werewolf.gameRulesStepSubtitle"));
     expect(gameRules.match(/role="radiogroup"/g)).toHaveLength(2);
     expect(gameRules.match(/role="radio"/g)).toHaveLength(5);
     expect(gameRules).toContain(`aria-label="${translate("de", "werewolf.winMode")}"`);
@@ -853,7 +862,7 @@ describe("werewolf play surface", () => {
     expect(gameRules).toContain(translate("de", "werewolf.winMode"));
     expect(gameRules).toContain(translate("de", "werewolf.revealMode"));
     expect(gameRules).toContain(translate("de", "werewolf.roleRevealSetting"));
-    expect(gameRules).not.toContain(translate("de", "werewolf.roleSetup"));
+    expect(gameRules).not.toContain(`<h3>${translate("de", "werewolf.gameRules")}</h3>`);
     expect(gameRules).not.toContain("aria-expanded");
     expect(roomRules).not.toContain(translate("de", "werewolf.roleRevealSetting"));
   });

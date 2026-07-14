@@ -50,6 +50,30 @@ describe("i18n", () => {
     expect(translate("de", "werewolf.roomLocked")).toBe("Der Raum wird vorbereitet.");
   });
 
+  it("uses concise copy throughout werewolf preparation", () => {
+    expect(translate("de", "werewolf.playerLobbySubtitle")).toBe(
+      "Fügt alle Mitspieler hinzu, bevor ihr die Rollen auswählt.",
+    );
+    expect(translate("en", "werewolf.roomLobbySubtitle")).toBe(
+      "Share the room code and wait for everyone to join.",
+    );
+    expect(translate("de", "werewolf.roleSelectionSubtitle")).toBe(
+      "Wähle die Rollen und lege fest, wie oft sie vorkommen.",
+    );
+    expect(translate("en", "werewolf.gameRulesStepSubtitle")).toBe(
+      "Set when the werewolves win and what is shown after a vote.",
+    );
+    expect(translate("de", "werewolf.roleAssignmentSubtitle")).toBe(
+      "Wähle, ob die Rollen zufällig oder von Hand verteilt werden.",
+    );
+    expect(translate("de", "werewolf.playerList")).toBe("Mitspieler");
+    expect(translate("de", "werewolf.selectedCount", { count: 1 })).toBe("1 ausgewählt");
+    expect(translate("de", "werewolf.villagerFillHint")).toBe("Sie füllen die übrigen Plätze.");
+    expect(translate("en", "werewolf.randomAssignmentHint")).toBe(
+      "Shuffle the roles and review the assignment before starting.",
+    );
+  });
+
   it("keeps German locale keys aligned with English", () => {
     expect(translationKeys(translations.de)).toEqual(translationKeys(translations.en));
     expect(translationKeys(commonDe)).toEqual(translationKeys(commonEn));

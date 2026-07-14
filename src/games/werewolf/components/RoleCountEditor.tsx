@@ -46,14 +46,13 @@ export function RoleCountEditor({
 
   return (
     <section className="panel role-editor">
-      <div className="panel-heading">
-        <h3>{t("werewolf.roleSetup")}</h3>
-        <span className="role-editor-heading-actions">
-          <span className={validation.valid ? "valid-text" : "error-text"}>
-            {validation.valid ? t("werewolf.validRoleCount") : t("werewolf.invalidRoleCount")}
-          </span>
-        </span>
-      </div>
+      <p
+        className={`role-editor-status ${validation.valid ? "valid-text" : "error-text"}`}
+        role="status"
+        aria-live="polite"
+      >
+        {validation.valid ? t("werewolf.validRoleCount") : t("werewolf.invalidRoleCount")}
+      </p>
 
       <div className="role-summary-grid">
         <SummaryStat label={t("common.players")} value={playerCount} tone="neutral" />
@@ -75,7 +74,7 @@ export function RoleCountEditor({
           <span>{t("werewolf.suggestedWerewolves", { count: suggestedWerewolves })}</span>
         </div>
         <span className={wolfCount === suggestedWerewolves ? "valid-text" : "muted-text"}>
-          {wolfCount} {t("werewolf.werewolves")}
+          {t("werewolf.selectedCount", { count: wolfCount })}
         </span>
       </div>
 
@@ -83,9 +82,9 @@ export function RoleCountEditor({
         <Home />
         <div>
           <strong>
-            {t("werewolf.autoVillagers")}: {villagerCount}
+            {t("werewolf.villagers")}: {villagerCount}
           </strong>
-          <span>{t("werewolf.autoVillagersHint")}</span>
+          <span>{t("werewolf.villagerFillHint")}</span>
         </div>
       </div>
 

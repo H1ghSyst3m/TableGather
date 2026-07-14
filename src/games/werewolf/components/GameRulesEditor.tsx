@@ -16,9 +16,6 @@ export function GameRulesEditor({
 
   return (
     <section className="panel rules-editor">
-      <div className="panel-heading">
-        <h3>{t("werewolf.gameRules")}</h3>
-      </div>
       <div className="rules-editor-body">
         <OptionGroup<WinMode>
           label={t("werewolf.winMode")}

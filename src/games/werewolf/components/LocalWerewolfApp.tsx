@@ -364,13 +364,7 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
       )}
 
       {setupStep === 1 && (
-        <WerewolfPreparationShell step={1}>
-          <section className="setup-hero">
-            <p className="section-label">{t("hub.passAndPlay")}</p>
-            <h2>{t("werewolf.playerLobbyTitle")}</h2>
-            <p>{t("werewolf.playerLobbySubtitle")}</p>
-          </section>
-
+        <WerewolfPreparationShell step={1} description={t("werewolf.playerLobbySubtitle")}>
           <section className="panel">
             <div className="panel-heading">
               <h3>{t("werewolf.playerList")}</h3>
@@ -420,31 +414,19 @@ export function LocalWerewolfApp({ navigate }: { navigate: (path: string) => voi
       )}
 
       {setupStep === 2 && (
-        <WerewolfPreparationShell step={2}>
-          <section className="setup-hero">
-            <p className="section-label">{t("werewolf.setupTitle")}</p>
-            <h2>{t("werewolf.roleSelectionTitle")}</h2>
-            <p>{t("werewolf.roleSelectionSubtitle")}</p>
-          </section>
-
+        <WerewolfPreparationShell step={2} description={t("werewolf.roleSelectionSubtitle")}>
           <RoleCountEditor playerCount={players.length} counts={displayCounts} onChange={setCounts} />
         </WerewolfPreparationShell>
       )}
 
       {setupStep === 3 && (
-        <WerewolfPreparationShell step={3}>
-          <section className="setup-hero">
-            <p className="section-label">{t("werewolf.setupTitle")}</p>
-            <h2>{t("werewolf.gameRules")}</h2>
-            <p>{t("werewolf.gameRulesStepSubtitle")}</p>
-          </section>
-
+        <WerewolfPreparationShell step={3} description={t("werewolf.gameRulesStepSubtitle")}>
           <GameRulesEditor options={options} onChange={updateOptions} />
         </WerewolfPreparationShell>
       )}
 
       {setupStep === 4 && (
-        <WerewolfPreparationShell step={4}>
+        <WerewolfPreparationShell step={4} description={t("werewolf.roleAssignmentSubtitle")}>
           {!assignMode && (
             <section className="assignment-choice">
               <button type="button" className="mode-button active" onClick={startRandomAssignment}>
