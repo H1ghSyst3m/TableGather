@@ -797,6 +797,8 @@ function contentTypeForPath(filePath: string) {
       return "image/webp";
     case ".mp3":
       return "audio/mpeg";
+    case ".ogg":
+      return "audio/ogg";
     case ".wav":
       return "audio/wav";
     case ".ico":

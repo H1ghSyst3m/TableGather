@@ -14,8 +14,8 @@ export interface WerewolfStageTimerCueState {
 
 export const werewolfStageAudioDefinition = {
   ambience: {
-    night: { url: new URL("./assets/audio/stage-night.mp3", import.meta.url).href },
-    day: { url: new URL("./assets/audio/stage-day.mp3", import.meta.url).href },
+    night: { url: new URL("./assets/audio/stage-night.ogg", import.meta.url).href },
+    day: { url: new URL("./assets/audio/stage-day.ogg", import.meta.url).href },
   },
   cues: {
     tick: { url: new URL("./assets/audio/timer-tick.wav", import.meta.url).href, gain: 0.82 },

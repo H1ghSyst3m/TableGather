@@ -153,15 +153,15 @@ Stage audio is local presentation state. It does not add room commands or snapsh
 
 `src/games/werewolf/stageAudio.ts` supplies the Werewolf-specific `StageAudioDefinition` and timer cue rules to the generic engine and hook in `src/audio/`. It resolves these bundled source assets with `new URL(..., import.meta.url).href`:
 
-- `src/games/werewolf/assets/audio/stage-night.mp3`
-- `src/games/werewolf/assets/audio/stage-day.mp3`
+- `src/games/werewolf/assets/audio/stage-night.ogg`
+- `src/games/werewolf/assets/audio/stage-day.ogg`
 - `src/games/werewolf/assets/audio/timer-tick.wav`
 - `src/games/werewolf/assets/audio/timer-gong.wav`
 
-Vite emits those source files as hashed build assets. MP3 ambience and WAV effects use the same `fetch` plus `AudioContext.decodeAudioData` path; any response with an `audio/*` MIME type is accepted. The ambience MP3 files must already be cut as seamless loops. Each WAV file is one short one-shot sample.
+Vite emits those source files as hashed build assets. OGG ambience and WAV effects use the same `fetch` plus `AudioContext.decodeAudioData` path; any response with an `audio/*` MIME type is accepted. The ambience OGG files must already be cut as seamless loops. Each WAV file is one short one-shot sample.
 
 Night and day ambience follow the same phase resolver as the Stage background and play only during active game scenes. Phase changes crossfade between loop-ready ambience files. Lobby, setup, assignment, role reveal, and ended scenes stay silent.
 
 The public day timer drives one short tick sample at every second from 10 through 1, then one gong when it reaches zero. The client records emitted cues across pause/resume, clears them on timer reset, and does not replay missed cues after a hidden tab becomes visible. No per-second server messages are required.
 
-Mute and master volume are stored locally under the versioned `tablegather-werewolf-stage-audio` preference configured by the definition. Browser autoplay policies still require a fresh user interaction after opening or reloading the Stage. Activation calls `AudioContext.resume()` directly inside the gesture before scheduling a one-frame silent unlock buffer and also accepts a delayed `running` state. Firefox can keep an initial resume promise pending until another accepted gesture; while activation is pending, the button therefore remains available and a repeated click resumes the same context instead of creating another first-attempt context. Activation warnings include context and document visibility state. Tracks load in parallel; successful buffers remain cached, while missing or invalid files are logged with their URL and failure cause and retried on the next activation. The remaining tracks and the Stage UI keep working after a partial failure. The integrated production server serves the bundled MP3 and WAV files as `audio/mpeg` and `audio/wav`.
+Mute and master volume are stored locally under the versioned `tablegather-werewolf-stage-audio` preference configured by the definition. Browser autoplay policies still require a fresh user interaction after opening or reloading the Stage. Activation calls `AudioContext.resume()` directly inside the gesture before scheduling a one-frame silent unlock buffer and also accepts a delayed `running` state. Firefox can keep an initial resume promise pending until another accepted gesture; while activation is pending, the button therefore remains available and a repeated click resumes the same context instead of creating another first-attempt context. Activation warnings include context and document visibility state. Tracks load in parallel; successful buffers remain cached, while missing or invalid files are logged with their URL and failure cause and retried on the next activation. The remaining tracks and the Stage UI keep working after a partial failure. The integrated production server serves the bundled OGG and WAV files as `audio/ogg` and `audio/wav`.

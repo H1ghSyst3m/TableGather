@@ -186,6 +186,7 @@ describe("room websocket server", () => {
       const nestedRoute = await fetch(toServerUrl(url, "/room/ABCD"));
       const asset = await fetch(toServerUrl(url, "/assets/app.js"));
       const mp3 = await fetch(toServerUrl(url, "/assets/ambience.mp3"));
+      const ogg = await fetch(toServerUrl(url, "/assets/ambience.ogg"));
       const wav = await fetch(toServerUrl(url, "/assets/cue.wav"));
       const serviceWorker = await fetch(toServerUrl(url, "/sw.js"));
       const manifest = await fetch(toServerUrl(url, "/manifest.webmanifest"));
@@ -208,8 +209,10 @@ describe("room websocket server", () => {
       await expect(asset.text()).resolves.toContain("fixture asset");
 
       expect(mp3.headers.get("content-type")).toBe("audio/mpeg");
+      expect(ogg.headers.get("content-type")).toBe("audio/ogg");
       expect(wav.headers.get("content-type")).toBe("audio/wav");
       expect(mp3.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+      expect(ogg.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
       expect(wav.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
 
       expect(serviceWorker.status).toBe(200);
@@ -1219,6 +1222,7 @@ async function createStaticFixture() {
   await writeFile(join(staticDir, "index.html"), "<!doctype html><title>TableGather fixture</title>");
   await writeFile(join(staticDir, "assets", "app.js"), "console.log('fixture asset');");
   await writeFile(join(staticDir, "assets", "ambience.mp3"), "fixture mp3");
+  await writeFile(join(staticDir, "assets", "ambience.ogg"), "fixture ogg");
   await writeFile(join(staticDir, "assets", "cue.wav"), "fixture wav");
   await writeFile(join(staticDir, "sw.js"), "self.addEventListener('install', () => undefined);");
   await writeFile(join(staticDir, "manifest.webmanifest"), JSON.stringify({ name: "TableGather fixture" }));

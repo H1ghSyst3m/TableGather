@@ -12,8 +12,8 @@ type TestCue = "gong" | "tick";
 const storageKey = "tablegather-test-stage-audio";
 const definition = {
   ambience: {
-    day: { url: "day.mp3" },
-    night: { url: "night.mp3", gain: 0.7 },
+    day: { url: "day.ogg" },
+    night: { url: "night.ogg", gain: 0.7 },
   },
   cues: {
     gong: { url: "gong.wav" },
@@ -54,11 +54,11 @@ describe("stage audio preferences", () => {
 });
 
 describe("StageAudioEngine", () => {
-  it("unlocks Web Audio, loads MP3 and WAV tracks, mixes playback, and closes cleanly", async () => {
+  it("unlocks Web Audio, loads OGG and WAV tracks, mixes playback, and closes cleanly", async () => {
     const context = new FakeAudioContext();
     const fetchAudio = vi.fn(async (url: URL | RequestInfo) => {
       const value = String(url);
-      return audioResponse({ contentType: value === "gong.wav" ? "audio/x-wav" : value.endsWith(".wav") ? "audio/wav" : "audio/mpeg" });
+      return audioResponse({ contentType: value === "gong.wav" ? "audio/x-wav" : value.endsWith(".wav") ? "audio/wav" : "audio/ogg" });
     });
     const engine = new StageAudioEngine(definition, {
       createContext: () => context as unknown as AudioContext,
@@ -68,7 +68,7 @@ describe("StageAudioEngine", () => {
     const result = await engine.activate(0.6, false);
     expect(result.failed).toEqual([]);
     expect(result.loaded).toHaveLength(4);
-    expect(result.loaded).toEqual(expect.arrayContaining(["day.mp3", "night.mp3", "gong.wav", "tick.wav"]));
+    expect(result.loaded).toEqual(expect.arrayContaining(["day.ogg", "night.ogg", "gong.wav", "tick.wav"]));
     expect(context.decoded).toBe(4);
     expect(context.resumed).toBe(true);
     expect(context.silentBuffers).toBe(1);
@@ -139,8 +139,8 @@ describe("StageAudioEngine", () => {
     let dayAttempts = 0;
     const fetchAudio = vi.fn(async (url: URL | RequestInfo) => {
       const value = String(url);
-      if (value === "day.mp3" && dayAttempts++ === 0) return audioResponse({ contentType: "text/html" });
-      return audioResponse({ contentType: value.endsWith(".wav") ? "audio/wav" : "audio/mpeg" });
+      if (value === "day.ogg" && dayAttempts++ === 0) return audioResponse({ contentType: "text/html" });
+      return audioResponse({ contentType: value.endsWith(".wav") ? "audio/wav" : "audio/ogg" });
     });
     const engine = new StageAudioEngine(definition, {
       createContext: () => context as unknown as AudioContext,
@@ -151,14 +151,14 @@ describe("StageAudioEngine", () => {
     const first = await engine.activate(0.6, false);
     expect(first.loaded).toHaveLength(3);
     expect(first.failed).toEqual([
-      expect.objectContaining({ reason: "mime", url: "day.mp3", contentType: "text/html" }),
+      expect.objectContaining({ reason: "mime", url: "day.ogg", contentType: "text/html" }),
     ]);
 
     const second = await engine.activate(0.6, false);
     expect(second.failed).toEqual([]);
     expect(second.loaded).toHaveLength(4);
-    expect(fetchAudio.mock.calls.filter(([url]) => String(url) === "day.mp3")).toHaveLength(2);
-    expect(fetchAudio.mock.calls.filter(([url]) => String(url) !== "day.mp3")).toHaveLength(3);
+    expect(fetchAudio.mock.calls.filter(([url]) => String(url) === "day.ogg")).toHaveLength(2);
+    expect(fetchAudio.mock.calls.filter(([url]) => String(url) !== "day.ogg")).toHaveLength(3);
     expect(context.decoded).toBe(4);
     expect(failures).toHaveBeenCalledTimes(1);
 
@@ -210,8 +210,8 @@ describe("StageAudioEngine", () => {
       createContext: () => context as unknown as AudioContext,
       fetchAudio: (async (url) => {
         const value = String(url);
-        if (value === "day.mp3") throw new Error("Network offline");
-        if (value === "night.mp3") return audioResponse({ ok: false, status: 404, statusText: "Not Found" });
+        if (value === "day.ogg") throw new Error("Network offline");
+        if (value === "night.ogg") return audioResponse({ ok: false, status: 404, statusText: "Not Found" });
         if (value === "tick.wav") return audioResponse({ contentType: "text/html" });
         return audioResponse({ byteLength: 13, contentType: "audio/wav" });
       }) as typeof fetch,
@@ -221,18 +221,18 @@ describe("StageAudioEngine", () => {
       const result = await engine.activate(0.6, false);
       expect(result.loaded).toEqual([]);
       expect(Object.fromEntries(result.failed.map((failure) => [failure.url, failure.reason]))).toEqual({
-        "day.mp3": "network",
-        "night.mp3": "http",
+        "day.ogg": "network",
+        "night.ogg": "http",
         "gong.wav": "decode",
         "tick.wav": "mime",
       });
       expect(result.failed).toEqual(expect.arrayContaining([
-        expect.objectContaining({ url: "night.mp3", status: 404, message: "HTTP 404 Not Found" }),
+        expect.objectContaining({ url: "night.ogg", status: 404, message: "HTTP 404 Not Found" }),
         expect.objectContaining({ url: "tick.wav", contentType: "text/html" }),
       ]));
       expect(warning).toHaveBeenCalledTimes(4);
-      expect(warning).toHaveBeenCalledWith(expect.stringContaining("day.mp3: Network offline"));
-      expect(warning).toHaveBeenCalledWith(expect.stringContaining("night.mp3: HTTP 404 Not Found"));
+      expect(warning).toHaveBeenCalledWith(expect.stringContaining("day.ogg: Network offline"));
+      expect(warning).toHaveBeenCalledWith(expect.stringContaining("night.ogg: HTTP 404 Not Found"));
     } finally {
       await engine.dispose();
       warning.mockRestore();
@@ -292,7 +292,7 @@ describe("StageAudioEngine", () => {
 
 function audioResponse({
   byteLength = 8,
-  contentType = "audio/mpeg",
+  contentType = "audio/ogg",
   ok = true,
   status = ok ? 200 : 500,
   statusText = "",
